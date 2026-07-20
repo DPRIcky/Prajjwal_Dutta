@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- P.DUTTA mark: hex badge + connectivity-graph "P" -->
+  <path d="M32 2 58 17v30L32 62 6 47V17Z" fill="#060a14"/>
+  <path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="#4fd8e8" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/>
+  <!-- graph edges across the bowl -->
+  <g stroke="#4fd8e8" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3">
+    <path d="M24 18 43 27"/>
+    <path d="M24 36 43 27"/>
+  </g>
+  <!-- the P -->
+  <path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="#4fd8e8" stroke-width="4.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- agent nodes -->
+  <g fill="#4fd8e8">
+    <circle cx="24" cy="18" r="3.4"/>
+    <circle cx="24" cy="36" r="3.4"/>
+    <circle cx="24" cy="46" r="3.4"/>
+  </g>
+  <circle cx="43" cy="27" r="3.9" fill="#f5a35c"/>
+</svg>

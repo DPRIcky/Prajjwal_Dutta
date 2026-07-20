@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="A three-part ROS 2 mobile autonomy stack — OAK-D cylinder perception, a 3D discrete Bayes filter for localization, and energy-aware A* planning with a Turn-Go-Turn controller. ASU RAS 598. By Prajjwal Dutta.">
 <title>ROS 2 Autonomy Stack — Perception, Localization &amp; Planning — Prajjwal Dutta</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
@@ -26,7 +28,17 @@
   nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
     align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
     background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
-  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+.nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
+    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+  .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
+  .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
+    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+  .nav-mark:hover .mark-icon .mark-node{r:5;}
+  @media (prefers-reduced-motion:reduce){
+    .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
+    .nav-mark:hover .mark-icon{transform:none;}
+  }
   .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
     text-decoration:none;text-transform:uppercase;transition:color .25s;}
   .back:hover{color:var(--cyan);}
@@ -115,7 +127,7 @@
 <div class="vignette"></div>
 
 <nav>
-  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
   <a class="back" href="../index.html#work">← Back to portfolio</a>
 </nav>
 
