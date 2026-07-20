@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Soft Actor-Critic with dynamic entropy tuning balancing a ball on a plate — 22-D observation, 2-D continuous torque action, Simscape Multibody physics, 6000 episodes on an RTX 4090. ASU EEE 587 Optimal Control. By Prajjwal Dutta.">
+<title>SAC for Continuous Robot Control — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #sacscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;
+    padding:0.6rem 1.2rem;transition:border-color .25s,color .25s,transform .25s;}
+  .btn:hover,.btn:focus-visible{color:var(--cyan);border-color:var(--cyan);transform:translateY(-2px);}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+  em.q{font-style:italic;color:var(--text);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+  .law .big{font-size:1.05em;}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img{display:block;width:100%;height:auto;background:#f4f7fb;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+  .fig-grid figure{margin:0.6rem 0;}
+  .fig-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;align-items:start;}
+  .fig-3 figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid,.fig-3{grid-template-columns:1fr;}}
+  .narrow{max-width:520px;margin-left:auto;margin-right:auto;}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="sacscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Deep RL · Spring 2025</span><span>ASU · EEE 587 Optimal Control</span></div>
+    <h1 class="reveal">Teaching a Plate to Catch a Ball, Without Telling It How</h1>
+    <p class="sub reveal">
+      A Soft Actor-Critic agent learns to balance a rolling ball at the center of a tilting
+      plate — no model, no gain tuning, just torque on two joints and a reward. The agent sees a
+      <strong>22-dimensional observation</strong>, acts in a <strong>continuous 2-D torque
+      space</strong>, and is trained against <strong>Simscape Multibody</strong> physics with
+      real contact forces. The interesting result isn't that it balances the ball. It's that
+      after 6000 episodes it still refuses to settle on a single way of doing it —
+      which, for SAC, is the algorithm working as designed.
+    </p>
+    <div class="actions reveal">
+      <a class="btn" href="../assets/sac/eee587-report.pdf" target="_blank" rel="noopener">Project report ↓</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>22-D</b><span>observation · 2-D action</span></div>
+      <div class="metric"><b>660.48</b><span>peak episode reward</span></div>
+      <div class="metric"><b>6,000</b><span>episodes · ~3 h on RTX 4090</span></div>
+      <div class="metric"><b>~3,000</b><span>episodes spent failing first</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <a href="../assets/sac/training-6000.jpg" target="_blank" rel="noopener">
+      <img src="../assets/sac/training-6000.jpg" alt="Training curve over 6000 episodes: episode reward scattered in light blue rising from near zero after roughly episode 3000, with the running average in dark blue climbing toward 600 and evaluation points in red.">
+    </a>
+    <figcaption><span class="n">FIG 01</span>6000 episodes of training. Nothing useful happens before ~3000 — then the reward climbs, peaking at 660.48 against a 700 stopping target.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">Why SAC</div>
+    <h2 class="reveal">Maximize reward. Also, stay as random as you can afford to.</h2>
+    <p class="reveal">
+      Standard RL maximizes expected return. Soft Actor-Critic maximizes return
+      <em class="q">plus the entropy of its own policy</em> — it is explicitly rewarded for
+      keeping its options open. That single extra term is the whole character of the algorithm:
+      it drives broad exploration early, prevents premature collapse onto one mediocre strategy,
+      and produces a <strong>stochastic policy</strong> rather than a deterministic map from
+      state to action.
+    </p>
+    <div class="law reveal">
+      <span class="big">π* = arg max<sub>π</sub> 𝔼<sub>τ~π</sub> [ Σ<sub>t</sub> γ<sup>t</sup> ( R(s<sub>t</sub>,a<sub>t</sub>,s<sub>t+1</sub>) + <span class="a">α·H(π(·|s<sub>t</sub>))</span> ) ]</span><br>
+      <span class="c">// the entropy bonus H, weighted by α, is what separates SAC from ordinary actor-critic</span>
+    </div>
+    <p class="reveal">
+      The choice suits this problem specifically. Balancing a ball on a plate admits
+      <strong>many valid control strategies</strong>, and exploring that space with deterministic
+      methods is notoriously sample-expensive given high-dimensional observations. SAC is
+      off-policy, so it reuses every transition from a replay buffer instead of throwing
+      experience away after one gradient step — sample efficiency being the reason it's worth the
+      extra machinery.
+    </p>
+    <p class="reveal">
+      Crucially, <strong>α is not a fixed hyperparameter here</strong>. It's tuned automatically
+      during training, driving the policy's entropy toward a target rather than holding the
+      exploration/exploitation trade-off constant — the "dynamic entropy tuning" the study set
+      out to investigate.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Agent</div>
+    <h2 class="reveal">Two critics, one Gaussian actor, and a tanh to keep it physical.</h2>
+    <p class="reveal">
+      The agent is MATLAB's <code>rlSACAgent</code> with <strong>two parameterized Q-value
+      critics</strong> — the twin-critic trick, where the <em class="q">minimum</em> of the two
+      is used to form targets, so the notorious overestimation bias of a single Q network gets
+      cut down. Target critics track the main critics slowly through a smoothing factor,
+      and the actor updates less often than the critics.
+    </p>
+    <p class="reveal">
+      The actor is a <strong>Gaussian policy</strong> with two output heads: one for the mean
+      μ<sub>θ</sub>(S), one for the standard deviation σ<sub>θ</sub>(S), with a ReLU on the
+      latter to keep it non-negative. Actions are sampled from that unbounded distribution and
+      then squashed through <strong>tanh and scaled</strong> into the physical torque limits.
+      The order matters: entropy is computed on the <em class="q">unbounded</em> Gaussian, while
+      the environment receives the bounded action.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/sac/networks.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/networks.jpg" alt="Layer graphs of the actor and critic networks: the actor branches after a common path into meanFC and stdFC heads; the critic concatenates observation and action through three fully connected layers to a Q-value output.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>Actor (left) branches after a shared trunk into mean and standard-deviation heads; critic (right) concatenates observation and action into a Q-value.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/sac/action-generation.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/action-generation.jpg" alt="Diagram: observation feeds a neural network producing mean and standard deviation, sampled through a Gaussian to an unbounded action, then through tanh and scale bounding functions to a bounded action.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>Continuous action generation — sample unbounded, measure entropy there, then squash into actuator limits.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Environment</div>
+    <h2 class="reveal">22 numbers that describe a ball on a plate.</h2>
+    <p class="reveal">
+      The plant is a Simscape Multibody model: two cylindrical joints with zero link lengths —
+      <strong>J1 rolling about X, J2 pitching about Y</strong> — driven directly by the agent's
+      torques. Ball state comes from a <strong>6-DoF joint block</strong>, and the ball-plate
+      interaction is a real <strong>spatial contact force block</strong> rather than a scripted
+      constraint, so rolling, slipping, and leaving the surface are all things the physics can
+      do. (This is deliberately the simplified stand-in for a 6-DoF arm carrying the plate.)
+    </p>
+    <p class="reveal">
+      The observation vector is where the modeling judgment shows. Joint angles enter as
+      <strong>sine and cosine pairs</strong> rather than raw angles, because a network that sees
+      an angle wrap from 2π to 0 will treat two nearly identical configurations as maximally
+      different. Plate orientation uses <strong>quaternions</strong> for the same reason at the
+      3D level — no gimbal singularities, no discontinuities. Previous joint torques are fed
+      back in, giving the agent a sense of what it just did, and ball radius and mass are
+      included so the policy is conditioned on the physical constants rather than silently
+      memorizing them.
+    </p>
+    <div class="law reveal">
+      obs = [ <span class="a">sin/cos(θ<sub>J1</sub>), sin/cos(θ<sub>J2</sub>)</span>, θ̇<sub>J1</sub>, θ̇<sub>J2</sub>,
+      ball x, y, <span class="c">v</span>x, <span class="c">v</span>y,
+      <span class="a">plate q0..q3</span>, plate ω,
+      τ<sub>J1</sub><sup>prev</sup>, τ<sub>J2</sub><sup>prev</sup>,
+      r<sub>ball</sub>, m<sub>ball</sub> ]  <span class="c">→ ℝ²²</span>
+    </div>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/sac/multibody.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/multibody.jpg" alt="Diagram of two orthogonal rotational joints J1 and J2 with curved arrows about the X and Y axes.">
+        </a>
+        <figcaption><span class="n">FIG 04</span>The actuator abstraction — two rotational joints, roll about X and pitch about Y.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/sac/observation-vector.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/observation-vector.jpg" alt="Simulink block diagram assembling joint sines and cosines, joint velocities, ball position and velocity, plate quaternions and angular rates, previous torques, ball radius and mass into a single 22-element observation bus.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>The observation bus — sin/cos joint angles, quaternion plate orientation, previous torques, and the ball's physical constants.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <a href="../assets/sac/rl-environment.jpg" target="_blank" rel="noopener">
+        <img src="../assets/sac/rl-environment.jpg" alt="The full Simulink RL environment model showing the multibody plate and ball, sensing blocks, and the reward and termination logic feeding the RL agent.">
+      </a>
+      <figcaption><span class="n">FIG 06</span>The full environment — multibody plant, ball sensing, and the reward and done signals the agent trains against.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Reward Design</div>
+    <h2 class="reveal">Three terms, and all the difficulty lives here.</h2>
+    <p class="reveal">
+      The reward is a composite of one incentive and two penalties. Ball position is rewarded
+      <strong>exponentially in distance from the plate center</strong> — a shaped signal that
+      keeps rewarding progress rather than paying out only on success, which matters enormously
+      when the agent starts from random flailing. Plate tilt is penalized by
+      <strong>squared tilt angles</strong> derived from the quaternion, discouraging the
+      degenerate strategy of violently pitching the plate. Control effort is penalized by
+      <strong>squared torque</strong>, pushing toward energy efficiency.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Term</th><th>Form</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Ball proximity</td><td>exponential in distance to center</td><td>dense progress signal toward the goal</td></tr>
+        <tr><td>Plate orientation</td><td>−(squared tilt angles from quaternion)</td><td>discourage extreme plate attitudes</td></tr>
+        <tr><td>Control effort</td><td>−(squared joint torques)</td><td>energy efficiency, smoother actuation</td></tr>
+      </tbody>
+    </table>
+    <p class="reveal">
+      This is the part the report is most honest about: <strong>reward design can only be
+      validated iteratively</strong>. Unlike a cost function in LQR — where the weights have
+      interpretable units and the resulting controller is provably optimal for them — there's no
+      way to know a reward shaping is right except to train on it and inspect what the agent
+      learned to exploit.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Training</div>
+    <h2 class="reveal">Three thousand episodes of failing on purpose.</h2>
+    <p class="reveal">
+      Training ran <strong>6000 episodes</strong>, up to 6000 steps each, with a greedy-policy
+      evaluation every 100 episodes (5 evaluation episodes each) and a stopping criterion of
+      <strong>700</strong> average reward. With asynchronous parallel workers on an
+      <strong>RTX 4090</strong>, the run took about <strong>3 hours</strong> and peaked at
+      <strong>660.48</strong> — approaching, but not reaching, the target.
+    </p>
+    <p class="reveal">
+      The shape of that curve is the finding. <strong>For roughly the first 3000 episodes the
+      agent produces essentially no useful control</strong> — and that isn't a bug, it's the
+      entropy bonus being paid out. The agent is being explicitly rewarded for trying diverse
+      ways to fail before committing to anything. The cost is real: SAC needs substantially more
+      wall-clock training than deterministic alternatives on this problem.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/sac/actor-loss.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/actor-loss.jpg" alt="Actor network loss over learning steps: a noisy band that rises for the first few hundred episodes, plateaus, then falls steadily.">
+        </a>
+        <figcaption><span class="n">FIG 07</span>Actor loss — rises while early control actions keep failing, then falls steadily as the policy starts working. The noise is the Gaussian sampling itself.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/sac/critic-loss.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/critic-loss.jpg" alt="Critic loss traces for both critics: dense spiky orange signals that do not trend downward over training.">
+        </a>
+        <figcaption><span class="n">FIG 08</span>Critic loss — spiky and never converging, which is expected: exploration keeps producing novel states, and the entropy weight keeps moving under it.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The critic loss deserves the attention it gets in the report, because it looks like failure
+      and isn't. It spikes and never trends down — the critics keep meeting states exploration
+      hasn't shown them before, and the Adam-tuned entropy weight shifts the target underneath
+      them as it goes. <strong>Actor-critic training never promised critic loss minimization;
+      the critic's job is to supply a useful gradient</strong>, not to be well-fit. Reading that
+      plot as "the model isn't learning" is one of the classic misreads of these methods.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Results</div>
+    <h2 class="reveal">Same start, different solution, every time.</h2>
+    <p class="reveal">
+      The trained agent balances the ball — and does it differently on repeated runs from
+      <em class="q">identical</em> initial conditions. From (x₀, y₀) = (0.05, 0.09) the ball
+      takes a visibly different path to the center on separate trials. That's not noise in the
+      plant; it's the policy. A stochastic policy samples its actions, so a converged SAC agent
+      is a <strong>distribution over strategies</strong>, not one strategy.
+    </p>
+    <p class="reveal">
+      It also generalizes across starting states: (0.04, 0.08), (−0.09, −0.09), and (0.06, 0.09)
+      all recover to the center, including the diagonal case where both axes must be corrected
+      simultaneously. The report's expectation is that with more training the trajectory spread
+      would narrow as the policy approaches optimality — the diversity being partly incomplete
+      convergence, partly the entropy objective doing exactly what it's told.
+    </p>
+    <div class="fig-3">
+      <figure class="reveal">
+        <a href="../assets/sac/trajectory-a.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/trajectory-a.jpg" alt="Top view of the plate with the ball's curved path to the center, alongside x and y coordinate plots settling to zero.">
+        </a>
+        <figcaption><span class="n">FIG 09</span>Ball path and x/y convergence to center.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/sac/trajectory-b.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/trajectory-b.jpg" alt="A second run from a nearby initial condition showing a differently shaped recovery path with the same convergence.">
+        </a>
+        <figcaption><span class="n">FIG 10</span>A different initial condition — same outcome.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/sac/trajectory-c.jpg" target="_blank" rel="noopener">
+          <img src="../assets/sac/trajectory-c.jpg" alt="A third run showing another distinct trajectory shape converging to the plate center.">
+        </a>
+        <figcaption><span class="n">FIG 11</span>A third start, another distinct route in.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Honest Accounting</div>
+    <h2 class="reveal">When not to reach for this.</h2>
+    <p class="reveal">
+      A ball on a plate is a problem <strong>PID or LQR solves in an afternoon</strong>, with
+      stability guarantees SAC cannot offer. Three hours of GPU training for a controller with no
+      proof of anything is not a trade you'd make in production — and the value of running the
+      experiment is knowing precisely <em class="q">why</em> you wouldn't.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Cost</th><th>What it actually means here</th></tr></thead>
+      <tbody>
+        <tr><td>Hyperparameter sensitivity</td><td>learning rates, entropy coefficient α, target update rate τ all need careful tuning</td></tr>
+        <tr class="hl"><td>Sample complexity</td><td>~3000 episodes before useful behavior; 6000 total for a peak of 660.48</td></tr>
+        <tr><td>Reward design</td><td>no analytical validation — shape it, train, inspect what got exploited, repeat</td></tr>
+        <tr><td>Compute</td><td>deep networks and replay vs. a handful of gains in a classical controller</td></tr>
+      </tbody>
+    </table>
+    <p class="reveal">
+      What SAC buys in return is the thing classical control can't give: a policy for problems
+      where the model is unavailable or the strategy space is genuinely unknown, learned from
+      interaction alone, and delivering <em class="q">multiple</em> viable solutions rather than
+      one. That optionality is a robustness property — when one route is blocked, a stochastic
+      policy already knows others.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Entropy regularization is a design decision with visible consequences.</strong>
+      The 3000 flat episodes and the trajectory diversity from identical starts are the same
+      mechanism seen from two ends — you don't get the second without paying for the first.
+      <strong>Representation is where the domain knowledge goes.</strong> Sin/cos angles,
+      quaternion attitude, and fed-back previous torques aren't incidental preprocessing; they're
+      the difference between a learnable problem and one with artificial discontinuities.
+      <strong>And a loss curve is not a scoreboard</strong> — the critic loss never converged
+      while the policy was steadily improving, and understanding why is the difference between
+      debugging a training run and misreading one.
+    </p>
+    <p class="tnote reveal">Team project for EEE 587 Optimal Control (Team 10), ASU — with thanks to Prof. Jennie Si. All figures and metrics from the team's final report, linked above.</p>
+    <div class="proj-stack reveal">
+      <span class="tag">Soft Actor-Critic</span><span class="tag">Deep RL</span><span class="tag">Entropy Regularization</span>
+      <span class="tag">Off-Policy Learning</span><span class="tag">Gaussian Policy</span><span class="tag">Twin Critics</span>
+      <span class="tag">MATLAB RL Toolbox</span><span class="tag">Simulink</span><span class="tag">Simscape Multibody</span>
+      <span class="tag">Continuous Control</span><span class="tag">Reward Shaping</span><span class="tag">CUDA / RTX 4090</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the plant, under a stochastic policy. A ball rolls on a tilting plate driven by
+     two joints (roll about X, pitch about Y); the controller samples its action from a Gaussian
+     each step — the sampling spread is drawn as a cloud around the commanded tilt — so every
+     recovery from the same start takes a different path. Past paths stay ghosted on the plate,
+     which is the report's central finding made visible. */
+  const canvas=document.getElementById('sacscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.045);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o});
+  const lineMat=(c,o)=>new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o});
+
+  const grid=new THREE.GridHelper(26,26,0x1c3a66,0x11223f);
+  grid.position.y=-2.2; grid.material.transparent=true; grid.material.opacity=0.2; scene.add(grid);
+
+  /* ---- the two-joint gimbal: J1 rolls about X, J2 pitches about Y ---- */
+  const rig=new THREE.Group(); scene.add(rig);
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,2.0,8),wire(DEEPBLUE,0.5));
+  post.position.y=-1.2; rig.add(post);
+  const j1=new THREE.Group(); rig.add(j1);                  // roll
+  const j2=new THREE.Group(); j1.add(j2);                   // pitch
+  const R=2.3;                                              // plate half-width
+  const plate=new THREE.Mesh(new THREE.BoxGeometry(R*2,0.07,R*2),wire(CYAN,0.42));
+  j2.add(plate);
+  const rim=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-R,0.05,-R),new THREE.Vector3(R,0.05,-R),
+    new THREE.Vector3(R,0.05,R),new THREE.Vector3(-R,0.05,R)]),lineMat(CYAN,0.6));
+  j2.add(rim);
+  const bullseye=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+    Array.from({length:28},(_,i)=>{const a=i/28*Math.PI*2;
+      return new THREE.Vector3(Math.cos(a)*0.32,0.06,Math.sin(a)*0.32);})),lineMat(AMBER,0.45));
+  j2.add(bullseye);
+  /* joint axis indicators */
+  j1.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(-R-0.5,0,0),new THREE.Vector3(R+0.5,0,0)]),lineMat(AMBER,0.22)));
+  j2.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0,0,-R-0.5),new THREE.Vector3(0,0,R+0.5)]),lineMat(AMBER,0.22)));
+
+  /* ---- the ball, in plate coordinates ---- */
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(0.19,12,9),wire(AMBER,0.9));
+  j2.add(ball);
+
+  /* ---- trails: the current path, plus ghosts of previous attempts ---- */
+  const TN=mobile?90:170;
+  function mkTrail(op){
+    const p=new Float32Array(TN*3);
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    const l=new THREE.Line(g,lineMat(CYAN,op)); l.frustumCulled=false; j2.add(l);
+    return {p,g,l,n:0};
+  }
+  const GHOSTS=3;
+  const ghosts=[]; for(let i=0;i<GHOSTS;i++) ghosts.push(mkTrail(0.12));
+  const live=mkTrail(0.55); live.l.material.color.setHex(AMBER);
+  let ghostSlot=0;
+
+  /* ---- action-sampling cloud: the Gaussian the policy draws its torque from ---- */
+  const NS=mobile?26:44;
+  const sPos=new Float32Array(NS*3);
+  const sGeo=new THREE.BufferGeometry();
+  sGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));
+  const sCloud=new THREE.Points(sGeo,new THREE.PointsMaterial({color:CYAN,size:0.07,transparent:true,opacity:0.4}));
+  sCloud.frustumCulled=false; scene.add(sCloud);
+
+  /* ---- ball dynamics on a tilting plate + a deliberately noisy policy ---- */
+  let bx=0.9,by=-0.6,vx=0,vy=0;                 // ball state in plate frame
+  let roll=0,pitch=0;                            // commanded joint angles
+  let settle=0;
+  const GAIN_P=0.85, GAIN_D=0.62, SIGMA=0.10;    // policy mean + sampling spread
+  function randn(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v); }
+  function reset(){
+    /* stash the finished path as a ghost, then start a new episode from a similar state */
+    const g=ghosts[ghostSlot%GHOSTS]; ghostSlot++;
+    g.p.set(live.p); g.g.attributes.position.needsUpdate=true; g.n=live.n;
+    live.n=0;
+    bx=0.75+Math.random()*0.5; by=-0.45-Math.random()*0.5;   // near-identical initial condition
+    vx=0; vy=0; settle=0;
+  }
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.04);
+    const t=clock.elapsedTime;
+    if(!reduced){
+      /* policy: a PD-shaped mean, then sample the action from a Gaussian around it */
+      const mRoll  = GAIN_P*by + GAIN_D*vy;
+      const mPitch = -(GAIN_P*bx + GAIN_D*vx);
+      const aRoll  = mRoll  + randn()*SIGMA;
+      const aPitch = mPitch + randn()*SIGMA;
+      roll  += (Math.max(-0.42,Math.min(0.42,aRoll )) - roll )*Math.min(1,dt*3.0);
+      pitch += (Math.max(-0.42,Math.min(0.42,aPitch)) - pitch)*Math.min(1,dt*3.0);
+      j1.rotation.x=roll; j2.rotation.z=pitch;
+
+      /* rolling ball on the tilted plate (5/7 factor for a solid sphere) */
+      const g=9.81*(5/7);
+      vx += ( g*Math.sin(pitch))*dt*0.22;
+      vy += (-g*Math.sin(roll ))*dt*0.22;
+      vx*=0.995; vy*=0.995;
+      bx+=vx*dt; by+=vy*dt;
+      const lim=R-0.24;                            // bounce off the plate edge
+      if(bx> lim){bx= lim;vx*=-0.45;} if(bx<-lim){bx=-lim;vx*=-0.45;}
+      if(by> lim){by= lim;vy*=-0.45;} if(by<-lim){by=-lim;vy*=-0.45;}
+      ball.position.set(bx,0.22,by);
+
+      /* live trail in plate coordinates */
+      for(let i=TN-1;i>0;i--){
+        live.p[i*3]=live.p[(i-1)*3];live.p[i*3+1]=live.p[(i-1)*3+1];live.p[i*3+2]=live.p[(i-1)*3+2];
+      }
+      live.p[0]=bx;live.p[1]=0.08;live.p[2]=by;
+      if(live.n<TN){ live.n++;
+        for(let i=live.n;i<TN;i++){live.p[i*3]=bx;live.p[i*3+1]=0.08;live.p[i*3+2]=by;}
+      }
+      live.g.attributes.position.needsUpdate=true;
+
+      /* the sampling cloud, floating above the plate */
+      for(let i=0;i<NS;i++){
+        sPos[i*3]  =mx*0+ (mPitch+randn()*SIGMA)*3.4;
+        sPos[i*3+1]=2.9+Math.sin(t*1.5+i)*0.06;
+        sPos[i*3+2]=(mRoll +randn()*SIGMA)*3.4;
+      }
+      sGeo.attributes.position.needsUpdate=true;
+
+      /* once centered and slow, log the attempt and run it again */
+      const near=Math.hypot(bx,by)<0.34 && Math.hypot(vx,vy)<0.25;
+      settle=near?settle+dt:0;
+      if(settle>1.6) reset();
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(t*0.07+d*0.4)*7.5+mx*1.8;
+    camera.position.z=7.5+Math.cos(t*0.07+d*0.4)*2.5;
+    camera.position.y=4.4+Math.min(d*1.8,2.6);
+    camera.lookAt(0,0.1,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

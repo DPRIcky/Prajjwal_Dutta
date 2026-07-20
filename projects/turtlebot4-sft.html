@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="SmartFollower &amp; Tracker — a TurtleBot 4 human-following system: ArUco 6-DoF pose estimation, Kalman vs particle filter tracking, FSM-supervised following with LiDAR safety. Ground robotics project by Prajjwal Dutta.">
+<title>TurtleBot 4 Human-Following System — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #sftscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.8rem 1.4rem;border-radius:8px;border:1px solid var(--cyan);
+    color:var(--cyan);transition:background .25s,color .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figure img.diagram{padding:1.6rem 1.8rem;box-sizing:border-box;background:#f4f6fa;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  .video-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:1.6rem;}
+  @media(max-width:720px){.video-grid{grid-template-columns:1fr;}}
+  .yt{margin:0;}
+  .yt .frame{position:relative;padding-top:56.25%;background:#04070e;}
+  .yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .yt-play{position:absolute;inset:0;width:100%;height:100%;display:block;padding:0;border:0;
+    background:#04070e;cursor:pointer;}
+  .yt-play img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+    opacity:0.8;transition:opacity .3s,transform .5s;}
+  .yt-play:hover img,.yt-play:focus-visible img{opacity:1;transform:scale(1.03);}
+  .yt-play:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px;}
+  .yt-play .pbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:60px;height:60px;border-radius:50%;border:1px solid var(--cyan);
+    background:rgba(6,10,20,0.75);display:flex;align-items:center;justify-content:center;
+    transition:background .25s,box-shadow .25s;}
+  .yt-play .pbtn svg{width:20px;height:20px;margin-left:3px;fill:var(--cyan);transition:fill .25s;}
+  .yt-play:hover .pbtn,.yt-play:focus-visible .pbtn{background:var(--cyan);
+    box-shadow:0 0 22px rgba(79,216,232,0.45);}
+  .yt-play:hover .pbtn svg,.yt-play:focus-visible .pbtn svg{fill:var(--abyss);}
+  .yt-play .ytm{position:absolute;right:0.8rem;bottom:0.7rem;font-family:var(--mono);
+    font-size:0.58rem;letter-spacing:0.16em;color:var(--text);text-transform:uppercase;
+    background:rgba(6,10,20,0.7);border:1px solid var(--line);border-radius:999px;
+    padding:0.25rem 0.7rem;}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="sftscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Ground Robotics · Spring 2026</span><span>with Tatwik Meesala &amp; Lu Yan Tan</span></div>
+    <h1 class="reveal">SmartFollower &amp; Tracker: A TurtleBot 4 That Keeps You in Frame</h1>
+    <p class="sub reveal">
+      A human-following system for GPS-denied warehouse environments: an OAK-D camera detects
+      an ArUco board carried by the target, solvePnP recovers its 6-DoF pose, and a tracking
+      filter — Kalman and 300-particle implementations, benchmarked head-to-head on the same
+      hardware run — feeds velocity commands through a three-state FOLLOW / PREDICTED / LOST
+      supervisor with a LiDAR safety guard. Built sim-first in Gazebo, then validated on a
+      physical TurtleBot 4.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/Mobile-Robots-UGV" target="_blank" rel="noopener" aria-label="GitHub organization" title="GitHub Repos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="btn alt" href="https://mobile-robots-ugv.github.io/" target="_blank" rel="noopener">Project Site ↗</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>0.04 m</b><span>mean tracking error · KF</span></div>
+      <div class="metric"><b>20 Hz</b><span>tracking pipeline</span></div>
+      <div class="metric"><b>6-DoF</b><span>ArUco board pose</span></div>
+      <div class="metric"><b>0.65 m</b><span>follow distance setpoint</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/turtlebot4/hardware_demo_poster.jpg"
+      aria-label="Hardware demonstration: a person carrying an ArUco board walks through a lab while the TurtleBot 4 follows; side panels show the live board-detection debug image, the RViz occupancy map with the robot pose, and streaming ROS 2 node logs.">
+      <source src="../media/sft-hardware-demo.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>Hardware run (live capture) — the TurtleBot 4 follows a walking target holding the ArUco board, while the detection debug view, RViz SLAM map, and node logs stream alongside.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Mission</div>
+    <h2 class="reveal">Follow the inspector. Don't hit anything. Don't lose them.</h2>
+    <p class="reveal">
+      The scenario is warehouse anomaly investigation: a mobile robot that can
+      <strong>detect, track, and safely follow a designated object of interest</strong> through
+      a dynamic, GPS-denied logistics floor — aisles, staging areas, packaging zones — while
+      circumventing obstacles and logging time-stamped evidence for later reconstruction.
+      The environment fights back with everything indoor robotics hates: occlusions, lighting
+      variability, narrow passages, and people who move like people.
+    </p>
+    <p class="reveal">
+      The team wrote the requirements as numbers before writing any code: target acquisition
+      in <strong>≤ 3 s</strong>, tracking continuity <strong>≥ 90%</strong> over five-minute
+      runs containing at least three occlusion events, re-acquisition within seconds of a
+      loss, a regulated follow distance, and <strong>zero collisions</strong> — ever.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Platform</div>
+    <h2 class="reveal">A TurtleBot 4, asked to earn its sensors.</h2>
+    <p class="reveal">
+      The platform is a <strong>TurtleBot 4</strong> on a Create 3 differential-drive base:
+      wheel encoders and IMU for odometry, a <strong>2D LiDAR</strong> for obstacle detection
+      and mapping, an <strong>OAK-D RGB-D camera</strong> for target identification and
+      depth-based ranging, and a Raspberry Pi doing the thinking. The base's bump, cliff, and
+      wheel-drop sensors form a hardware safety floor beneath everything the software decides.
+    </p>
+    <div class="law reveal">
+      ẋ = v·cos(θ) &nbsp;&nbsp; ẏ = v·sin(θ) &nbsp;&nbsp; θ̇ = ω &nbsp;<span class="c">// differential-drive model, state [x, y, θ]ᵀ</span><br>
+      u = [v, ω]ᵀ &nbsp;<span class="c">// the only two knobs the controller gets to turn</span>
+    </div>
+    <p class="reveal">
+      The target carries an <strong>ArUco fiducial board</strong> (DICT_5X5_100 dictionary,
+      2.25 cm markers) rather than relying on appearance-based person detection — a deliberate
+      trade: fiducials give robust identity and metric relative pose under exactly the
+      occlusion and lighting variability the warehouse setting guarantees.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Architecture</div>
+    <h2 class="reveal">Three nodes: see, believe, act.</h2>
+    <p class="reveal">
+      The ROS 2 pipeline runs at 20 Hz across three custom nodes. A <strong>perception
+      node</strong> detects the ArUco board with adaptive thresholding and corner validation,
+      then solves for full 6-DoF pose. A <strong>tracking node</strong> maintains a filtered
+      estimate of where the target is — and where it's going — even between detections. A
+      <strong>control node</strong> turns the tracked state into velocity commands, with a
+      LiDAR safety guard that can veto anything the follow law proposes.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/turtlebot4/rqt_graph.png" target="_blank" rel="noopener">
+        <img class="diagram" src="../assets/turtlebot4/rqt_graph.png" alt="rqt_graph of the ROS 2 computational graph: the aruco_detector node publishes board_detected and detected_aruco_pose to the goal_generator node, which publishes target_goal_pose to the coordinator node; camera_tf feeds static transforms to the TF listener.">
+      </a>
+      <figcaption><span class="n">FIG 02</span>Live rqt_graph — detector → goal generator → coordinator, with camera extrinsics flowing through TF so every pose lands in the right frame.</figcaption>
+    </figure>
+    <div class="law reveal">
+      t = [x, y, z]ᵀ = solvePnP(corners, board geometry) &nbsp;<span class="c">// pixels → meters, one function that must never lie</span><br>
+      <span class="c">// z: forward distance to target &nbsp; x: lateral offset — the two numbers that drive the robot</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Tracking · KF vs PF</div>
+    <h2 class="reveal">Two filters walk into a warehouse.</h2>
+    <p class="reveal">
+      The camera loses the board constantly — a shoulder turn, a shelf edge, a lighting flare —
+      so the tracker is what actually holds the system together. The team built
+      <strong>two interchangeable estimators behind the same interface</strong> and raced them.
+      The <strong>Kalman filter</strong> carries state [x, z, v<sub>x</sub>, v<sub>z</sub>]ᵀ
+      under a constant-velocity model: predict forward with velocity, correct with each new
+      measurement, weighted by the Kalman gain. The <strong>particle filter</strong> scatters
+      <strong>300 hypotheses</strong> with Gaussian process noise, weights them by measurement
+      likelihood, and systematically resamples — more expressive for nonlinear motion, and far
+      hungrier for tuning.
+    </p>
+    <p class="reveal">
+      Both expose the same predict-correct API — <strong>update()</strong> on each measurement,
+      <strong>peek(dt)</strong> for a single-step forecast, <strong>rollout(dt, n)</strong> for
+      visualizing predicted paths — so the control node genuinely cannot tell which one is
+      running. That's what made the benchmark honest.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Control &amp; Supervision</div>
+    <h2 class="reveal">Follow at 0.65 m. Trust decays in three seconds.</h2>
+    <div class="law reveal">
+      v = clip( <span class="a">K_lin</span>·(z − d_target), −v_max, +v_max ) &nbsp;<span class="c">// forward: close the range gap</span><br>
+      ω = clip( −<span class="a">K_ang</span>·x, −ω_max, +ω_max ) &nbsp;<span class="c">// heading: center the target</span><br>
+      <span class="c">// deadbands: |x| &lt; 0.08 m, |z − d_target| &lt; 0.05 m → hold, don't twitch</span>
+    </div>
+    <table class="reveal">
+      <thead><tr><th>Parameter</th><th>Symbol</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Follow distance setpoint</td><td>d_target</td><td>0.65 m</td></tr>
+        <tr><td>Linear gain</td><td>K_lin</td><td>0.8</td></tr>
+        <tr><td>Angular gain</td><td>K_ang</td><td>2.0</td></tr>
+        <tr><td>Max linear speed</td><td>v_max</td><td>0.15 m/s</td></tr>
+        <tr><td>Max angular speed</td><td>ω_max</td><td>0.6 rad/s</td></tr>
+      </tbody>
+    </table>
+    <p class="reveal">
+      Above the control law sits a <strong>three-state supervisor</strong>. While the board is
+      visible — <strong>MEASURED</strong> — the robot follows at full authority. Lose it, and
+      the system drops to <strong>PREDICTED</strong>: for up to three seconds it follows the
+      filter's forecast at reduced speed, coasting through the occlusion on physics rather
+      than sight. Past three seconds it declares <strong>LOST</strong> and stops — a robot
+      that keeps driving on a stale guess is a robot that finds the one obstacle the spec
+      said it never could. The LiDAR guard runs underneath all three states.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Sim First</div>
+    <h2 class="reveal">Break it in Gazebo, where crashes are free.</h2>
+    <p class="reveal">
+      The full pipeline ran in <strong>Gazebo simulation</strong> before it ever touched
+      hardware — a leader TurtleBot carrying the board through a walled test room while the
+      follower tracked it, with RViz mirroring the occupancy grid, laser scan, and camera
+      view. Same nodes, same topics, same parameters: the sim-to-real port was a camera
+      calibration and a TF tree, not a rewrite.
+    </p>
+    <figure class="reveal">
+      <video autoplay muted loop playsinline preload="metadata"
+        poster="../assets/turtlebot4/simulation_demo_poster.jpg"
+        aria-label="Gazebo simulation: a leader TurtleBot carrying an ArUco board drives through a walled room while the follower TurtleBot pursues it; RViz shows the occupancy map, laser scan, and the follower's camera view.">
+        <source src="../media/sft-simulation-demo.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">FIG 03</span>Gazebo pipeline verification — leader-follower pursuit in the simulated test room, with RViz tracking the map, scan, and goal poses in real time.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Results</div>
+    <h2 class="reveal">The Kalman filter didn't just win. The particle filter left the map.</h2>
+    <p class="reveal">
+      Both backends replayed the <strong>same recorded 20 Hz hardware run</strong> — identical
+      detections, identical timing — so the only variable was the filter. The KF held
+      near-zero error for the entire trial. The PF tracked cleanly for about twelve seconds,
+      then diverged: its lateral estimate began oscillating across ±1.5 m and its forward
+      estimate railed against the 3.0 m safety clamp for the rest of the run.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Metric</th><th>Kalman filter</th><th>Particle filter</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Mean error vs measurement</td><td>~0.04 m</td><td>~0.12 m</td></tr>
+        <tr><td>Max error spike</td><td>~0.5 m</td><td>~2.7 m</td></tr>
+        <tr><td>Divergence</td><td>none</td><td>after ~12 s, to trial end</td></tr>
+        <tr><td>Velocity commands</td><td>stable throughout</td><td>degrade post-divergence</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">Head-to-head replay of one recorded hardware session; both filters consumed identical measurement streams.</p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/turtlebot4/status_timeline.png" target="_blank" rel="noopener">
+          <img src="../assets/turtlebot4/status_timeline.png" alt="Tracker status timeline over a 41-second trial: both KF and PF backends alternate between measured and predicted states, with brief lost events near the start and around 25 seconds.">
+        </a>
+        <figcaption><span class="n">FIG 04</span>Supervisor state timeline — both filters ride the MEASURED/PREDICTED boundary as the board flickers in and out of view.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/turtlebot4/tracked_pose_timeseries.png" target="_blank" rel="noopener">
+          <img src="../assets/turtlebot4/tracked_pose_timeseries.png" alt="Tracked lateral and forward position versus time: the KF estimate stays glued to the gray measurement dots, while the PF estimate diverges after about 12 seconds, oscillating to minus 1.5 meters laterally and railing at the 3 meter forward clamp.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>Tracked pose vs raw measurements — the KF (blue) hugs the gray measurement track; the PF (orange) departs at ~12 s and never returns.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/turtlebot4/measurement_error.png" target="_blank" rel="noopener">
+          <img src="../assets/turtlebot4/measurement_error.png" alt="Error to measurement versus time: KF error stays near zero with one 0.5 meter spike; PF error spikes repeatedly to between 2 and 2.7 meters after 12 seconds.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>Measured-state error — KF stays pinned near zero; PF spikes grow to 2.7 m as the particle set collapses onto the wrong hypothesis.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/turtlebot4/cmd_vel.png" target="_blank" rel="noopener">
+          <img src="../assets/turtlebot4/cmd_vel.png" alt="Commanded linear and angular velocity versus time for both filter backends: KF commands are smooth and bounded, while PF commands chatter against the saturation limits after divergence.">
+        </a>
+        <figcaption><span class="n">FIG 07</span>Commanded velocities — garbage in, garbage out: once the PF estimate diverges, its commands chatter against the saturation limits.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The verdict was unambiguous: for a human-speed target, the constant-velocity assumption
+      is nearly exact, and the <strong>Kalman filter is the right tool</strong> — numerically
+      sound, cheap, and stable. The PF's flexibility bought nothing here but variance.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Demonstrations</div>
+    <h2 class="reveal">Watch it work.</h2>
+    <p class="reveal">
+      From first state-machine switching tests to the full hardware follow — the complete
+      demo trail, in order. Full documentation lives on the
+      <a class="btn alt" style="padding:0.3rem 0.8rem;border-radius:6px;" href="https://mobile-robots-ugv.github.io/" target="_blank" rel="noopener">team project site ↗</a>
+    </p>
+    <div class="video-grid">
+      <figure class="yt reveal">
+        <div class="frame">
+          <button class="yt-play" data-id="A36tL840Uys" aria-label="Play video: final hardware following demo">
+            <img src="https://i.ytimg.com/vi/A36tL840Uys/hqdefault.jpg" alt="" loading="lazy">
+            <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="ytm" aria-hidden="true">YouTube</span>
+          </button>
+        </div>
+        <figcaption><span class="n">VID 01</span>Final hardware demo — full-stack following on the physical TurtleBot 4.</figcaption>
+      </figure>
+      <figure class="yt reveal">
+        <div class="frame">
+          <button class="yt-play" data-id="bWFFL76V-qk" aria-label="Play video: simulation pipeline, Gazebo leader-follower run">
+            <img src="https://i.ytimg.com/vi/bWFFL76V-qk/hqdefault.jpg" alt="" loading="lazy">
+            <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="ytm" aria-hidden="true">YouTube</span>
+          </button>
+        </div>
+        <figcaption><span class="n">VID 02</span>Simulation pipeline — Gazebo leader-follower run with live RViz.</figcaption>
+      </figure>
+      <figure class="yt reveal">
+        <div class="frame">
+          <button class="yt-play" data-id="REegeuekApo" aria-label="Play video: ArUco tracking and robot state switching">
+            <img src="https://i.ytimg.com/vi/REegeuekApo/hqdefault.jpg" alt="" loading="lazy">
+            <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="ytm" aria-hidden="true">YouTube</span>
+          </button>
+        </div>
+        <figcaption><span class="n">VID 03</span>ArUco tracking + FOLLOW/LOST/SEARCH state switching.</figcaption>
+      </figure>
+      <figure class="yt reveal">
+        <div class="frame">
+          <button class="yt-play" data-id="1Pdddi-QHHU" aria-label="Play video: mid-point hardware target follower">
+            <img src="https://i.ytimg.com/vi/1Pdddi-QHHU/hqdefault.jpg" alt="" loading="lazy">
+            <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="ytm" aria-hidden="true">YouTube</span>
+          </button>
+        </div>
+        <figcaption><span class="n">VID 04</span>Mid-point hardware target follower — first closed loop on the robot.</figcaption>
+      </figure>
+      <figure class="yt reveal">
+        <div class="frame">
+          <button class="yt-play" data-id="J7BFnYV3Crw" aria-label="Play video: target tracking and prediction simulation">
+            <img src="https://i.ytimg.com/vi/J7BFnYV3Crw/hqdefault.jpg" alt="" loading="lazy">
+            <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="ytm" aria-hidden="true">YouTube</span>
+          </button>
+        </div>
+        <figcaption><span class="n">VID 05</span>Target tracking + prediction — the filter forecasting through occlusion in sim.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Benchmark filters behind one interface, or you're benchmarking your glue
+      code.</strong> Because KF and PF were drop-in swaps on identical replayed data, the
+      12-second divergence was indisputably the filter's — no confound survived.
+      <strong>Match the model to the motion:</strong> a human walking is a constant-velocity
+      process, and 300 particles of extra generality lost to four state variables of the
+      right assumption. And <strong>degrade on a timer, not on hope</strong> — three seconds
+      of prediction, then stop. The state machine's honesty about what the robot doesn't know
+      is what kept the zero-collision record intact.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">ROS 2</span><span class="tag">TurtleBot 4</span><span class="tag">OAK-D</span>
+      <span class="tag">ArUco / solvePnP</span><span class="tag">Kalman Filter</span><span class="tag">Particle Filter</span>
+      <span class="tag">Finite-State Machine</span><span class="tag">2D LiDAR</span><span class="tag">Gazebo</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* YouTube facades: swap in the player on click; from file:// the embed API
+     rejects referrer-less pages (error 153), so open the video directly instead. */
+  document.querySelectorAll('.yt-play').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id=btn.dataset.id;
+      if(location.protocol==='file:'){
+        window.open('https://www.youtube.com/watch?v='+id,'_blank','noopener');
+        return;
+      }
+      const f=document.createElement('iframe');
+      f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1';
+      f.title=btn.getAttribute('aria-label')||'YouTube video';
+      f.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+      f.setAttribute('allowfullscreen','');
+      btn.replaceWith(f);
+    });
+  });
+
+  /* Background: the tracking problem itself — an ArUco board wanders the floor, a wireframe
+     TurtleBot pursues it at follow distance, a camera frustum locks onto the board, a
+     particle cloud (PF) breathes around the target while a cyan trail (KF estimate) hugs it.
+     A pillar periodically occludes the line of sight: the frustum fades and the particle
+     cloud swells — MEASURED to PREDICTED, rendered literally. */
+  const canvas=document.getElementById('sftscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  camera.position.set(0,3.2,13);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+  const FLOOR=-2.2;
+
+  const grid=new THREE.GridHelper(80,50,0x1c3a66,0x11223f);
+  grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
+  scene.add(grid);
+
+  /* ---- target: ArUco board on a pole, wandering the floor ---- */
+  const target=new THREE.Group();
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.5,5),wire(DEEPBLUE));
+  pole.position.y=0.75; target.add(pole);
+  const board=new THREE.Group();
+  const B=0.9;
+  const bMat=new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.8});
+  const bFrame=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-B/2,-B/2,0),new THREE.Vector3(B/2,-B/2,0),
+    new THREE.Vector3(B/2,B/2,0),new THREE.Vector3(-B/2,B/2,0),new THREE.Vector3(-B/2,-B/2,0)]);
+  board.add(new THREE.Line(bFrame,bMat));
+  // 5x5 marker grid, echoing DICT_5X5
+  const gpts=[];
+  for(let i=1;i<5;i++){
+    const s=-B/2+i*(B/5);
+    gpts.push(new THREE.Vector3(s,-B/2,0),new THREE.Vector3(s,B/2,0));
+    gpts.push(new THREE.Vector3(-B/2,s,0),new THREE.Vector3(B/2,s,0));
+  }
+  const gGeo=new THREE.BufferGeometry().setFromPoints(gpts);
+  board.add(new THREE.LineSegments(gGeo,new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.35})));
+  board.position.y=1.55; target.add(board);
+  target.position.y=FLOOR;
+  scene.add(target);
+
+  /* ---- follower: wireframe TurtleBot ---- */
+  const bot=new THREE.Group();
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.55,0.26,14),wire(DEEPBLUE));
+  base.position.y=0.2; bot.add(base);
+  const deck=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.05,12),wire(DEEPBLUE));
+  deck.position.y=0.45; bot.add(deck);
+  const lidar=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.12,10),wire(AMBER));
+  lidar.position.y=0.56; bot.add(lidar);
+  const camPod=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.12,0.2),wire(CYAN));
+  camPod.position.set(0.46,0.42,0); bot.add(camPod);
+  [[0.5],[-0.5]].forEach(([z])=>{
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.05,10),wire(CYAN));
+    wheel.rotation.x=Math.PI/2; wheel.position.set(0,0.14,z*0.5); bot.add(wheel);
+  });
+  bot.position.set(-3,FLOOR,2);
+  bot.scale.setScalar(mobile?0.85:1.0);
+  scene.add(bot);
+
+  /* ---- LiDAR sweep ring ---- */
+  const ringPts=[];
+  for(let i=0;i<=48;i++){const a=i/48*Math.PI*2;ringPts.push(new THREE.Vector3(Math.cos(a)*2.2,0.02,Math.sin(a)*2.2));}
+  const ring=new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts),
+    new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.14}));
+  bot.add(ring);
+  const sweep=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0,0.56,0),new THREE.Vector3(2.2,0.02,0)]),
+    new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3}));
+  bot.add(sweep);
+
+  /* ---- occlusion pillar ---- */
+  const pillar=new THREE.Mesh(new THREE.BoxGeometry(1.1,3.4,1.1),wire(DEEPBLUE));
+  pillar.position.set(3.2,FLOOR+1.7,-2.2);
+  scene.add(pillar);
+
+  /* ---- particle cloud (PF) around the target ---- */
+  const PN=mobile?70:150;
+  const pOff=[];
+  for(let i=0;i<PN;i++){pOff.push({r:0.25+Math.random()*0.65,a:Math.random()*Math.PI*2,w:0.4+Math.random()*1.2,ph:Math.random()*Math.PI*2,h:0.4+Math.random()*1.6});}
+  const pfPos=new Float32Array(PN*3);
+  const pfGeo=new THREE.BufferGeometry();
+  pfGeo.setAttribute('position',new THREE.BufferAttribute(pfPos,3));
+  const pfPts=new THREE.Points(pfGeo,new THREE.PointsMaterial({color:AMBER,size:0.07,transparent:true,opacity:0.55}));
+  scene.add(pfPts);
+
+  /* ---- KF estimate marker + trail ---- */
+  const kfMark=new THREE.Mesh(new THREE.OctahedronGeometry(0.12),wire(CYAN));
+  scene.add(kfMark);
+  const TN=70;
+  const trailPos=new Float32Array(TN*3);
+  const trailGeo=new THREE.BufferGeometry();
+  trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+  const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3}));
+  scene.add(trail);
+  let trailInit=false;
+
+  /* ---- camera frustum: cam pod -> board corners ---- */
+  const frusGeo=new THREE.BufferGeometry();
+  const frusPos=new Float32Array(8*3);
+  frusGeo.setAttribute('position',new THREE.BufferAttribute(frusPos,3));
+  const frusMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.2});
+  scene.add(new THREE.LineSegments(frusGeo,frusMat));
+
+  /* ---- ambient dust ---- */
+  const PC=mobile?450:1100;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  const goal=new THREE.Vector3(), toT=new THREE.Vector3(), nose=new THREE.Vector3(), est=new THREE.Vector3();
+  let spread=1, frameCount=0;
+  function segNearPillar(a,b,p,rad){
+    // 2D (xz) point-to-segment distance vs pillar radius
+    const ax=a.x,az=a.z,bx=b.x,bz=b.z,px=p.x,pz=p.z;
+    const dx=bx-ax,dz=bz-az;
+    const L2=dx*dx+dz*dz; if(L2===0)return false;
+    let u=((px-ax)*dx+(pz-az)*dz)/L2; u=Math.max(0,Math.min(1,u));
+    const cx=ax+u*dx-px, cz=az+u*dz-pz;
+    return (u>0.02&&u<0.98)&&(cx*cx+cz*cz)<rad*rad;
+  }
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      /* target wanders (lissajous), passing behind the pillar */
+      target.position.x=Math.sin(t*0.17)*7.2;
+      target.position.z=Math.sin(t*0.29+1.2)*3.4-1.2;
+      target.rotation.y=Math.sin(t*0.23)*0.9;
+      board.rotation.y=Math.sin(t*0.6)*0.25;
+
+      /* follower pursues: hold follow distance behind target */
+      toT.subVectors(target.position,bot.position); toT.y=0;
+      const dist=toT.length();
+      if(dist>0.001){
+        const desiredYaw=Math.atan2(-toT.z,toT.x);
+        let dy=desiredYaw-bot.rotation.y;
+        while(dy>Math.PI)dy-=Math.PI*2; while(dy<-Math.PI)dy+=Math.PI*2;
+        bot.rotation.y+=dy*0.02;
+        goal.copy(target.position).addScaledVector(toT.normalize(),-2.0);
+        goal.y=FLOOR;
+        bot.position.lerp(goal,0.012);
+      }
+      sweep.rotation.y=t*2.4;
+      ring.material.opacity=0.09+Math.sin(t*3)*0.05;
+
+      /* occlusion check: pillar between camera and board */
+      const occluded=segNearPillar(bot.position,target.position,pillar.position,1.0);
+      spread+=((occluded?2.6:1)-spread)*0.04;
+      frusMat.opacity+=((occluded?0.03:0.2)-frusMat.opacity)*0.08;
+      bMat.opacity=occluded?0.35:0.8;
+
+      /* PF cloud breathes around the board; swells when occluded */
+      for(let i=0;i<PN;i++){
+        const o=pOff[i];
+        const r=o.r*spread;
+        pfPos[i*3]  =target.position.x+Math.cos(o.a+t*o.w)*r;
+        pfPos[i*3+1]=target.position.y+1.0+Math.sin(o.ph+t*o.w*0.7)*o.h*0.5+0.5;
+        pfPos[i*3+2]=target.position.z+Math.sin(o.a+t*o.w)*r;
+      }
+      pfGeo.attributes.position.needsUpdate=true;
+      pfPts.material.opacity=occluded?0.75:0.45;
+
+      /* KF estimate hugs the target with slight lag */
+      est.set(target.position.x,target.position.y+1.55,target.position.z);
+      kfMark.position.lerp(est,0.08);
+      kfMark.rotation.y=t*1.4;
+      if(!trailInit){for(let i=0;i<TN;i++){trailPos[i*3]=est.x;trailPos[i*3+1]=est.y;trailPos[i*3+2]=est.z;}trailInit=true;}
+      if(++frameCount%3===0){
+        for(let i=TN-1;i>0;i--){trailPos[i*3]=trailPos[(i-1)*3];trailPos[i*3+1]=trailPos[(i-1)*3+1];trailPos[i*3+2]=trailPos[(i-1)*3+2];}
+        trailPos[0]=kfMark.position.x;trailPos[1]=kfMark.position.y;trailPos[2]=kfMark.position.z;
+        trailGeo.attributes.position.needsUpdate=true;
+      }
+
+      /* frustum: cam pod -> board corners */
+      nose.set(0.46,0.42,0).applyMatrix4(bot.matrixWorld);
+      const corners=[[-B/2,-B/2],[B/2,-B/2],[B/2,B/2],[-B/2,B/2]];
+      corners.forEach((c,i)=>{
+        const p=new THREE.Vector3(c[0],c[1],0);
+        board.localToWorld(p);
+        frusPos[i*6]=nose.x; frusPos[i*6+1]=nose.y; frusPos[i*6+2]=nose.z;
+        frusPos[i*6+3]=p.x;  frusPos[i*6+4]=p.y;  frusPos[i*6+5]=p.z;
+      });
+      frusGeo.attributes.position.needsUpdate=true;
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.6)*13+mx*1.6;
+    camera.position.z=Math.cos(d*0.6)*13;
+    camera.position.y=3.2-Math.min(d*1.5,3);
+    camera.lookAt((target.position.x+bot.position.x)*0.25,0.4,(target.position.z+bot.position.z)*0.25);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Space Robotics & AI coursework — LQR stabilization of a cart-pole under earthquake disturbance, a PD-tuned boustrophedon coverage navigator, and a PX4 SITL drone mission with RGB-D mapping and precision landing. ASU RAS/SES 598. By Prajjwal Dutta.">
+<title>LQR Stabilization &amp; Space Robotics — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #dronescene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;
+    padding:0.6rem 1.2rem;transition:border-color .25s,color .25s,transform .25s;}
+  .btn:hover,.btn:focus-visible{color:var(--cyan);border-color:var(--cyan);transform:translateY(-2px);}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  figcaption a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="dronescene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Optimal Control · Spring 2025</span><span>ASU · RAS/SES 598 Space Robotics &amp; AI</span></div>
+    <h1 class="reveal">Balancing a Pendulum Through a Simulated Earthquake</h1>
+    <p class="sub reveal">
+      An underactuated cart-pole — one actuator, four states, and a continuous earthquake force
+      generator trying to knock it over. The task was to design and tune a
+      <strong>Linear Quadratic Regulator</strong> that keeps the pole upright <em>and</em> the
+      cart inside a ±2.5 m rail, then prove it with logged metrics rather than a video that
+      looks stable. Tuning Q and R turned a controller that flung the cart 3 m and saturated at
+      ~300 N into one holding <strong>0.09 rad</strong> of pole deviation and
+      <strong>7.8 cm</strong> RMS cart error at a <strong>70 N</strong> peak.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/RAS-SES-598-Space-Robotics-and-AI" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="btn" href="https://drive.google.com/file/d/1rPaYaQFi7gwk5XYfn2aMJvr7oC3SJ-R5/view?usp=sharing" target="_blank" rel="noopener">Demo video ↗</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>0.0900 rad</b><span>max pole deviation · 5.2°</span></div>
+      <div class="metric"><b>0.0779 m</b><span>RMS cart position error</span></div>
+      <div class="metric"><b>70.12 N</b><span>peak control force</span></div>
+      <div class="metric"><b>71.95%</b><span>control effort efficiency</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <a href="../assets/ses598/cartpole-rviz.jpg" target="_blank" rel="noopener">
+      <img src="../assets/ses598/cartpole-rviz.jpg" alt="RViz view of the cart-pole system: a red cart on a blue rail with the pole held vertical, plus the disturbance force arrow.">
+    </a>
+    <figcaption><span class="n">FIG 01</span>The stabilized system in RViz — pole vertical, cart near rail center, with the earthquake force arrow (magenta) actively pushing against it.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Plant</div>
+    <h2 class="reveal">Four states, one actuator, and a ground that won't hold still.</h2>
+    <p class="reveal">
+      The cart-pole is the canonical underactuated system: the state is
+      <strong>[x, ẋ, θ, θ̇]</strong> — cart position and velocity, pole angle and angular rate —
+      but the only input is a horizontal force on the cart. There is no torque at the pole
+      joint. Every correction to the pole has to be bought by moving the cart, and the cart has
+      only <strong>±2.5 m</strong> of rail to spend. That coupling is the entire difficulty:
+      aggressively fixing the angle drives the cart into its limit, and protecting the cart
+      lets the pole fall.
+    </p>
+    <p class="reveal">
+      What makes it more than a textbook exercise is the disturbance. An earthquake generator
+      injects continuous force built from a <strong>superposition of sine waves</strong> —
+      15 N base amplitude across <strong>0.5–4.0 Hz</strong>, with randomized amplitude and
+      phase plus Gaussian noise on top. It's broadband, persistent, and never repeats, so the
+      controller can't settle into any steady state; it's always rejecting.
+    </p>
+    <div class="law reveal">
+      A = [[0,1,0,0], [0,0, <span class="a">mg/M</span>, 0], [0,0,0,1], [0,0, <span class="a">(M+m)g/(ML)</span>, 0]]<br>
+      B = [0, <span class="a">1/M</span>, 0, <span class="a">−1/(ML)</span>]ᵀ &nbsp;<span class="c">// M = m = 1.0 kg, L = 1.0 m</span><br>
+      K = solve_continuous_are(A, B, Q, R) → <span class="a">u = −Kx</span> <span class="c">// control loop at 100 Hz</span>
+    </div>
+    <p class="reveal">
+      The controller linearizes about the upright equilibrium, solves the continuous algebraic
+      Riccati equation for the optimal gain, and applies <strong>u = −Kx</strong>. Which means
+      the real design work isn't writing the controller at all — it's choosing what
+      <em>optimal</em> means, and that lives entirely in Q and R.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Tuning</div>
+    <h2 class="reveal">Q and R are where the engineering judgment goes.</h2>
+    <p class="reveal">
+      LQR minimizes ∫(xᵀQx + uᵀRu) dt — Q prices deviation in each state, R prices control
+      effort. The starting weights treated cart position as barely worth anything
+      (<code>Q[0,0] = 1.0</code>) and only mildly penalized pole angle
+      (<code>Q[2,2] = 10.0</code>), with cheap control (<code>R = 0.1</code>). The result was
+      exactly what those prices ask for: a controller that happily slides the cart 3 m and
+      slams in ~300 N of force to chase the angle, because neither was expensive.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Weight</th><th>Before</th><th>After</th><th>Intent</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Q[0,0] — cart position</td><td>1.0</td><td>50.0</td><td>make displacement expensive → stay on the rail</td></tr>
+        <tr><td>Q[1,1] — cart velocity</td><td>1.0</td><td>5.0</td><td>smooth the cart, kill erratic darting</td></tr>
+        <tr class="hl"><td>Q[2,2] — pole angle</td><td>10.0</td><td>100.0</td><td>correct tilt harder — the primary objective</td></tr>
+        <tr><td>Q[3,3] — pole rate</td><td>10.0</td><td>20.0</td><td>damp fast oscillation before it builds</td></tr>
+        <tr><td>R — control effort</td><td>0.1</td><td>0.1</td><td>held: force headroom needed for 4 Hz disturbance</td></tr>
+      </tbody>
+    </table>
+    <p class="reveal">
+      The key move is the <strong>50× increase on cart position</strong> alongside the
+      <strong>10× on pole angle</strong>. Raising only the angle weight makes the pole better
+      and the displacement worse; raising both in proportion is what buys stability in one
+      without sacrificing the other. Q[3,3] doing damping duty is the quiet one — penalizing
+      angular <em>rate</em> stops oscillations while they're small, which costs far less force
+      than correcting them once they're large.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Results</div>
+    <h2 class="reveal">Logged, not eyeballed.</h2>
+    <p class="reveal">
+      A dedicated <code>performance_metrics</code> node logs the numbers that matter while the
+      earthquake runs — peak pole deviation, RMS cart error, peak force, control effort
+      efficiency, recovery time, and the achieved control rate. Two runs from that node tell
+      the tuning story better than any plot: an intermediate configuration, and the final one.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Logged metric</th><th>Intermediate run</th><th>Final tuning</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Max pole angle deviation</td><td>0.1520 rad</td><td>0.0900 rad (5.2°)</td></tr>
+        <tr class="hl"><td>RMS cart position error</td><td>0.2266 m</td><td>0.0779 m</td></tr>
+        <tr><td>Peak control force</td><td>104.27 N</td><td>70.12 N</td></tr>
+        <tr><td>Control effort efficiency</td><td>58.29%</td><td>71.95%</td></tr>
+        <tr><td>Average recovery time</td><td>0.013 s</td><td>0.030 s</td></tr>
+        <tr><td>Control rate</td><td>67.83 Hz</td><td>43.05 Hz</td></tr>
+      </tbody>
+    </table>
+    <p class="reveal">
+      Against the untuned baseline the improvement is larger still: peak force fell from around
+      <strong>300 N to 70.12 N</strong>, and maximum cart excursion from roughly
+      <strong>3.1 m</strong> — outside the physical rail — to about <strong>1.1 m</strong>,
+      comfortably inside it. The honest caveat is the last row: the final configuration logs a
+      lower control rate, so there's a real trade between how hard the gains work and how fast
+      the loop closes.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/ses598/metrics-final.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ses598/metrics-final.jpg" alt="Terminal log of the final performance metrics: max pole angle 0.0900 rad, RMS cart error 0.0779 m, peak force 70.12 N, efficiency 71.95%.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>Final metrics, logged live — repeated identically across successive reports, i.e. steady under continuing disturbance.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/ses598/metrics-intermediate.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ses598/metrics-intermediate.jpg" alt="Split terminal showing the earthquake generator firing on the left and the LQR controller's per-step state and control force on the right.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>The loop under load — "Earthquake detected!" events on the left, per-step state and control force on the right.</figcaption>
+      </figure>
+    </div>
+    <p class="tnote reveal">Metrics as logged by the performance_metrics node in the repository; before-tuning figures as reported in the assignment README.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Also In This Course</div>
+    <h2 class="reveal">Coverage planning on a first-order system.</h2>
+    <p class="reveal">
+      <strong>Boustrophedon coverage navigator.</strong> A first-order system (turtlesim) driven
+      through a lawnmower survey pattern by a PD controller, where the score is
+      <strong>cross-track error</strong> — how far the robot drifts off the prescribed path.
+      Tuning splits into two independent loops: linear gains govern how hard it drives down each
+      pass, angular gains govern how cleanly it turns at the ends of rows. Final gains were
+      <strong>Kp_linear = 10.0, Kd_linear = 0.1, Kp_angular = 5.0, Kd_angular = 0.2</strong> at
+      1.0 unit line spacing — an aggressive proportional term for tracking with light derivative
+      damping to keep cornering from overshooting. Reported average cross-track error under the
+      0.2-unit target.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Rocky Times Challenge</div>
+    <h2 class="reveal">Find two rocks, measure them, land on the tall one.</h2>
+    <p class="reveal">
+      The course capstone flew a <strong>PX4 SITL</strong> quadrotor with a downward camera and
+      RGB-D sensing into an unknown scene holding two cylindrical rock formations —
+      <strong>10 m and 7 m</strong> tall. The mission: search the area, locate both, estimate
+      their diameters and world-frame positions, and land on top of the taller one, all while
+      logging time and energy.
+    </p>
+    <p class="reveal">
+      The search strategy is the first real decision, and it's a coverage-versus-information
+      trade. A <strong>spiral</strong> is efficient when the target is likely central;
+      <strong>random</strong> walks suit total uncertainty; <strong>frontier-based</strong>
+      exploration is optimal when a SLAM map is being built live; a <strong>grid + TSP</strong>
+      hybrid wins in cluttered semi-known space. For a bounded arena with two guaranteed targets
+      the answer is the boring one — a <strong>lawnmower sweep</strong> with line spacing set
+      from the camera's field of view gives provable complete coverage, and its straight-line
+      legs keep the airframe stable enough to hand off to a precision descent. Same
+      boustrophedon idea as the turtlesim assignment, now in three dimensions with a real
+      vehicle under it.
+    </p>
+    <div class="law reveal">
+      TAKEOFF <span class="c">→</span> SURVEY <span class="c">(lawnmower, abort on detection)</span> <span class="c">→</span> <span class="a">GOTO_ARUCO</span> <span class="c">→</span> HOVER <span class="c">→</span> DESCEND <span class="c">→</span> LAND<br>
+      <span class="c">marker pose:</span> OpenCV ArUco <span class="c">→</span> <span class="a">solvePnP</span>(intrinsics) <span class="c">+ PX4 odometry → world position</span><br>
+      <span class="c">control:</span> /fmu/in/offboard_control_mode · /fmu/in/trajectory_setpoint · /fmu/in/vehicle_command
+    </div>
+    <p class="reveal">
+      Detection runs on the downward mono stream against published camera intrinsics; when a
+      marker appears mid-survey the remaining sweep is <strong>abandoned immediately</strong>,
+      the marker's global position is inferred from <code>solvePnP</code>'s translation vector
+      composed with onboard odometry, and the vehicle walks in on position setpoints before
+      hovering to stabilize and descending. Mission parameters: <strong>0.8 m</strong> marker,
+      <strong>15 m</strong> takeoff altitude, <strong>2.0 m</strong> survey step,
+      <strong>0.2 m</strong> final descent height. RTAB-Map covered the 3D reconstruction
+      extension, exporting both rocks as a mesh.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <video autoplay muted loop playsinline preload="none"
+          poster="../assets/ses598/landing-trial1-poster.jpg"
+          aria-label="Trial 1: the drone completes a lawnmower survey, detects the ArUco marker, hovers and descends.">
+          <source src="../media/ses598-landing-trial1.mp4" type="video/mp4">
+        </video>
+        <figcaption><span class="n">VID 01</span>Trial 1 — survey complete, marker detected mid-sweep, controlled descent.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <video autoplay muted loop playsinline preload="none"
+          poster="../assets/ses598/landing-trial2-poster.jpg"
+          aria-label="Trial 2: the drone hovers over the detected marker and executes its landing sequence.">
+          <source src="../media/ses598-landing-trial2.mp4" type="video/mp4">
+        </video>
+        <figcaption><span class="n">VID 02</span>Trial 2 — hover held over the target before descent is triggered.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <video autoplay muted loop playsinline preload="none"
+        poster="../assets/ses598/landing-trial3-poster.jpg"
+        aria-label="Trial 3: full mission from lawnmower pattern through aerial marker detection to touchdown.">
+        <source src="../media/ses598-landing-trial3.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 03</span>Trial 3 — the full pipeline end to end. Demo footage recorded by classmate <a href="https://github.com/anushka002/RAS-SES-598-Space-Robotics-and-AI" target="_blank" rel="noopener">Anushka Satapathy</a>, from the same class assignment.</figcaption>
+    </figure>
+    <p class="reveal">
+      The instructive part is the failure. Across trials the pipeline ran clean — coverage,
+      detection, hover, descent — but touchdown landed <strong>consistently beside the marker
+      rather than on it</strong>, and consistency is the tell. A random scatter would suggest
+      noise; a repeatable offset in the same direction points at a systematic error: frame
+      misalignment between camera and body, the <code>tvec</code> from
+      <code>solvePnP</code> mapped into the world frame with a wrong transform, or depth
+      estimates drifting during descent as the marker fills the frame. Fixing that is a
+      calibration and TF problem, not a control-gain problem — which is exactly the kind of
+      diagnosis worth being able to make.
+    </p>
+    <p class="tnote reveal">The cart-pole assignment above is documented with my own logged results in this repository. This challenge was a common class assignment; the trial footage shown is credited to my classmate above.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Optimal control is a pricing problem.</strong> The LQR machinery is four lines of
+      scipy; everything that determined whether this thing stayed on the rail was the relative
+      cost assigned to displacement, tilt, and effort. Getting Q wrong doesn't produce a broken
+      controller — it produces a controller that optimally does the wrong thing.
+      <strong>Underactuated means every fix costs something elsewhere:</strong> there is no gain
+      that improves pole angle for free, only a trade you choose deliberately.
+      <strong>And instrument before you tune</strong> — the metrics node is what turned "looks
+      stable" into 0.0900 rad and 70.12 N, which is the difference between a claim and a result.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">LQR</span><span class="tag">Optimal Control</span><span class="tag">Riccati / CARE</span>
+      <span class="tag">Underactuated Systems</span><span class="tag">Disturbance Rejection</span>
+      <span class="tag">ROS 2</span><span class="tag">Gazebo</span><span class="tag">RViz</span>
+      <span class="tag">PD Control</span><span class="tag">Coverage Planning</span>
+      <span class="tag">PX4 SITL</span><span class="tag">RTAB-Map</span><span class="tag">ArUco / solvePnP</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the Rocky Times mission, flown live. A quadrotor takes off, runs a
+     boustrophedon survey at altitude with its downward camera cone sweeping, spots the ArUco
+     marker on top of the taller cylinder, aborts the remaining sweep, closes in, hovers to
+     stabilize, descends, and lands on the rock. Then it lifts off and runs it again. */
+  const canvas=document.getElementById('dronescene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.022);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,GREEN=0x63d97a;
+  const mobile=innerWidth<700;
+  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o});
+  const lineMat=(c,o)=>new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o});
+
+  const grid=new THREE.GridHelper(34,34,0x1c3a66,0x11223f);
+  grid.material.transparent=true; grid.material.opacity=0.24; scene.add(grid);
+
+  /* ---- the two rock formations: the 10 m and 7 m cylinders of the challenge ---- */
+  const TALL={x:2.6,z:-1.2,r:0.95,h:3.6}, SHORT={x:-3.8,z:2.2,r:0.85,h:2.5};
+  [TALL,SHORT].forEach(c=>{
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(c.r,c.r,c.h,16,3,true),wire(DEEPBLUE,0.45));
+    m.position.set(c.x,c.h/2,c.z); scene.add(m);
+    const cap=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+      Array.from({length:24},(_,i)=>{const a=i/24*Math.PI*2;
+        return new THREE.Vector3(c.x+Math.cos(a)*c.r,c.h,c.z+Math.sin(a)*c.r);})),lineMat(CYAN,0.4));
+    scene.add(cap);
+  });
+
+  /* ---- the ArUco marker on top of the tall cylinder ---- */
+  const marker=new THREE.Group();
+  marker.position.set(TALL.x,TALL.h+0.02,TALL.z);
+  marker.rotation.x=-Math.PI/2;
+  scene.add(marker);
+  const MS=0.62;
+  const plate=new THREE.Mesh(new THREE.PlaneGeometry(MS,MS),
+    new THREE.MeshBasicMaterial({color:0x0b1424,transparent:true,opacity:0.85,side:THREE.DoubleSide}));
+  marker.add(plate);
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++){
+    if((i*4+j)%3!==0) continue;                       // a sparse pseudo-ArUco bit pattern
+    const s=MS/5;
+    const q=new THREE.Mesh(new THREE.PlaneGeometry(s*0.9,s*0.9),
+      new THREE.MeshBasicMaterial({color:0xdfe8f4,transparent:true,opacity:0.9,side:THREE.DoubleSide}));
+    q.position.set(-MS/2+s*(i+1),-MS/2+s*(j+1),0.002); marker.add(q);
+  }
+  const mRing=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-MS/2,-MS/2,0.003),new THREE.Vector3(MS/2,-MS/2,0.003),
+    new THREE.Vector3(MS/2,MS/2,0.003),new THREE.Vector3(-MS/2,MS/2,0.003)]),lineMat(AMBER,0.5));
+  marker.add(mRing);
+
+  /* ---- the survey: a boustrophedon sweep at altitude ---- */
+  const ALT=4.8, X0=-6.5, X1=6.5, Z0=-5.0, ZSTEP=2.5, ROWS=5;
+  const SURVEY=[];
+  for(let r=0;r<ROWS;r++){
+    const z=Z0+r*ZSTEP;
+    if(r%2===0){SURVEY.push(new THREE.Vector3(X0,ALT,z));SURVEY.push(new THREE.Vector3(X1,ALT,z));}
+    else{SURVEY.push(new THREE.Vector3(X1,ALT,z));SURVEY.push(new THREE.Vector3(X0,ALT,z));}
+  }
+  const planPts=[];
+  for(let i=0;i<SURVEY.length-1;i++){
+    const a=SURVEY[i],b=SURVEY[i+1];
+    for(let s=0;s<20;s+=2){
+      planPts.push(a.clone().lerp(b,s/20),a.clone().lerp(b,(s+1)/20));
+    }
+  }
+  const planMat=lineMat(CYAN,0.22);
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(planPts),planMat));
+
+  /* ---- the quadrotor ---- */
+  const drone=new THREE.Group(); scene.add(drone);
+  const hull=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.12,0.34),wire(AMBER,0.9));
+  drone.add(hull);
+  const rotors=[];
+  [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([sx,sz])=>{
+    const ax=sx*0.32, az=sz*0.32;
+    drone.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+      [new THREE.Vector3(0,0,0),new THREE.Vector3(ax,0,az)]),lineMat(DEEPBLUE,0.7)));
+    const disc=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+      Array.from({length:14},(_,i)=>{const a=i/14*Math.PI*2;
+        return new THREE.Vector3(Math.cos(a)*0.19,0,Math.sin(a)*0.19);})),lineMat(CYAN,0.6));
+    disc.position.set(ax,0.04,az); drone.add(disc);
+    const blade=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+      [new THREE.Vector3(-0.19,0,0),new THREE.Vector3(0.19,0,0)]),lineMat(CYAN,0.5));
+    blade.position.set(ax,0.045,az); drone.add(blade); rotors.push(blade);
+  });
+  /* downward camera cone — the sensor that finds the marker */
+  const coneMat=wire(CYAN,0.14);
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(0.85,1.9,4,1,true),coneMat);
+  cone.rotation.x=Math.PI; cone.position.y=-0.95; drone.add(cone);
+
+  /* ---- flown trail ---- */
+  const TN=mobile?110:220;
+  const trailPos=new Float32Array(TN*3);
+  const trailGeo=new THREE.BufferGeometry();
+  trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+  const trail=new THREE.Line(trailGeo,lineMat(GREEN,0.35));
+  trail.frustumCulled=false; scene.add(trail);
+  let trailN=0;
+
+  /* ---- mission state machine: TAKEOFF → SURVEY → GOTO → HOVER → DESCEND → LAND ---- */
+  const HOME=new THREE.Vector3(X0-1.5,0.12,Z0-1.5);
+  const pos=new THREE.Vector3().copy(HOME);
+  const tgt=new THREE.Vector3();
+  let state='TAKEOFF', legI=0, timer=0, detected=false, yaw=0;
+  const TOUCH=TALL.h+0.12;
+  const speed={TAKEOFF:2.2,SURVEY:3.4,GOTO:2.6,DESCEND:1.1,RETURN:3.0};
+
+  function moveToward(target,v,dt){
+    const d=target.clone().sub(pos), len=d.length();
+    if(len<1e-4) return true;
+    const stepLen=Math.min(len,v*dt);
+    pos.add(d.multiplyScalar(stepLen/len));
+    const want=Math.atan2(target.x-pos.x,target.z-pos.z);
+    if(Math.abs(target.x-pos.x)+Math.abs(target.z-pos.z)>1e-3){
+      let e=want-yaw; while(e>Math.PI)e-=6.2832; while(e<-Math.PI)e+=6.2832;
+      yaw+=e*Math.min(1,dt*3);
+    }
+    return len<=v*dt;
+  }
+  function resetMission(){
+    state='TAKEOFF'; legI=0; timer=0; detected=false; trailN=0;
+    pos.copy(HOME); planMat.opacity=0.22; coneMat.color.setHex(CYAN);
+  }
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.05);
+    const t=clock.elapsedTime;
+    if(!reduced){
+      let spin=26;
+      switch(state){
+        case 'TAKEOFF':
+          tgt.set(HOME.x,ALT,HOME.z);
+          if(moveToward(tgt,speed.TAKEOFF,dt)) state='SURVEY';
+          break;
+        case 'SURVEY':
+          if(moveToward(SURVEY[legI],speed.SURVEY,dt)) legI=Math.min(legI+1,SURVEY.length-1);
+          /* the downward camera picks the marker up when it passes near enough */
+          if(!detected && Math.hypot(pos.x-TALL.x,pos.z-TALL.z)<1.9){
+            detected=true; state='GOTO';
+            planMat.opacity=0.08;                 // remaining sweep abandoned
+            coneMat.color.setHex(AMBER);
+          }
+          break;
+        case 'GOTO':
+          tgt.set(TALL.x,ALT,TALL.z);
+          if(moveToward(tgt,speed.GOTO,dt)){ state='HOVER'; timer=0; }
+          break;
+        case 'HOVER':
+          timer+=dt;
+          pos.y=ALT+Math.sin(t*2.2)*0.07;         // holding station over the marker
+          if(timer>1.8) state='DESCEND';
+          break;
+        case 'DESCEND':
+          tgt.set(TALL.x,TOUCH,TALL.z);
+          spin=20;
+          if(moveToward(tgt,speed.DESCEND,dt)){ state='LANDED'; timer=0; }
+          break;
+        case 'LANDED':
+          timer+=dt; spin=6*Math.max(0,1-timer);  // rotors spin down on the rock
+          if(timer>2.2) state='RETURN';
+          break;
+        case 'RETURN':
+          tgt.set(HOME.x,ALT,HOME.z);
+          if(moveToward(tgt,speed.RETURN,dt)) resetMission();
+          break;
+      }
+      drone.position.copy(pos);
+      drone.rotation.y=yaw;
+      const banking=(state==='SURVEY'||state==='GOTO'||state==='RETURN')?0.12:0.0;
+      drone.rotation.z+=(banking*Math.sin(t*0.9)-drone.rotation.z)*Math.min(1,dt*2);
+      rotors.forEach((r,i)=>{r.rotation.y+=spin*dt*(i%2?1:-1);});
+      cone.visible=state!=='LANDED';
+      coneMat.opacity=(detected&&state!=='LANDED')?0.13+0.1*Math.sin(t*7):0.12;
+      mRing.material.opacity=detected?0.5+0.4*Math.sin(t*6):0.35;
+
+      for(let i=TN-1;i>0;i--){
+        trailPos[i*3]=trailPos[(i-1)*3];trailPos[i*3+1]=trailPos[(i-1)*3+1];trailPos[i*3+2]=trailPos[(i-1)*3+2];
+      }
+      trailPos[0]=pos.x;trailPos[1]=pos.y;trailPos[2]=pos.z;
+      if(trailN<TN){
+        trailN++;
+        for(let i=trailN;i<TN;i++){trailPos[i*3]=pos.x;trailPos[i*3+1]=pos.y;trailPos[i*3+2]=pos.z;}
+      }
+      trailGeo.attributes.position.needsUpdate=true;
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0011;
+    const orbit=mobile?22:16;
+    camera.position.x=Math.sin(t*0.055+d*0.4)*orbit*0.65+mx*2.2;
+    camera.position.z=orbit+Math.cos(t*0.055+d*0.4)*5;
+    camera.position.y=7.5+Math.min(d*2.2,5);
+    camera.lookAt(0,1.6,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

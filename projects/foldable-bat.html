@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Robotic flight inspired by bat wings — a foldable, laminated flapping-wing robot with a gear-driven four-bar mechanism, single-servo actuation, parameter identification, and MuJoCo simulation. ASU Foldable Robotics. By Prajjwal Dutta.">
+<title>Foldable Flapping-Wing Robot — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #batscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+  .narrow{max-width:620px;margin-left:auto;margin-right:auto;}
+
+  figcaption a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
+  figcaption a:hover{border-bottom-color:var(--cyan);}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="batscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Bio-Inspired · Fall 2024</span><span>ASU · Foldable Robotics</span></div>
+    <h1 class="reveal">A Robot That Learned to Fly by Copying a Bat, One Fold at a Time</h1>
+    <p class="sub reveal">
+      A foldable flapping-wing robot modeled on <em>Glossophaga soricina</em>, Pallas's
+      long-tongued bat. The wings are a <strong>two-layer lamination</strong> — vinyl film
+      bonded to a flexure layer — with vein-like creases that act as living hinges, so the
+      wingspan folds and changes in flight. A <strong>single servo</strong>, centrally mounted
+      between both wings, drives a gear train and a four-bar linkage that flaps them together.
+      The project ran the full loop: parameter identification on the physical parts, symbolic
+      four-bar kinematics, MuJoCo simulation, and a working prototype that flaps.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/Foldable-Robotics" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="https://www.youtube.com/watch?v=ZdsJeafwBmk" target="_blank" rel="noopener" aria-label="Project video on YouTube" title="Project Video (YouTube)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FF0000" d="M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.51A3.02 3.02 0 0 0 .5 6.2C0 8.09 0 12 0 12s0 3.91.5 5.8a3.02 3.02 0 0 0 2.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51a3.02 3.02 0 0 0 2.12-2.14C24 15.91 24 12 24 12s0-3.91-.5-5.8ZM9.55 15.57V8.43L15.82 12l-6.27 3.57Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>1</b><span>servo · both wings</span></div>
+      <div class="metric"><b>2-layer</b><span>laminated wing membrane</span></div>
+      <div class="metric"><b>6</b><span>incremental stiffness tests</span></div>
+      <div class="metric"><b>0.158 m/N</b><span>foam compliance, measured</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/foldable/flapping-demo-poster.jpg"
+      aria-label="The finished flapping-wing prototype driving its laminated wing through a flap cycle on the bench.">
+      <source src="../media/foldable-flapping-demo.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>The prototype flapping under servo power — the laminated wing folds along its vein hinges through the stroke. It works.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Premise</div>
+    <h2 class="reveal">Bats don't have wings. They have hands.</h2>
+    <p class="reveal">
+      A bat's flight surface is a membrane stretched over jointed fingers, which is why it can
+      change shape mid-stroke — folding, cambering, and adjusting span in ways a rigid airfoil
+      can't. That adaptive morphology is the whole reason bats out-maneuver comparable fliers in
+      cluttered space, and it's what makes them worth copying for search-and-rescue and survey
+      drones that have to work indoors and between obstacles.
+    </p>
+    <p class="reveal">
+      The project started as a study of <strong>gliding and landing</strong> mechanics — model
+      the wing, predict trajectories and aerodynamic forces, evaluate configurations. After a
+      review, the professor pushed for something harder: add a <strong>flapping
+      mechanism</strong> and use the force the four-bar linkage was already producing. That
+      redirect is what turned a glider into a robot, and it forced two other changes downstream
+      — a stronger frame and a properly laminated wing.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Wing</div>
+    <h2 class="reveal">Laminate two layers, crease them, and the hinges come free.</h2>
+    <p class="reveal">
+      The final wing is the course's lamination technique applied literally: a
+      <strong>vinyl film with an adhesive backing</strong> cut to the wing profile, with a
+      <strong>flexure material</strong> bonded straight onto the adhesive side and the excess
+      trimmed. The pattern of that flexure layer forms <strong>vein-like structures</strong>
+      copied from bat wing anatomy — and those veins double as the hinges. No pin joints, no
+      bearings: the wing folds where the laminate is compliant and stays rigid where it isn't,
+      which is what lets the wingspan change dynamically during a stroke.
+    </p>
+    <p class="reveal">
+      That was the endpoint, not the start. Early prototypes used whatever was to hand —
+      <strong>wax paper</strong>, then a kitchen paper sheet versus a clear
+      <strong>mylar sheet</strong>. The mylar won, and it won on data: the gliding experiment
+      from parameter identification is what chose it.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/foldable/wing-final.jpg" target="_blank" rel="noopener">
+          <img src="../assets/foldable/wing-final.jpg" alt="The final laminated wing — a yellow vinyl film sheet with dark vein-like flexure strips forming a triangular wing panel.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>The final wing: vinyl film laminated to a flexure layer, with bat-inspired veins doing the hinging.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/foldable/wing-mat-a.jpg" target="_blank" rel="noopener">
+          <img src="../assets/foldable/wing-mat-a.jpg" alt="An early four-bar wing frame covered with a paper sheet membrane during wing material testing.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>Membrane trials on the early frame — paper sheet versus clear mylar, decided by the gliding tests.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Mechanism</div>
+    <h2 class="reveal">One motor, two wings, and a gear mesh that broke the first frame.</h2>
+    <p class="reveal">
+      The drivetrain converts rotation into stroke through a <strong>gear-driven four-bar
+      linkage</strong>. One servo sits on the body structure <strong>between the two
+      wings</strong> and flaps both — a deliberate choice twice over: it halves the actuator
+      count, and its central placement keeps the <strong>center of gravity on the body
+      frame</strong> rather than skewed to one side, which matters more on something that has to
+      glide than on something that just has to move.
+    </p>
+    <p class="reveal">
+      The frame material was the hard lesson. The initial build used <strong>balsa
+      board</strong>, and it simply couldn't hold a gear mesh — it <strong>broke under minimal
+      actuation</strong> and had none of the strength the flapping stroke demanded. The final
+      frame moved to <strong>3D-printed PLA</strong>, which was stiff enough to both survive the
+      stroke and carry a printed gear mesh that the balsa version could never support. Control
+      is an <strong>ESP32</strong>, powered directly for the prototype; onboard batteries were
+      left as future work.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/foldable/body-frame-cad.jpg" target="_blank" rel="noopener">
+          <img src="../assets/foldable/body-frame-cad.jpg" alt="CAD render of the final body frame — a symmetric multi-link wing skeleton with a central gear sector between the two wings.">
+        </a>
+        <figcaption><span class="n">FIG 04</span>Final body frame — the central gear sector between the wings is the whole transmission.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/foldable/proto-cad.jpg" target="_blank" rel="noopener">
+          <img src="../assets/foldable/proto-cad.jpg" alt="CAD model of the initial four-bar prototype — a flat linkage of perforated bars forming a triangular wing frame.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>The initial four-bar CAD — built to vary wingspan, not to flap: fully open, partially open, fully closed.</figcaption>
+      </figure>
+    </div>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/foldable/proto-foam.jpg" target="_blank" rel="noopener">
+          <img src="../assets/foldable/proto-foam.jpg" alt="The foam sheet version of the four-bar prototype assembled on a desk next to electronics.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>Foam-sheet build (a) — compliant, and measurably so.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/foldable/proto-balsa.jpg" target="_blank" rel="noopener">
+          <img src="../assets/foldable/proto-balsa.jpg" alt="The balsa board version of the four-bar linkage prototype being handled during assembly.">
+        </a>
+        <figcaption><span class="n">FIG 07</span>Balsa build (b) — stiffer than foam, still too brittle for a gear mesh.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Parameter ID</div>
+    <h2 class="reveal">Measure the parts before you trust the model.</h2>
+    <p class="reveal">
+      Each team member owned one physical parameter, measured on the real hardware and fitted in
+      Python — the numbers that make a simulation mean something.
+      <strong>Stiffness (my piece):</strong> six tests starting from the empty chassis and adding
+      components one at a time up to the fully assembled system, with a <strong>power-law
+      model</strong> fitted to the force–displacement data so each component's contribution to
+      overall structural integrity could be separated out.
+      <strong>Compliance:</strong> loaded deflection tests across the cylinder, servo, batteries,
+      and ESP32 breadboard, fitted linearly — the foam board came out at
+      <strong>0.1578 m/N</strong>, bending measurably more than balsa under identical load.
+    </p>
+    <p class="reveal">
+      <strong>Mass and inertia:</strong> a <strong>torsional pendulum</strong> on the balsa
+      chassis, timing oscillation periods at several pivot distances, polynomial-fitted in Python
+      and cross-checked against <strong>SolidWorks</strong>.
+      <strong>Gliding:</strong> three membrane configurations — plastic parchment, wax paper, and
+      a bare unmembraned frame — through free-fall and assisted drop tests, with a
+      <strong>4th-degree polynomial</strong> fitted to the motion to recover acceleration and
+      velocity profiles and back out a coefficient of gliding friction.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Parameter</th><th>Method</th><th>Fit</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Stiffness</td><td>6 incremental load tests, empty chassis → full system</td><td>power law</td></tr>
+        <tr><td>Compliance</td><td>digital scale + loaded deflection</td><td>linear · foam 0.1578 m/N</td></tr>
+        <tr><td>Mass &amp; inertia</td><td>torsional pendulum, varied pivot distance</td><td>polynomial vs. SolidWorks</td></tr>
+        <tr><td>Gliding</td><td>free-fall + assisted drops, 3 membranes</td><td>4th-degree polynomial</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Kinematics</div>
+    <h2 class="reveal">Close the loop symbolically, then check the Jacobian.</h2>
+    <p class="reveal">
+      The four-bar was solved rather than sketched. The linkage's geometric
+      <strong>closure constraints</strong> were written symbolically and the valid angular
+      configurations found by posing it as an <strong>optimization</strong> that minimizes
+      constraint violation — which is what lets different link-length designs be evaluated
+      without hand-deriving each one. <strong>Jacobian matrices</strong> then relate the
+      independent joint velocity to the dependent ones, exposing how motion propagates through
+      the mechanism, and the result is plotted as linkage configurations with velocity vectors
+      at the key points.
+    </p>
+    <div class="law reveal">
+      <span class="c">closure:</span> Σ link vectors = 0 <span class="c">→ solve for dependent angles (optimization)</span><br>
+      <span class="c">velocity:</span> <span class="a">J</span> q̇ = 0 <span class="c">→ dependent q̇ from the independent input, at every configuration</span>
+    </div>
+    <figure class="reveal narrow">
+      <a href="../assets/foldable/kinematics.jpg" target="_blank" rel="noopener">
+        <img src="../assets/foldable/kinematics.jpg" alt="Kinematics plot showing two four-bar linkage configurations in blue and orange with black velocity vectors at the outer points.">
+      </a>
+      <figcaption><span class="n">FIG 08</span>Kinematics results — linkage configurations with the velocity vectors that fall out of the Jacobian.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Simulation</div>
+    <h2 class="reveal">Sine waves in, flapping out.</h2>
+    <p class="reveal">
+      The mechanism was rebuilt in <strong>MuJoCo</strong> as a hierarchical rigid-body model —
+      an XML tree of bodies joined by <strong>hinge joints</strong>, with actuators driving them.
+      A custom controller commands joint positions from <strong>time-dependent sine
+      functions</strong> parameterized by amplitude and frequency, which is the simplest honest
+      model of a flapping gait: one periodic input, coordinated output across the linkage. The
+      simulation steps forward and renders at 800×600, and the frames are compiled into an
+      animated GIF for inspecting kinematics and actuator behavior.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/foldable/mujoco-frames.jpg" target="_blank" rel="noopener">
+        <img src="../assets/foldable/mujoco-frames.jpg" alt="Four frames from the MuJoCo simulation showing the red central body and green wing links at successive points of the flapping stroke.">
+      </a>
+      <figcaption><span class="n">FIG 09</span>Four frames of the MuJoCo flapping cycle — the wing links (green) sweep through the stroke about the red body under sinusoidal actuation.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Results</div>
+    <h2 class="reveal">It flaps, consistently, and the model saw it coming.</h2>
+    <p class="reveal">
+      The finished prototype delivered <strong>consistent wing motion with minimal
+      deviation</strong> from the modeled kinematics, and the gliding and flapping tests showed
+      stable, controlled motion supported by the measured stiffness and the weight distribution
+      that came out of the CG work. Sim-to-real agreement was close, which the report credits to
+      feeding real measured values — compliance, mass distribution, joint friction — back into
+      MuJoCo and SolidWorks rather than trusting nominal ones. The residual gap is attributed to
+      what wasn't modeled: <strong>air currents during testing</strong> and small imperfections
+      in the printed parts.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/foldable/prototype-final.jpg" target="_blank" rel="noopener">
+        <img src="../assets/foldable/prototype-final.jpg" alt="The final flapping-wing prototype on a floor — 3D-printed PLA frame in yellow and black with the laminated wing extended, tethered by a power cable.">
+      </a>
+      <figcaption><span class="n">FIG 10</span>The final prototype — PLA frame, central servo and gear mesh, laminated foldable wings, ESP32 on a tether.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Walkthrough</div>
+    <h2 class="reveal">The full project video.</h2>
+    <p class="reveal">
+      The team's final presentation — bio-inspiration and scope, the prototyping plan across
+      three builds, the circuit and actuation choices, and the finished mechanism flapping at
+      the end.
+    </p>
+    <figure class="reveal">
+      <video controls preload="none"
+        poster="../assets/foldable/presentation-poster.jpg"
+        aria-label="Final project presentation video for the bat-inspired flapping-wing robot.">
+        <source src="../media/foldable-presentation.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 01</span>Final project presentation — Niyati Vaidya, Vivek Kulkarni, Prajjwal Dutta, Yogesh Salvi. Also on <a href="https://www.youtube.com/watch?v=ZdsJeafwBmk" target="_blank" rel="noopener">YouTube ↗</a>.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Compliance is a design material, not a defect.</strong> The wing has no hinges
+      because the laminate <em>is</em> the hinge — pick where the structure is allowed to bend
+      and you've designed the joint. <strong>Material choice is a load-path decision.</strong>
+      Balsa didn't fail because it was weak in the abstract; it failed because a gear mesh
+      concentrates force exactly where a brittle sheet has nothing to give, and the fix wasn't
+      more balsa but a different process. <strong>And a model is only as good as the parts you
+      measured.</strong> Sim and hardware agreed here because compliance, inertia, and friction
+      went into the simulation as measured numbers — the parameter-identification work is
+      invisible in the final video and is the reason the final video works.
+    </p>
+    <p class="reveal">
+      The team's own honest caveat: this isn't a true digital twin yet. MuJoCo runs
+      <strong>box approximations</strong> rather than the real CAD geometry, so the next step is
+      importing the actual model. Beyond that — more power at the wings so flapping generates
+      forward thrust rather than just stroke, and better fitting algorithms in parameter
+      identification.
+    </p>
+    <p class="tnote reveal">Team project — Niyati Abhijeet Vaidya, Vivek Sunil Kulkarni, Prajjwal Dutta, Yogesh Pradeep Salvi (Arizona State University). Stiffness parameter identification was my contribution; figures from the team's final project report.</p>
+    <div class="proj-stack reveal">
+      <span class="tag">Foldable Robotics</span><span class="tag">Lamination</span><span class="tag">Flexure Hinges</span>
+      <span class="tag">Four-Bar Linkage</span><span class="tag">Gear Drive</span><span class="tag">MuJoCo</span>
+      <span class="tag">SolidWorks</span><span class="tag">Python</span><span class="tag">MATLAB</span>
+      <span class="tag">Parameter ID</span><span class="tag">ESP32</span><span class="tag">3D-Printed PLA</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the mechanism itself — a central gear pair drives a sinusoidal flap (the same
+     one-input gait the MuJoCo controller used), each wing built from finger spars with a
+     membrane webbed between them, folding at its vein hinges through the stroke, with the
+     wingtips trailing their own path. */
+  const canvas=document.getElementById('batscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.03);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o===undefined?0.6:o});
+  const lineMat=(c,o)=>new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o});
+
+  const robot=new THREE.Group(); scene.add(robot);
+
+  /* ---- body: a slim fuselage with the servo block and the gear pair between the wings ---- */
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.34,1.5),wire(DEEPBLUE,0.55));
+  robot.add(body);
+  const servo=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.34,0.5),wire(AMBER,0.7));
+  servo.position.z=0.12; robot.add(servo);
+  /* two meshing gears, counter-rotating, drawn as rims with spokes */
+  function gear(r,teeth){
+    const g=new THREE.Group();
+    const rim=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+      Array.from({length:teeth*2},(_,i)=>{const a=i/(teeth*2)*Math.PI*2,rr=r*(i%2?0.86:1);
+        return new THREE.Vector3(Math.cos(a)*rr,Math.sin(a)*rr,0);})),lineMat(CYAN,0.75));
+    g.add(rim);
+    const spokes=[];
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;
+      spokes.push(new THREE.Vector3(0,0,0),new THREE.Vector3(Math.cos(a)*r*0.86,Math.sin(a)*r*0.86,0));}
+    g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(spokes),lineMat(CYAN,0.3)));
+    return g;
+  }
+  const gearA=gear(0.4,12), gearB=gear(0.4,12);
+  gearA.position.set(-0.38,0.1,0.12); gearB.position.set(0.38,0.1,0.12);
+  robot.add(gearA); robot.add(gearB);
+
+  /* ---- wings: humerus → folding elbow → three finger spars, membrane webbed between ---- */
+  const SPARS=[{len:2.5,spread:0.30},{len:2.9,spread:0.02},{len:2.4,spread:-0.34}];
+  function buildWing(side){
+    const shoulder=new THREE.Group();          // flap axis
+    shoulder.position.set(side*0.3,0.08,0.1);
+    robot.add(shoulder);
+    const hum=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.05,1.5,6),wire(CYAN,0.7));
+    hum.rotation.z=Math.PI/2*-side; hum.position.x=side*0.75; shoulder.add(hum);
+    const elbow=new THREE.Group();             // fold axis — this is what makes the span change
+    elbow.position.x=side*1.5; shoulder.add(elbow);
+    const tips=[];
+    SPARS.forEach(s=>{
+      const spar=new THREE.Group(); elbow.add(spar);
+      spar.rotation.y=s.spread*side;
+      const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.036,s.len,5),wire(CYAN,0.55));
+      bar.rotation.z=Math.PI/2*-side; bar.position.x=side*s.len/2; spar.add(bar);
+      const tip=new THREE.Object3D(); tip.position.x=side*s.len; spar.add(tip);
+      tips.push(tip);
+    });
+    /* membrane: a webbing of line segments between neighbouring spars, rebuilt each frame */
+    const ribs=6;
+    const memPos=new Float32Array((SPARS.length-1)*ribs*2*3+SPARS.length*2*3);
+    const memGeo=new THREE.BufferGeometry();
+    memGeo.setAttribute('position',new THREE.BufferAttribute(memPos,3));
+    const membrane=new THREE.LineSegments(memGeo,lineMat(AMBER,0.32));
+    membrane.frustumCulled=false;              // vertices live in world space, bounds are stale
+    scene.add(membrane);                       // world space: tips are read after transforms
+    return {shoulder,elbow,tips,memPos,memGeo,ribs,side};
+  }
+  const wings=[buildWing(-1),buildWing(1)];
+  const shoulderW=new THREE.Vector3(), tmpA=new THREE.Vector3(), tmpB=new THREE.Vector3();
+  function updateMembrane(w){
+    const p=w.memPos; let n=0;
+    w.shoulder.getWorldPosition(shoulderW);
+    const tipW=w.tips.map(t=>t.getWorldPosition(new THREE.Vector3()));
+    /* chordwise webbing between adjacent spars */
+    for(let i=0;i<tipW.length-1;i++){
+      for(let r=1;r<=w.ribs;r++){
+        const f=r/(w.ribs+1);
+        tmpA.lerpVectors(shoulderW,tipW[i],f);
+        tmpB.lerpVectors(shoulderW,tipW[i+1],f);
+        p[n++]=tmpA.x;p[n++]=tmpA.y;p[n++]=tmpA.z;
+        p[n++]=tmpB.x;p[n++]=tmpB.y;p[n++]=tmpB.z;
+      }
+    }
+    /* trailing edge from shoulder out to each tip */
+    tipW.forEach(t=>{
+      p[n++]=shoulderW.x;p[n++]=shoulderW.y;p[n++]=shoulderW.z;
+      p[n++]=t.x;p[n++]=t.y;p[n++]=t.z;
+    });
+    w.memGeo.attributes.position.needsUpdate=true;
+    return tipW[1];                             // middle spar tip drives the trail
+  }
+
+  /* ---- wingtip trail: a fading ribbon of where the tip has been ---- */
+  const TRAIL=mobile?70:130;
+  const trailPos=new Float32Array(TRAIL*3);
+  const trailGeo=new THREE.BufferGeometry();
+  trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+  const trail=new THREE.Line(trailGeo,lineMat(AMBER,0.35));
+  trail.frustumCulled=false;
+  scene.add(trail);
+  let trailN=0;
+
+  /* ---- ambient dust ---- */
+  const PC=mobile?400:1000;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*46;pp[i*3+1]=(Math.random()-0.5)*24;pp[i*3+2]=(Math.random()-0.5)*30;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.45})));
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const FREQ=1.15, AMP=0.62;                    // the sinusoidal gait: one input, both wings
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      const phase=t*FREQ*Math.PI*2;
+      const flap=Math.sin(phase)*AMP;
+      /* the fold leads the flap slightly — span shortens on the upstroke, opens on the down */
+      const fold=(0.5-0.5*Math.cos(phase))*0.5;
+      wings.forEach(w=>{
+        w.shoulder.rotation.z=flap*-w.side;
+        w.elbow.rotation.z=fold*-w.side;
+        w.elbow.rotation.y=fold*0.35*w.side;
+      });
+      gearA.rotation.z=phase*0.5; gearB.rotation.z=-phase*0.5;
+      robot.position.y=Math.sin(phase)*0.16;     // the body bobs against the stroke
+      robot.rotation.y=Math.sin(t*0.22)*0.5;
+
+      robot.updateMatrixWorld(true);
+      let tipRef=null;
+      wings.forEach(w=>{const tw=updateMembrane(w); if(w.side===1) tipRef=tw;});
+
+      if(tipRef){                                // push the right wingtip into the trail buffer
+        for(let i=TRAIL-1;i>0;i--){
+          trailPos[i*3]=trailPos[(i-1)*3];trailPos[i*3+1]=trailPos[(i-1)*3+1];trailPos[i*3+2]=trailPos[(i-1)*3+2];
+        }
+        trailPos[0]=tipRef.x;trailPos[1]=tipRef.y;trailPos[2]=tipRef.z;
+        if(trailN<TRAIL){                        // avoid a streak to the origin before it fills
+          trailN++;
+          for(let i=trailN;i<TRAIL;i++){trailPos[i*3]=tipRef.x;trailPos[i*3+1]=tipRef.y;trailPos[i*3+2]=tipRef.z;}
+        }
+        trailGeo.attributes.position.needsUpdate=true;
+      }
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.55)*9+mx*2.0;
+    camera.position.z=9+Math.cos(d*0.55)*3.5;
+    camera.position.y=2.2+Math.min(d*1.8,3.5);
+    camera.lookAt(0,0.1,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

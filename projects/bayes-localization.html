@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A 3D discrete Bayes histogram filter for robot localization — an 80×80×72 belief over (x, y, θ) updated by Turn-Go-Turn odometry and Gaussian landmark likelihoods in a 16×16 m cave. By Prajjwal Dutta.">
+<title>3D Bayes Filter Localization — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #bfscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="bfscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="ros2-autonomy.html">← ROS 2 autonomy stack</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Localization · Spring 2026</span><span>ASU · RAS 598</span></div>
+    <h1 class="reveal">Where Am I? Answered as a Probability Cloud Over 460,800 Cells</h1>
+    <p class="sub reveal">
+      A 3D discrete Bayes filter — a histogram filter — localizing a robot in a known 16 × 16 m
+      cave. The belief isn't a pose; it's a full probability distribution over
+      <strong>(x, y, θ)</strong> held as an <strong>80 × 80 × 72</strong> NumPy array, predicted
+      forward with noisy Turn-Go-Turn odometry and corrected by Gaussian range–bearing
+      likelihoods from fiducial landmarks. Watching its <em>shape</em> change — blob, ellipse,
+      arc, peak — is watching the robot reason about its own uncertainty.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/bayes-filter-robot-localization" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>80×80×72</b><span>belief over x, y, θ</span></div>
+      <div class="metric"><b>0.6 m</b><span>convergence to ground truth</span></div>
+      <div class="metric"><b>2–3</b><span>landmarks to converge</span></div>
+      <div class="metric"><b>5°</b><span>angular bin resolution</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/bayes/bayes-localization-poster.jpg"
+      aria-label="The Bayes filter running: the belief cloud in Stage and the corresponding costmap in RViz as the robot drives past landmarks.">
+      <source src="../media/bayes-localization.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>The filter live — Stage (left) shows the belief cloud tracking the robot, RViz (right) shows the same belief as a costmap against the ground-truth path.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Grid</div>
+    <h2 class="reveal">Discretize the world, then never leave the array.</h2>
+    <p class="reveal">
+      A histogram filter's whole bargain is this: give up the elegance of a parametric
+      distribution, and in exchange represent <em>any</em> shape of uncertainty — multi-modal,
+      ring-shaped, banana-shaped — with no assumptions at all. The cost is that you carry the
+      entire state space in memory. Here that's 80 × 80 cells of 0.2 m over ±8 m, times
+      <strong>72 angular bins at 5° each</strong>.
+    </p>
+    <p class="reveal">
+      Coordinate mapping is the part that quietly breaks everything if you get it wrong. The
+      row index is <strong>inverted</strong> — row 0 is y = +8 m, the top of the map — to match
+      the <code>np.flipud</code> convention the costmap publisher uses, so the belief renders in
+      RViz the same way it exists in the array.
+    </p>
+    <div class="law reveal">
+      ix  = int((x + 8.0) / res)      <span class="c">// 0 → leftmost column</span><br>
+      iy  = int((<span class="a">8.0 − y</span>) / res)      <span class="c">// 0 → top row: y is inverted to match np.flipud</span><br>
+      ith = int(θ % 360 / θ_res) % 72 <span class="c">// heading wrapped into 72 bins</span>
+    </div>
+    <p class="reveal">
+      The inverse, <code>grid_to_real()</code>, returns <strong>fully vectorized</strong>
+      (rx, ry, rθ) arrays across every cell — which is what makes the measurement update a
+      handful of NumPy expressions instead of a triple-nested Python loop over 460,800 cells.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Prediction</div>
+    <h2 class="reveal">Motion is three primitives and a blur.</h2>
+    <p class="reveal">
+      Odometry between two poses is decomposed the classic way — <strong>δ_rot1</strong>, the
+      turn to face the direction of travel; <strong>δ_trans</strong>, the drive; and
+      <strong>δ_rot2</strong>, the turn into the final heading. Each is applied by
+      <strong>rolling the belief array</strong> along the appropriate axis, which is the trick
+      that makes prediction cheap: shifting a distribution is an index operation, not a
+      convolution.
+    </p>
+    <p class="reveal">
+      Translation is the subtle one. Every θ-slice has to shift in <em>its own</em> heading
+      direction — a cell that believes the robot faces east must move east, and one that
+      believes north must move north — so the slice shift is computed per heading from
+      <code>cos θ</code> and <code>sin θ</code>. Then <strong>Gaussian diffusion (σ = 0.5)</strong>
+      is applied after each prediction: that's the process noise, and it's the reason the belief
+      spreads when the robot drives blind.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Correction</div>
+    <h2 class="reveal">Every cell answers: if I were here, what would I see?</h2>
+    <p class="reveal">
+      For each detected fiducial, the expected <strong>range and bearing</strong> to that known
+      landmark are computed from <em>every</em> grid cell at once, and compared against the
+      measurement through a Gaussian likelihood with <strong>σ_r = 0.5 m</strong> and
+      <strong>σ_b = 15°</strong>. Multiply element-wise into the belief, renormalize, done —
+      textbook Bayes, executed as array math.
+    </p>
+    <div class="law reveal">
+      likelihood = exp(−0.5·((r_meas − r_exp)/σ_r)²) × exp(−0.5·((b_meas − b_exp)/σ_b)²)<br>
+      <span class="a">Bel(x)</span> = η · p(z|x) · <span class="c">Bel̄(x)</span> &nbsp;<span class="c">// element-wise multiply, then renormalize</span>
+    </div>
+    <table class="reveal">
+      <thead><tr><th>Model</th><th>Parameter</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Belief grid</td><td>x, y resolution</td><td>0.2 m over ±8 m (80 × 80)</td></tr>
+        <tr><td>Belief grid</td><td>θ bins</td><td>72 (5° each)</td></tr>
+        <tr class="hl"><td>Motion</td><td>process noise σ</td><td>0.5 (Gaussian diffusion)</td></tr>
+        <tr class="hl"><td>Measurement</td><td>σ_r · σ_b</td><td>0.5 m · 15°</td></tr>
+        <tr><td>Start pose</td><td>known initial state</td><td>(−7, −7, 90°)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Shapes</div>
+    <h2 class="reveal">Blob, ellipse, arc, peak — the geometry of not knowing.</h2>
+    <p class="reveal">
+      The most instructive thing this filter produces isn't its estimate, it's the
+      <em>shape</em> of its belief — and each shape has a cause you can name.
+    </p>
+    <p class="reveal">
+      <strong>At initialization</strong> it's a tight circular Gaussian blob at (−7, −7): the
+      start pose is known.
+      <strong>After motion without observations</strong>, prediction shifts each θ-slice and
+      diffuses it, and the projected x–y belief stretches into an <strong>elongated
+      ellipse</strong> aligned with travel — translational uncertainty grows faster along the
+      motion axis than across it, while angular uncertainty broadens in parallel.
+      <strong>After one landmark</strong>, the range likelihood constrains position to a
+      <strong>ring at the measured distance</strong>; the bearing term cuts that ring down to a
+      crescent. The robot knows how far the landmark is, not which way it approached from.
+      <strong>After two or three</strong> from different landmarks, those arcs
+      <strong>intersect</strong> and the distribution collapses to a compact peak — within
+      <strong>0.6 m</strong> of ground truth.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/bayes/initialisiing-position.jpg" target="_blank" rel="noopener">
+          <img src="../assets/bayes/initialisiing-position.jpg" alt="Stage and RViz at initialization, showing a tight circular belief blob at the robot's known starting pose.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>Initialization — a tight Gaussian blob at the known start pose.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/bayes/1-2-landmark.jpg" target="_blank" rel="noopener">
+          <img src="../assets/bayes/1-2-landmark.jpg" alt="The belief spread into an elongated shape after motion with one to two landmark observations.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>After motion + 1–2 landmarks — elliptical spread, beginning to collapse.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <a href="../assets/bayes/4-landmark.jpg" target="_blank" rel="noopener">
+        <img src="../assets/bayes/4-landmark.jpg" alt="After four landmark observations the belief has collapsed to a concentrated peak aligned with the ground-truth path.">
+      </a>
+      <figcaption><span class="n">FIG 04</span>After 4 landmarks — arcs intersect and the belief concentrates on the true pose, tracking the green ground-truth path.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Kidnapping</div>
+    <h2 class="reveal">The failure mode is the lesson.</h2>
+    <p class="reveal">
+      Teleport the robot mid-run and the filter does something revealing: <strong>nothing</strong>.
+      The belief stays confidently parked at the old estimate, because a histogram filter can
+      only redistribute probability mass it already has — and after convergence, the cells at
+      the new location hold essentially zero. There is no mechanism to invent belief where none
+      remains.
+    </p>
+    <p class="reveal">
+      Driving back near landmarks produces partial recovery as likelihoods re-weight what little
+      mass survives, but full recovery requires either re-initializing to a uniform prior or
+      switching to a <strong>particle filter with random particle injection</strong> — a
+      mechanism specifically designed to keep a few hypotheses alive everywhere. That contrast
+      is the clearest argument for why particle filters exist.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/bayes/kidnap.jpg" target="_blank" rel="noopener">
+          <img src="../assets/bayes/kidnap.jpg" alt="After kidnapping, the belief blob remains at the old estimated position while the robot has been moved elsewhere.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>Kidnapped — the belief holds its old position with full confidence.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/bayes/recovery.jpg" target="_blank" rel="noopener">
+          <img src="../assets/bayes/recovery.jpg" alt="Partial recovery of the belief after the robot drives near landmarks again following the kidnapping.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>Partial recovery — landmarks re-weight the surviving mass, but it isn't a true relocalization.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>A pose estimate throws away the interesting part.</strong> The number this filter
+      would report is less informative than the distribution it came from — an ellipse says
+      "I've been driving blind," an arc says "I've seen one landmark," and both are actionable in
+      a way that a single (x, y, θ) is not.
+      <strong>Vectorize or die:</strong> 460,800 cells updated per observation is trivial as
+      array math and impossible as Python loops, and the design that makes that possible is
+      returning grid coordinates as arrays rather than querying them cell by cell.
+      <strong>And know your filter's failure mode before you deploy it</strong> — the kidnapping
+      test wasn't a bug hunt, it was a demonstration of the exact boundary where this algorithm
+      stops being the right tool.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">ROS 2</span><span class="tag">Bayes / Histogram Filter</span><span class="tag">Probabilistic Robotics</span>
+      <span class="tag">Motion Model</span><span class="tag">Measurement Model</span><span class="tag">Gaussian Likelihood</span>
+      <span class="tag">NumPy Vectorization</span><span class="tag">SciPy</span><span class="tag">Stage Simulator</span>
+      <span class="tag">RViz OccupancyGrid</span><span class="tag">Fiducial Landmarks</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="perception-cylinders.html">← Perception pipeline</a>
+    <a href="energy-planner.html">Next: Energy-aware planning →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the belief itself. Samples of the distribution sit on the cave floor and follow
+     the cycle the report describes — tight blob, diffusion into an ellipse along travel, a range
+     ring when a landmark is seen, then collapse to a peak as arcs intersect. Landmark posts glow
+     as they're observed; the true pose runs ahead of the estimate. */
+  const canvas=document.getElementById('bfscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.026);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,RED=0xe8544f;
+  const mobile=innerWidth<700;
+  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o});
+
+  /* ---- the 16 x 16 m cave floor, drawn at the filter's own 0.2 m grid pitch (coarsened) ---- */
+  const W=16;
+  const grid=new THREE.GridHelper(W,mobile?32:40,0x1c3a66,0x11223f);
+  grid.material.transparent=true; grid.material.opacity=0.32; scene.add(grid);
+  const border=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-8,0.01,-8),new THREE.Vector3(8,0.01,-8),
+    new THREE.Vector3(8,0.01,8),new THREE.Vector3(-8,0.01,8)]),
+    new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.28}));
+  scene.add(border);
+
+  /* ---- fiducial landmarks, drawn like the red posts in the RViz scene ---- */
+  const LM=[{x:-5.5,z:3.0},{x:1.5,z:5.2},{x:5.8,z:0.4},{x:3.2,z:-4.6},{x:-3.0,z:-5.4}];
+  const posts=LM.map(l=>{
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,1.1,8),wire(RED,0.5));
+    m.position.set(l.x,0.55,l.z); scene.add(m); return m;
+  });
+
+  /* ---- belief samples: a cloud whose spread is driven by the filter's own cycle ---- */
+  const NB=mobile?360:800;
+  const bPos=new Float32Array(NB*3);
+  const bGeo=new THREE.BufferGeometry();
+  bGeo.setAttribute('position',new THREE.BufferAttribute(bPos,3));
+  const bMat=new THREE.PointsMaterial({color:CYAN,size:0.13,transparent:true,opacity:0.62});
+  const belief=new THREE.Points(bGeo,bMat);
+  belief.frustumCulled=false; scene.add(belief);
+  const seeds=[];
+  for(let i=0;i<NB;i++){
+    const a=Math.random()*Math.PI*2, r=Math.sqrt(Math.random());
+    seeds.push({ux:Math.cos(a)*r,uy:Math.sin(a)*r,p:Math.random()*Math.PI*2});
+  }
+
+  /* ---- range ring: the arc a single landmark observation carves out ---- */
+  const RSEG=96;
+  const ringGeo=new THREE.BufferGeometry().setFromPoints(
+    Array.from({length:RSEG},(_,i)=>{const a=i/RSEG*Math.PI*2;return new THREE.Vector3(Math.cos(a),0,Math.sin(a));}));
+  const ringMat=new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0});
+  const ring=new THREE.LineLoop(ringGeo,ringMat); ring.position.y=0.02; scene.add(ring);
+
+  /* ---- ground truth robot on a slow tour of the cave ---- */
+  const PATH=[new THREE.Vector3(-7,0,-7),new THREE.Vector3(-6.2,0,1.5),new THREE.Vector3(-1.0,0,4.6),
+              new THREE.Vector3(4.4,0,3.4),new THREE.Vector3(6.4,0,-2.2),new THREE.Vector3(0.6,0,-6.0)];
+  const robot=new THREE.Group(); scene.add(robot);
+  const chassis=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.22,0.68),wire(AMBER,0.85));
+  chassis.position.y=0.2; robot.add(chassis);
+  const heading=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0,0.2,0),new THREE.Vector3(0,0.2,0.75)]),
+    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.8}));
+  robot.add(heading);
+  /* ground-truth trail */
+  const trailGeo=new THREE.BufferGeometry().setFromPoints(PATH.concat([PATH[0]]).map(p=>new THREE.Vector3(p.x,0.015,p.z)));
+  scene.add(new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:0x63d97a,transparent:true,opacity:0.3})));
+
+  /* ---- the cycle: drift (belief spreads) → observe (ring + collapse) → repeat ---- */
+  const DRIFT=5.0, OBSERVE=2.6, CYCLE=DRIFT+OBSERVE;
+  const truePos=new THREE.Vector3().copy(PATH[0]);
+  const estPos=new THREE.Vector3().copy(PATH[0]);
+  const dirV=new THREE.Vector3();
+  let legI=0, legT=0, lmIdx=0;
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.05);
+    const t=clock.elapsedTime;
+    if(!reduced){
+      /* drive the ground truth around the tour */
+      const a=PATH[legI], b=PATH[(legI+1)%PATH.length];
+      const len=a.distanceTo(b);
+      legT+=(1.5*dt)/len;
+      if(legT>=1){legT-=1;legI=(legI+1)%PATH.length;}
+      truePos.copy(a).lerp(b,legT);
+      robot.position.copy(truePos);
+      dirV.subVectors(b,a);
+      robot.rotation.y=Math.atan2(dirV.x,dirV.z);
+
+      const ct=t%CYCLE;
+      const observing=ct>DRIFT;
+      /* spread grows while driving blind, snaps down on observation */
+      const k=observing?(ct-DRIFT)/OBSERVE:0;
+      const spreadAlong = observing ? 2.6*(1-k)+0.25 : 0.5+ (ct/DRIFT)*2.6;
+      const spreadCross = observing ? 1.3*(1-k)+0.22 : 0.4+ (ct/DRIFT)*1.1;
+      /* the estimate lags the truth while blind and is pulled onto it by observations */
+      estPos.lerp(truePos,observing?0.02+k*0.06:0.004);
+
+      const ang=Math.atan2(dirV.x,dirV.z);
+      const ca=Math.cos(ang), sa=Math.sin(ang);
+      for(let i=0;i<NB;i++){
+        const s=seeds[i];
+        const along=s.ux*spreadAlong, cross=s.uy*spreadCross;
+        const jitter=0.05*Math.sin(t*1.7+s.p);
+        bPos[i*3]  =estPos.x+along*sa+cross*ca+jitter;
+        bPos[i*3+1]=0.05;
+        bPos[i*3+2]=estPos.z+along*ca-cross*sa+jitter;
+      }
+      bGeo.attributes.position.needsUpdate=true;
+      bMat.opacity=observing?0.62+k*0.25:0.5;
+
+      /* landmark observation: draw the range ring around the landmark being used */
+      if(observing){
+        if(k<0.03){ lmIdx=(lmIdx+1)%LM.length; }
+        const l=LM[lmIdx];
+        const r=Math.hypot(truePos.x-l.x,truePos.z-l.z);
+        ring.position.set(l.x,0.02,l.z);
+        ring.scale.setScalar(r);
+        ringMat.opacity=0.55*Math.sin(Math.PI*k);
+        posts.forEach((p,i)=>{p.material.opacity=i===lmIdx?0.55+0.35*Math.sin(t*7):0.32;});
+      }else{
+        ringMat.opacity*=0.9;
+        posts.forEach(p=>{p.material.opacity=0.32;});
+      }
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0011;
+    const orbit=mobile?26:20;
+    camera.position.x=Math.sin(t*0.05+d*0.4)*orbit*0.6+mx*2.4;
+    camera.position.z=orbit+Math.cos(t*0.05+d*0.4)*6;
+    camera.position.y=12+Math.min(d*2.4,6);
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

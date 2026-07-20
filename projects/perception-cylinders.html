@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="OAK-D cylinder perception pipeline — a ROS 2 package that box-filters, voxel-downsamples, RANSAC-removes the floor plane, Euclidean-clusters, fits cylinders from point normals, and labels them by HSV hue. By Prajjwal Dutta.">
+<title>OAK-D Cylinder Perception Pipeline — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #pcscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  .stages{list-style:none;counter-reset:st;margin:1.4rem 0;border:1px solid var(--line);
+    border-radius:10px;overflow:hidden;}
+  .stages li{counter-increment:st;display:flex;gap:1rem;align-items:baseline;
+    padding:0.7rem 1.1rem;border-bottom:1px solid var(--line);background:rgba(6,10,20,0.55);
+    font-size:0.88rem;color:var(--muted);}
+  .stages li:last-child{border-bottom:0;}
+  .stages li::before{content:counter(st,decimal-leading-zero);font-family:var(--mono);
+    font-size:0.68rem;color:var(--amber);letter-spacing:0.1em;flex:0 0 auto;}
+  .stages li b{color:var(--text);font-weight:600;}
+  .stages li em{font-family:var(--mono);font-style:normal;font-size:0.72rem;color:var(--cyan);
+    margin-left:auto;padding-left:1rem;text-align:right;flex:0 0 auto;}
+  @media(max-width:620px){.stages li em{display:none;}}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="pcscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="ros2-autonomy.html">← ROS 2 autonomy stack</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Perception · Spring 2026</span><span>ASU · RAS 598</span></div>
+    <h1 class="reveal">Ten Stages From a Million Raw Points to "That's a Green Cylinder"</h1>
+    <p class="sub reveal">
+      A ROS 2 perception package that turns OAK-D RGB-D point clouds into labeled object
+      detections. It subscribes to <code>/oakd/points</code>, crops and downsamples the cloud,
+      estimates per-point surface normals, RANSACs away the floor, clusters what's left, fits
+      <strong>cylinder models from point-normal geometry</strong>, classifies each one by HSV
+      hue, and publishes RViz markers — with every intermediate stage exposed as its own debug
+      cloud so a failure can be seen rather than guessed at.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/perception-cylinder-pipeline" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>10</b><span>pipeline stages</span></div>
+      <div class="metric"><b>6</b><span>debug cloud topics</span></div>
+      <div class="metric"><b>26</b><span>centralized tuning params</span></div>
+      <div class="metric"><b>50–200 ms</b><span>per frame</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/perception/perception-cylinders-poster.jpg"
+      aria-label="Cylinder detections in RViz across three rosbags, with colored markers tracking the cylinders through the scene.">
+      <source src="../media/perception-cylinders.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>Detections across all three rosbags — colored <code>CYLINDER</code> markers published to <code>/viz/detections</code>, one per fitted object.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Chain</div>
+    <h2 class="reveal">One callback, ten stages, no hand-waving in the middle.</h2>
+    <p class="reveal">
+      The whole pipeline is a linear synchronous chain inside a single
+      <code>pointcloud_callback()</code> — one cloud processed to completion before the next is
+      touched. No threading, no frame buffering. That's a deliberate constraint: it makes the
+      per-frame behavior reproducible, and it means every stage can publish what it produced.
+    </p>
+    <ol class="stages reveal">
+      <li><b>Parse PointCloud2</b> — unpack xyz with aligned RGB from packed float32 <em>—</em></li>
+      <li><b>Validity check</b> — drop NaN / infinite points <em>/stage_valid</em></li>
+      <li><b>Box filter</b> — keep only the region of interest <em>/stage_box</em></li>
+      <li><b>Voxel downsample</b> — uniform grid averaging <em>/stage_downsample</em></li>
+      <li><b>Normal estimation</b> — k-NN neighborhood + SVD per point <em>—</em></li>
+      <li><b>Plane RANSAC</b> — find and remove the dominant floor plane <em>/stage_no_plane</em></li>
+      <li><b>Euclidean clustering</b> — cKDTree radius grouping <em>/stage_clusters</em></li>
+      <li><b>Cylinder RANSAC</b> — fit a cylinder per cluster <em>/stage_cylinders</em></li>
+      <li><b>Semantic labeling</b> — RGB → HSV hue band → red / green / blue / unknown <em>—</em></li>
+      <li><b>Publish markers</b> — colored CYLINDER markers <em>/viz/detections</em></li>
+    </ol>
+    <p class="reveal">
+      Six of those stages publish a <code>PointCloud2</code> of their own output. When a
+      detection is wrong, you don't reason about it — you open RViz, walk the stages, and watch
+      where the points stopped making sense.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Geometry</div>
+    <h2 class="reveal">A cylinder axis is just the cross product of two normals.</h2>
+    <p class="reveal">
+      The interesting stage is cylinder fitting, because it doesn't sample points — it samples
+      <strong>normals</strong>. Per-point surface normals come first: for each point, take its
+      <strong>k nearest neighbors</strong>, build the local covariance, and run
+      <strong>SVD</strong> — the smallest singular vector is the surface normal. With normals in
+      hand, cylinder RANSAC follows from a geometric fact: on an ideal cylinder, every surface
+      normal is perpendicular to the axis. So sampling <strong>two normals</strong> and taking
+      their <strong>cross product</strong> gives a candidate axis directly, no least-squares
+      needed.
+    </p>
+    <div class="law reveal">
+      n̂ᵢ = smallest singular vector of cov(k-NN)  <span class="c">// per-point normal, k = normal_search_k</span><br>
+      <span class="a">â</span> = n̂₁ × n̂₂ <span class="c">// candidate cylinder axis from two sampled normals</span><br>
+      inlier ⇔ d⊥(p,<span class="a">â</span>) ∈ [ r − thresh , r + thresh ] <span class="c">// perpendicular distance inside the radius band</span>
+    </div>
+    <p class="reveal">
+      Each candidate axis is scored by counting points whose perpendicular distance falls inside
+      the radius band, the best model wins, and a fit is only accepted above
+      <code>min_cylinder_inliers</code>. Fitting runs <strong>per cluster independently</strong>,
+      which is what lets one frame produce several detections instead of one compromise model.
+    </p>
+    <p class="reveal">
+      Color comes last and deliberately in <strong>HSV, not RGB</strong>: the inlier points'
+      average color is converted and classified by hue angle alone, so a cylinder that's
+      brightly lit and one in shadow land in the same band. Red wraps
+      (<strong>0–30°</strong> and <strong>330–360°</strong>), green takes
+      <strong>60–180°</strong>, blue <strong>180–270°</strong>, and anything else is honestly
+      reported as <code>unknown</code> rather than forced into a guess.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Stage</th><th>Method</th><th>Key parameters</th></tr></thead>
+      <tbody>
+        <tr><td>Box filter</td><td>axis-aligned ROI crop</td><td>box_{x,y,z}_{min,max}</td></tr>
+        <tr><td>Downsample</td><td>voxel grid averaging</td><td>voxel_size</td></tr>
+        <tr><td>Normals</td><td>k-NN + SVD</td><td>normal_search_k</td></tr>
+        <tr><td>Plane</td><td>RANSAC, prefers upward normals</td><td>plane_ransac_thresh / _iters</td></tr>
+        <tr><td>Clustering</td><td>cKDTree radius search</td><td>cluster_dist_thresh, min/max_cluster_size</td></tr>
+        <tr class="hl"><td>Cylinder</td><td>RANSAC on normal cross products</td><td>cyl_radius, cyl_radius_thresh, min_cylinder_inliers</td></tr>
+        <tr><td>Labeling</td><td>HSV hue bands</td><td>hue band boundaries</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">All 26 parameters live in one PipelineConfig dataclass — tuning never means editing algorithm code.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Detections</div>
+    <h2 class="reveal">Three bags, three scenes, same parameters.</h2>
+    <p class="reveal">
+      The pipeline was validated against three recorded RGB-D bags. Markers are republished
+      every callback using a <strong>two-message strategy</strong> — a <code>DELETEALL</code>
+      marker first, then the new detections — which is the fix for RViz's duplicate-marker
+      warnings when detection counts change between frames.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/perception/rosbag-0.jpg" target="_blank" rel="noopener">
+          <img src="../assets/perception/rosbag-0.jpg" alt="RViz view of rosbag 0 with the processed point cloud and a fitted cylinder marker.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>rosbag_0 — pipeline stages and fitted detections side by side in RViz.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/perception/rosbag-1.jpg" target="_blank" rel="noopener">
+          <img src="../assets/perception/rosbag-1.jpg" alt="RViz view of rosbag 1 with clustered points and cylinder markers.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>rosbag_1 — clusters surviving plane removal, each fitted independently.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <a href="../assets/perception/rosbag-2.jpg" target="_blank" rel="noopener">
+        <img src="../assets/perception/rosbag-2.jpg" alt="RViz view of rosbag 2 showing multiple detected cylinders with semantic color markers.">
+      </a>
+      <figcaption><span class="n">FIG 04</span>rosbag_2 — the hardest of the three; the third cylinder is where the tuning order in the README earns its keep.</figcaption>
+    </figure>
+    <p class="reveal">
+      When a marginal cylinder drops out, the fix is ordered rather than random: raise
+      <code>cluster_dist_thresh</code> first so the object stops fragmenting into two clusters,
+      then loosen <code>cyl_radius_thresh</code>, and only then lower
+      <code>min_cylinder_inliers</code> to accept a thinner but valid fit. Doing it in that
+      order changes one failure mode at a time.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Publish your intermediate state.</strong> Six debug clouds cost almost nothing and
+      convert perception debugging from inference into observation — the difference between "the
+      detection failed" and "the plane RANSAC ate the object because it was nearly coplanar with
+      the floor." <strong>Pick the representation that makes the math easy:</strong> fitting
+      cylinders to raw points is an optimization problem, but fitting them to <em>normals</em>
+      makes the axis a cross product. <strong>And classify in the space where the thing you care
+      about is one number</strong> — hue survives lighting changes that RGB thresholds don't.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">ROS 2</span><span class="tag">rclpy</span><span class="tag">OAK-D RGB-D</span>
+      <span class="tag">PointCloud2</span><span class="tag">RANSAC</span><span class="tag">Surface Normals</span>
+      <span class="tag">SVD</span><span class="tag">cKDTree</span><span class="tag">Euclidean Clustering</span>
+      <span class="tag">HSV Classification</span><span class="tag">RViz Markers</span><span class="tag">NumPy / SciPy</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="ros2-autonomy.html">← Autonomy stack</a>
+    <a href="bayes-localization.html">Next: Bayes filter localization →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the pipeline running on a synthetic scene. A raw cloud (floor + three colored
+     cylinders + out-of-ROI clutter) is walked through the real stage order — crop, downsample,
+     plane removal, clustering, cylinder fit — then reset and run again. Points are colored per
+     stage; fitted cylinders appear as wireframes with their semantic color. */
+  const canvas=document.getElementById('pcscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.035);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  const mobile=innerWidth<700;
+
+  const C_DIM=new THREE.Color(0x16243f);      // "removed" — fades into the background
+  const C_RAW=new THREE.Color(0x35608f);      // unprocessed points
+  const C_FLOOR=new THREE.Color(0x2a4a7a);
+  const CYL_COLORS=[new THREE.Color(0xe8544f),new THREE.Color(0x63d97a),new THREE.Color(0x4f9de8)];
+  const CLUSTER=new THREE.Color(0x4fd8e8);
+
+  /* ---- synthetic scene: floor plane, three cylinders, clutter outside the ROI ---- */
+  const CYL=[{x:-1.9,z:-0.4,r:0.42,h:1.5},{x:0.35,z:0.6,r:0.38,h:1.3},{x:2.2,z:-0.7,r:0.45,h:1.6}];
+  const N_FLOOR=mobile?900:2000, N_CYL=mobile?170:340, N_CLUTTER=mobile?200:420;
+  const pos=[],kind=[];                        // kind: 0 clutter, 1 floor, 2+ cylinder index
+  for(let i=0;i<N_FLOOR;i++){
+    pos.push((Math.random()-0.5)*9,(Math.random()-0.5)*0.05,(Math.random()-0.5)*5.5); kind.push(1);
+  }
+  CYL.forEach((c,ci)=>{
+    for(let i=0;i<N_CYL;i++){
+      const a=Math.random()*Math.PI*2, y=Math.random()*c.h;
+      const rr=c.r*(1+(Math.random()-0.5)*0.06);
+      pos.push(c.x+Math.cos(a)*rr,y,c.z+Math.sin(a)*rr); kind.push(2+ci);
+    }
+  });
+  for(let i=0;i<N_CLUTTER;i++){                // outside the ROI box — the box filter kills these
+    const side=Math.random()<0.5?-1:1;
+    pos.push(side*(4.6+Math.random()*3),Math.random()*3-0.2,(Math.random()-0.5)*9); kind.push(0);
+  }
+  const N=kind.length;
+  const posArr=new Float32Array(pos), colArr=new Float32Array(N*3);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(posArr,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(colArr,3));
+  const cloud=new THREE.Points(geo,new THREE.PointsMaterial({size:0.055,vertexColors:true,
+    transparent:true,opacity:0.95}));
+  scene.add(cloud);
+  /* every other cylinder/floor point is tagged as "dropped by the voxel grid" */
+  const keptByVoxel=new Uint8Array(N);
+  for(let i=0;i<N;i++) keptByVoxel[i]=(i%3!==0)?1:0;
+
+  /* ---- fitted cylinder wireframes (appear at the fit stage) ---- */
+  const fits=CYL.map((c,ci)=>{
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(c.r,c.r,c.h,14,1,true),
+      new THREE.MeshBasicMaterial({color:CYL_COLORS[ci],wireframe:true,transparent:true,opacity:0}));
+    m.position.set(c.x,c.h/2,c.z); scene.add(m);
+    const axis=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+      [new THREE.Vector3(c.x,0,c.z),new THREE.Vector3(c.x,c.h*1.25,c.z)]),
+      new THREE.LineBasicMaterial({color:CYL_COLORS[ci],transparent:true,opacity:0}));
+    scene.add(axis);
+    return {mesh:m,axis};
+  });
+
+  /* ---- ROI box: drawn while the box-filter stage is active ---- */
+  const roi=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(9.2,3.4,5.8)),
+    new THREE.LineBasicMaterial({color:0xf5a35c,transparent:true,opacity:0}));
+  roi.position.y=1.2; scene.add(roi);
+
+  const grid=new THREE.GridHelper(26,26,0x1c3a66,0x11223f);
+  grid.material.transparent=true; grid.material.opacity=0.25; scene.add(grid);
+
+  /* ---- stage timeline (seconds), mirroring the real pipeline order ---- */
+  const STAGES=[
+    {name:'raw',      t:2.4},
+    {name:'box',      t:2.4},
+    {name:'voxel',    t:2.0},
+    {name:'noplane',  t:2.4},
+    {name:'clusters', t:2.2},
+    {name:'cylinders',t:3.6}
+  ];
+  const TOTAL=STAGES.reduce((s,x)=>s+x.t,0);
+  const tmpC=new THREE.Color();
+  function paint(stage,k){                       // k = 0..1 progress within the stage
+    for(let i=0;i<N;i++){
+      const kd=kind[i]; let c=C_RAW, vis=1;
+      if(stage>=1 && kd===0) vis=0;              // box filter removed the clutter
+      if(stage>=2 && !keptByVoxel[i]) vis=0;     // voxel grid thinned the rest
+      if(stage>=3 && kd===1) vis=0;              // plane RANSAC removed the floor
+      if(stage===0) c=(kd===1)?C_FLOOR:C_RAW;
+      else if(stage<=2) c=(kd===1)?C_FLOOR:C_RAW;
+      else if(stage===3) c=C_RAW;
+      else if(stage===4) c=CLUSTER;              // clustered
+      else c=(kd>=2)?CYL_COLORS[kd-2]:C_RAW;     // labeled by semantic color
+      tmpC.copy(vis?c:C_DIM);
+      if(vis===0) tmpC.lerp(C_DIM,1);
+      colArr[i*3]=tmpC.r; colArr[i*3+1]=tmpC.g; colArr[i*3+2]=tmpC.b;
+    }
+    geo.attributes.color.needsUpdate=true;
+    roi.material.opacity=(stage===1)?0.35*Math.min(1,k*3):(stage===0?0:0.06);
+    const fitOp=stage===5?Math.min(1,k*2.5):0;
+    fits.forEach(f=>{f.mesh.material.opacity=fitOp*0.55; f.axis.material.opacity=fitOp*0.7;});
+  }
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  paint(0,1);
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      let ct=t%TOTAL, si=0;
+      while(si<STAGES.length-1 && ct>STAGES[si].t){ ct-=STAGES[si].t; si++; }
+      paint(si,ct/STAGES[si].t);
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    const orbit=mobile?11:8.5;
+    camera.position.x=Math.sin(t*0.08+d*0.5)*orbit+mx*1.8;
+    camera.position.z=Math.cos(t*0.08+d*0.5)*orbit;
+    camera.position.y=3.1+Math.min(d*1.6,2.6);
+    camera.lookAt(0,0.7,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

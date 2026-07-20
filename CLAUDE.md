@@ -1,0 +1,51 @@
+# Prajjwal Dutta — Portfolio Website
+
+## What this is
+A robotics/autonomy-themed personal portfolio site for Prajjwal Dutta (dual-MS, ASU — Robotics & Autonomous Systems + Manufacturing Engineering). Pure static site: hand-written HTML/CSS/JS, Three.js (r128 via cdnjs CDN) for animated 3D backgrounds. No framework, no build step — every page is self-contained and deployable as-is.
+
+## Folder structure
+```
+site/  (or repo root — this folder maps 1:1 to what gets deployed)
+├── index.html                  # home page — hero, about, research, featured work, project grid, skills, contact
+├── projects/
+│   └── tube-mpc.html           # first project detail page (template/reference for all future ones)
+└── assets/
+    └── tubempc/                # images for the tube-mpc page (pulled from its GitHub repo, optimized)
+```
+NOTE: the local parent folder is named "Protfolio website" (typo is intentional/legacy, don't rename without asking).
+
+## Design system — keep every page consistent with this
+- **Palette (CSS vars, defined in each page's `:root`)**: `--abyss:#060a14`, `--deep:#0a1226`, `--panel:#0e1830`, `--line:rgba(140,170,220,0.14)`, `--cyan:#4fd8e8` (primary accent), `--amber:#f5a35c` (secondary accent), `--text:#dfe8f4`, `--muted:#8a9ab5`
+- **Type**: Space Grotesk (display/headings), IBM Plex Mono (labels, eyebrows, metrics, captions), Sora (body) — loaded from Google Fonts
+- **Conventions**: mono uppercase eyebrows with a line rule; numbered section labels (01 /, 02 /...); metric strips (grid of big cyan numbers + tiny mono labels); wireframe-only 3D geometry in cyan/amber/deep-blue; `.reveal` IntersectionObserver scroll animations; `prefers-reduced-motion` respected everywhere; mobile breakpoint at 680–720px reduces 3D object counts/scales
+- **3D backgrounds are thematic per page**: index.html has a robotics ecosystem (swarm with live connectivity-graph edges, quadcopter, patrolling rover with LiDAR + dashed waypoint path, blimp with comms-tower uplink, robot arm, scanning grid floor). tube-mpc.html has a literal tube: wireframe tube around a nominal path with an amber vehicle weaving inside it. Every new project page should get its own concept-relevant background variant.
+
+## Current state (done)
+- Home page complete: all content sourced from master resume + course reports (real metrics only — never invent numbers)
+- Tube-MPC detail page complete, with images from https://github.com/EGR-560-Project-2026/Carsim-tubemp-matlab-cosimulation
+- Tube-MPC headline on index.html links to `projects/tube-mpc.html` via `.proj-link` class (hover → cyan + arrow)
+- Real links wired: LinkedIn (prajjwal-dutta-4a9801193), GitHub (DPRIcky), email pdutta9@asu.edu, archive link to old site robopod.in
+
+## TODO (in priority order)
+1. **Resume button** on index.html contact section is a placeholder (`data-placeholder="RESUME_PDF_URL"`) — point it at `./resume.pdf` once the PDF is added to the folder
+2. **Project detail pages** — every major card now has a detail page and is linked from index.html:
+   - 50-agent flocking page (projects/flocking-mrs.html) done — no repo; sourced from the local "MRS project report.pdf" + "demo video.mp4" in ASU/Masters 2023-2025/Fall24/MRS (14 figures to assets/mrs/, PDF linked). Two clips: media/mrs-flocking.mp4 (the grouping window cropped from ~59.5–88 s of the demo video — the only segment showing the flock) and media/mrs-walkthrough.mp4 (full recording, controls + audio). Team: Prajjwal, Vivek Sunil Kulkarni, Niyati Abhijeet Vaidya — keep the credit note. The MRS blimp (Fall 2024) predates AeroFusion (blimp.html, Spring 2025); the pages cross-link
+   - SAC ball-plate page (projects/sac-ball-plate.html) done — no repo/video exists; sourced entirely from the local team report "EEE587_Team10_Report_Rajdeep.pdf" in ASU/Masters 2023-2025/Spring25/Spring 2025/EEE587 Optimal Control (11 figures extracted to assets/sac/, PDF linked as a download). Team 10 project — keep the team credit note. Background simulates a real rolling ball on a tilting 2-joint plate under a Gaussian-sampled policy, ghosting previous attempts to show strategy diversity
+   - CLF–CBF–QP page (projects/clf-cbf-qp.html) done — sourced from github.com/DPRIcky/Optimization-of-CLF-CBF-QP-Control + its final report PDF (report figures extracted to assets/clfcbf/, the PDF itself linked as a download). Solver-comparison video re-encoded from the repo's "EGR 611 - Made with Clipchamp.mp4" (1080p, better than assets/demo.gif). Background runs a live fleet with a real Prim MST + pairwise safety / connectivity / obstacle barriers, edges colored by which constraint is binding
+3. Optionally: detail pages for the other grid projects (ROSMASTER X3, SAC RL, etc.) as repos/media are provided.
+   - TurtleBot 4 SFT page (projects/turtlebot4-sft.html) done — sourced from https://mobile-robots-ugv.github.io/ (team site, linked on the page); demo GIFs converted to mp4 in media/, plots in assets/turtlebot4/
+   - MyCobot Tic-Tac-Toe page (projects/mycobot-tictactoe.html) done — sourced from github.com/DPRIcky/Tic-Tac-Toe-with-Mycobot280M5; repo mp4s re-encoded into media/, images in assets/mycobot/. NOTE: README's youtu.be/Wk0kXTqNdao video is dead (404) — only CiusEVtUcxw is embedded
+   - Space Robotics page (projects/space-robotics.html) done — sourced from github.com/DPRIcky/RAS-SES-598-Space-Robotics-and-AI. NOTE: only the cart_pole_optimal_control assignment has Prajjwal's own commits + logged results (metrics screenshots in assets/ses598/); the boustrophedon and terrain_mapping (PX4 drone) assignments in that fork are unmodified upstream course material with no commits from him, so the page leads with LQR. The 3 PX4 landing trial clips (media/ses598-landing-trial*.mp4) come from classmate Anushka Satapathy's repo (github.com/anushka002/...) and MUST keep their visible credit line in the VID 03 caption — never present them as Prajjwal's own runs
+   - ROS 2 autonomy (RAS 598) is a HUB: index.html has ONE card → projects/ros2-autonomy.html, which holds 3 sub-project cards → projects/perception-cylinders.html, projects/bayes-localization.html, projects/energy-planner.html. Sourced from github.com/DPRIcky/{perception-cylinder-pipeline, bayes-filter-robot-localization, ros2-energy-planner}; repo GIFs/mp4s re-encoded into media/, figures into assets/{perception,bayes,energy}/. The energy-planner background runs a real A* + Bresenham pruning in JS (~81–90% waypoint reduction, matching the repo's 89.8%)
+   - Foldable flapping-wing page (projects/foldable-bat.html) done — sourced from github.com/DPRIcky/Foldable-Robotics + the local "Final Project Report.pdf" in ASU/Masters 2023-2025/Fall24/Foldable Robotics; report figures extracted to assets/foldable/. Two self-hosted videos: media/foldable-flapping-demo.mp4 (hardware flapping, cropped from ~286–293 s of the local "Flapping bird mechanism.mp4" — the only segment with real footage) and media/foldable-presentation.mp4 (that same file re-encoded in full, 7 MB, controls + audio). The YouTube version (youtu.be/ZdsJeafwBmk) is linked from a YouTube icon in the header, not embedded — no iframe facade on this page. Background = laminated bat wing flapping on a sinusoidal gait with a driven gear pair
+   - ROSMASTER X3 page (projects/rosmaster-x3.html) done — sourced from the team site https://asu-egr530-project.github.io/ROSMASTER-PROJECT-WEBSITE/ (all 8 pages); demo mp4s from its v1.0 GitHub release re-encoded into media/rosmaster-*.mp4, expo photos + poster PDF in assets/rosmaster/. Background = warehouse aisles with a mecanum rover running an A* route, LiDAR fan, AMCL particle cloud, and red/amber marker posts
+   - UR5 page (projects/ur5.html) done — sourced from github.com/DPRIcky/Universal-Robot-5; cube-tracing GIFs re-encoded to media/ur5-cube-{sim,real}.mp4, photos in assets/ur5/. Background arm uses the corrected 2-link IK (elbow.rotation.z = a2 − π, elbow-up) — reuse that for any future arm scenes
+   - YouTube embeds on project pages use click-to-play thumbnail facades (not eager iframes): YouTube error 153 blocks referrer-less players, so from file:// the facade opens YouTube in a new tab; on http(s) it swaps in the iframe
+4. **Deploy**: GitHub Pages — repo on github.com/DPRIcky, `index.html` at root, then point the robopod.in custom domain (A records → GitHub Pages IPs, CNAME www → dpricky.github.io, enforce HTTPS)
+
+## Workflow rules
+- Every project page's facts, metrics, and images must come from the actual repo/report — ask Prajjwal for the source if it's missing; never fabricate results
+- Keep pages self-contained (inline CSS/JS); relative paths only (`../assets/...` from projects/) so the site works from file:// and any host
+- After editing, sanity-check: open in browser, verify the 3D scene runs, reveals fire, and mobile layout holds (~380px)
+- Image budget: compress to <300 KB each (JPEG q≈82, max ~1600px wide) into `assets/<project>/`
+- Prajjwal reviews each deliverable before moving to the next

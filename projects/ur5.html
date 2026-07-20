@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="UR5 multi-task manipulation — PolyScope, RoboDK, and URScript programming, virtual cube tracing, ROBOTIQ gripper repeatability, pick-and-place, and torque-controlled flashlight assembly. By Prajjwal Dutta.">
+<title>UR5 Multi-Task Manipulation — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #ur5scene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="ur5scene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Manipulation · Fall 2023</span><span>ASU · Robotics &amp; Autonomous Systems</span></div>
+    <h1 class="reveal">One UR5, Three Languages, and a Flashlight That Screws Itself Together</h1>
+    <p class="sub reveal">
+      Hands-on mastery of an industrial cobot across every layer of its programming stack:
+      PolyScope waypoints on the teach pendant, offline path planning and simulation in
+      RoboDK, and raw URScript on the controller. Validated by tracing all eight vertices of
+      a virtual cube with linear moves, quantifying gripper repeatability with a dial
+      indicator, running pallet-to-pallet pick-and-place with a ROBOTIQ adaptive gripper,
+      and finishing with a full flashlight assembly — fastened by torque feedback, not hope.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/Universal-Robot-5" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="https://github.com/DPRIcky/Universal-Robot-5/blob/main/UR5.pdf" target="_blank" rel="noopener" aria-label="Technical report PDF" title="Technical Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>3</b><span>programming environments</span></div>
+      <div class="metric"><b>8</b><span>cube vertices · moveL</span></div>
+      <div class="metric"><b>3 N·m</b><span>torque-controlled fastening</span></div>
+      <div class="metric"><b>~850 mm</b><span>spherical reach · 6-DoF</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/ur5/cube_real_poster.jpg"
+      aria-label="The physical UR5 tracing the eight vertices of a virtual cube in the air with straight-line moves.">
+      <source src="../media/ur5-cube-real.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>Cube tracing on the real robot — nine waypoints, moveJ to the first corner, then pure moveL: every edge a straight line in Cartesian space.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">Three Environments</div>
+    <h2 class="reveal">Same arm, three ways to talk to it.</h2>
+    <p class="reveal">
+      The point of this project wasn't one demo — it was fluency. Every task was approached
+      through the UR5's full programming stack: <strong>PolyScope</strong> on the teach
+      pendant for real-time waypoint control, <strong>RoboDK</strong> for offline simulation
+      and path planning against a modeled table station, and <strong>URScript</strong> for
+      text-level programs running directly on the controller — including gripper primitives
+      like <strong>rq_close_and_wait()</strong> and torque telemetry via
+      <strong>get_joint_torques()</strong>. Each environment executed the same waypoint
+      missions, so their trade-offs showed up in practice, not in a datasheet.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Feature</th><th>PolyScope</th><th>RoboDK</th><th>URScript</th></tr></thead>
+      <tbody>
+        <tr><td>Interface</td><td>pendant GUI</td><td>simulation + GUI</td><td>text</td></tr>
+        <tr><td>Learning curve</td><td>low</td><td>medium</td><td>high</td></tr>
+        <tr><td>Control level</td><td>high-level</td><td>high-level + detail</td><td>fine-grained</td></tr>
+        <tr><td>Simulation</td><td>basic built-in</td><td>full offline</td><td>none</td></tr>
+        <tr class="hl"><td>Best for</td><td>bring-up, teaching</td><td>path planning</td><td>custom algorithms</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Simulate First</div>
+    <h2 class="reveal">RoboDK: crash in software, deploy with confidence.</h2>
+    <p class="reveal">
+      The UR5 model was imported into RoboDK with its table station, three targets were
+      recorded, and the program linked them with linear joint-space moves. Only after the
+      simulated run was verified did the same program go to the physical robot — the same
+      three poses were also driven through PolyScope in both <strong>joint space</strong>
+      (per-joint angles, fine control) and <strong>Cartesian space</strong> (pose targets,
+      simpler paths), making the coordinate-system trade-off concrete.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/ur5/1.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ur5/1.jpg" alt="RoboDK simulation of the UR5 in its default upright pose on a modeled table station.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>RoboDK station — the UR5 model in its default pose on the simulated table.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/ur5/3.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ur5/3.jpg" alt="RoboDK view of the UR5 with three target coordinate frames labeled Target 1, 2, and 3, connected by straight yellow path lines.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>Three recorded targets and the linear path linking them — validated in sim before touching hardware.</figcaption>
+      </figure>
+    </div>
+    <table class="reveal">
+      <thead><tr><th>Pose</th><th>X (mm)</th><th>Y (mm)</th><th>Z (mm)</th><th>RX·RY·RZ (rad)</th></tr></thead>
+      <tbody>
+        <tr><td>Pose 1</td><td>−575</td><td>−350</td><td>300</td><td>2.10 · 1.11 · 0.63</td></tr>
+        <tr><td>Pose 2</td><td>−240</td><td>−445</td><td>650</td><td>1.57 · −1.57 · −1.57</td></tr>
+        <tr><td>Pose 3</td><td>400</td><td>−400</td><td>200</td><td>2.79 · −0.16 · 0</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">The three PolyScope waypoints, driven in both joint and Cartesian space.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Cube Tracing</div>
+    <h2 class="reveal">Draw a cube in thin air. Then measure it.</h2>
+    <p class="reveal">
+      The capstone of the motion work: trace all <strong>8 vertices of a virtual cube</strong>
+      hanging in the workspace. One <strong>moveJ</strong> gets the arm to the first corner;
+      every subsequent edge is a <strong>moveL</strong>, forcing straight Cartesian lines
+      rather than joint-space arcs. The recorded waypoints then let the cube be measured from
+      its own trajectory — the diagonal between corner points recovers the side length:
+    </p>
+    <div class="law reveal">
+      d = √( Δx² + Δy² + Δz² ) = √( 2500 + 2500 + 10000 ) ≈ <span class="a">122.47 mm</span> &nbsp;<span class="c">// side from the corner-to-corner diagonal</span><br>
+      V = d³ ≈ <span class="a">1.80 × 10⁶ mm³</span> &nbsp;<span class="c">// the cube the arm drew, computed from its own waypoints</span>
+    </div>
+    <figure class="reveal">
+      <video autoplay muted loop playsinline preload="metadata"
+        poster="../assets/ur5/cube_sim_poster.jpg"
+        aria-label="RoboDK simulation of the UR5 tracing the virtual cube's vertices with straight-line motion.">
+        <source src="../media/ur5-cube-sim.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">FIG 04</span>The same cube trace in simulation — points 1–5 walk the top face, 6–9 the bottom, every leg a straight line.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Repeatability</div>
+    <h2 class="reveal">Trust, but verify with a dial indicator.</h2>
+    <p class="reveal">
+      Before asking the arm to assemble anything, its precision was measured. A digital
+      pressure indicator was mounted perpendicular to a 3D-printed block, and the robot
+      traced the block's edge between waypoints — then its full face through four corner
+      waypoints — over <strong>10 iterations</strong>, recording the indicator at each pass.
+      The UR5 held its line: the only visible variation came from the print surface itself,
+      not the robot.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/ur5/5.jpg" target="_blank" rel="noopener">
+        <img src="../assets/ur5/5.jpg" alt="Grid of ten photos showing the UR5 gripper holding position against a dial pressure indicator across ten repeatability iterations, with colored blocks in the foreground.">
+      </a>
+      <figcaption><span class="n">FIG 05</span>All ten repeatability passes against the dial indicator — the needle barely moves; the rough 3D-printed edge accounts for the residual.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Grip &amp; Move</div>
+    <h2 class="reveal">Calibrated force, transformed frames, undamaged blocks.</h2>
+    <p class="reveal">
+      The <strong>ROBOTIQ adaptive gripper</strong> work went from manual open/close on the
+      pendant to scripted control, with grip force calibrated in newtons against a
+      <strong>load cell</strong> across speed and force settings. The pick-and-place program
+      then transferred blocks pallet-to-pallet using <strong>coordinate transformations from
+      the robot base frame to each pallet</strong>, with positions held in variables so the
+      pallets could move without rewriting the program. A precision epilogue: inserting and
+      removing a <strong>10 mm dowel pin</strong> through a sequence of different-sized holes
+      in a mating plate.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/ur5/6.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ur5/6.jpg" alt="The ROBOTIQ adaptive gripper positioned above a set of colored blocks on the workbench.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>ROBOTIQ gripper over the block set — force settings calibrated against a load cell before touching parts.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/ur5/7.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ur5/7.jpg" alt="The UR5 gripper lifting a blue block from a pallet of colored blocks during the pick-and-place task.">
+        </a>
+        <figcaption><span class="n">FIG 07</span>Pallet-to-pallet pick-and-place — grip force high enough to hold, low enough to leave no marks.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Assembly</div>
+    <h2 class="reveal">Screw until the joints say 3 N·m.</h2>
+    <p class="reveal">
+      The final task assembled a working flashlight: head clamped in a <strong>pneumatic
+      chuck via Digital I/O</strong>, barrel threaded on until joint torque readings from
+      <strong>get_joint_torques()</strong> hit <strong>3 N·m</strong>, battery pack inserted
+      with correct polarity, and the tail cap tightened to its own <strong>2 N·m</strong>
+      spec before unclamping. Fastening by torque feedback instead of position means the
+      thread decides when it's seated — the robot just listens.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Step</th><th>Action</th><th>Control signal</th></tr></thead>
+      <tbody>
+        <tr><td>Clamp head</td><td>place into pneumatic chuck</td><td>Digital I/O</td></tr>
+        <tr class="hl"><td>Thread barrel</td><td>screw onto head</td><td>torque → 3 N·m</td></tr>
+        <tr><td>Insert battery</td><td>into barrel, correct polarity</td><td>pose sequence</td></tr>
+        <tr class="hl"><td>Thread tail cap</td><td>align and screw</td><td>torque → 2 N·m</td></tr>
+        <tr><td>Release</td><td>unclamp, place in tray</td><td>Digital I/O</td></tr>
+      </tbody>
+    </table>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/ur5/8.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ur5/8.jpg" alt="The UR5 positioning the flashlight head into the pneumatic chuck at the start of the assembly sequence.">
+        </a>
+        <figcaption><span class="n">FIG 08</span>Head into the pneumatic chuck — clamped through Digital I/O before threading begins.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/ur5/9.jpg" target="_blank" rel="noopener">
+          <img src="../assets/ur5/9.jpg" alt="The UR5 gripper holding the flashlight barrel during the threading stage of assembly.">
+        </a>
+        <figcaption><span class="n">FIG 09</span>Barrel stage — the gripper drives the thread while joint torques stream back as the stop condition.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <a href="../assets/ur5/10.jpg" target="_blank" rel="noopener">
+        <img src="../assets/ur5/10.jpg" alt="The UR5 holding the fully assembled flashlight above the workbench at the end of the sequence.">
+      </a>
+      <figcaption><span class="n">FIG 10</span>The deliverable — an assembled, working flashlight, torqued to spec and placed in the tray.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Environments are tools, not identities.</strong> PolyScope got the arm moving in
+      minutes, RoboDK caught path problems before they cost hardware time, and URScript did
+      what no GUI could — read joint torques mid-motion and use them as a stop condition.
+      Knowing when to drop a layer is the actual skill. <strong>moveJ and moveL are different
+      promises:</strong> one guarantees where the joints end up, the other guarantees the path
+      between — the cube trace only measures correctly because every edge kept the second
+      promise. And <strong>force is a sensor:</strong> the flashlight threads seated by
+      listening to torque, which is the difference between assembly and cross-threading with
+      confidence.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">UR5</span><span class="tag">PolyScope</span><span class="tag">RoboDK</span>
+      <span class="tag">URScript</span><span class="tag">moveJ / moveL</span><span class="tag">ROBOTIQ Gripper</span>
+      <span class="tag">Torque Control</span><span class="tag">Digital I/O</span><span class="tag">Pick-and-Place</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the cube-tracing experiment — a wireframe arm walks its stylus through the
+     eight vertices of a faint virtual cube in the report's exact visit order (top face loop,
+     then the bottom face), lighting each traversed edge amber. Trace, admire, reset. */
+  const canvas=document.getElementById('ur5scene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  camera.position.set(0,3.2,13);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+  const FLOOR=-2.6;
+
+  const grid=new THREE.GridHelper(80,50,0x1c3a66,0x11223f);
+  grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
+  scene.add(grid);
+
+  /* ---- arm: base yaw + 2-link IK (elbow-up), stylus tool pointing down ---- */
+  const L1=2.7,L2=2.5,TOOL=0.5;
+  const armBase=new THREE.Group();
+  armBase.position.set(0,FLOOR,-3.6);
+  scene.add(armBase);
+  const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.62,0.8,12),wire(DEEPBLUE));
+  pedestal.position.y=0.4; armBase.add(pedestal);
+  const yawGrp=new THREE.Group(); yawGrp.position.y=0.85; armBase.add(yawGrp);
+  const shoulder=new THREE.Group(); yawGrp.add(shoulder);
+  const upper=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,L1,8),wire(CYAN));
+  upper.position.y=L1/2; shoulder.add(upper);
+  const elbow=new THREE.Group(); elbow.position.y=L1; shoulder.add(elbow);
+  const fore=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,L2,8),wire(CYAN));
+  fore.position.y=L2/2; elbow.add(fore);
+  const wrist=new THREE.Group(); wrist.position.y=L2; elbow.add(wrist);
+  /* stylus: a slim cylinder + cone tip hanging below the wrist */
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,TOOL-0.14,6),wire(AMBER));
+  shaft.position.y=-(TOOL-0.14)/2; wrist.add(shaft);
+  const nib=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.14,6),wire(AMBER));
+  nib.rotation.x=Math.PI; nib.position.y=-(TOOL-0.07); wrist.add(nib);
+  const joint1=new THREE.Mesh(new THREE.SphereGeometry(0.17,8,6),wire(AMBER)); shoulder.add(joint1);
+  const joint2=new THREE.Mesh(new THREE.SphereGeometry(0.14,8,6),wire(AMBER)); elbow.add(joint2);
+
+  const flat=new THREE.Vector3();
+  function aimArm(world){
+    flat.subVectors(world,armBase.position);
+    const yaw=Math.atan2(-flat.z,flat.x);
+    yawGrp.rotation.y=yaw;
+    const r=Math.sqrt(flat.x*flat.x+flat.z*flat.z);
+    const h=flat.y-0.85;
+    const d=Math.min(Math.sqrt(r*r+h*h),L1+L2-0.01);
+    const a1=Math.atan2(h,r)+Math.acos(Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)));
+    const a2=Math.acos(Math.min(1,Math.max(-1,(L1*L1+L2*L2-d*d)/(2*L1*L2))));
+    shoulder.rotation.z=-(Math.PI/2-a1);
+    elbow.rotation.z=a2-Math.PI; // elbow-up: forearm folds back toward the target
+    wrist.rotation.z=-(shoulder.rotation.z+elbow.rotation.z);
+  }
+
+  /* ---- the virtual cube: report visit order — top face loop, then bottom face ---- */
+  const S=0.8;                                  // half-side
+  const CC=new THREE.Vector3(0,FLOOR+2.0,-0.3); // cube center
+  const HI=CC.y+S, LO=CC.y-S;
+  const V=[
+    new THREE.Vector3(CC.x-S,HI,CC.z+S), // 1  A  top
+    new THREE.Vector3(CC.x-S,HI,CC.z-S), // 2  B
+    new THREE.Vector3(CC.x+S,HI,CC.z-S), // 3  C
+    new THREE.Vector3(CC.x+S,HI,CC.z+S), // 4  D
+    new THREE.Vector3(CC.x-S,HI,CC.z+S), // 5  A again
+    new THREE.Vector3(CC.x+S,LO,CC.z+S), // 6  below D
+    new THREE.Vector3(CC.x-S,LO,CC.z+S), // 7  below A
+    new THREE.Vector3(CC.x-S,LO,CC.z-S), // 8  below B
+    new THREE.Vector3(CC.x+S,LO,CC.z-S)  // 9  below C
+  ];
+  const LEGS=V.length-1;
+  /* faint full cube for reference */
+  const cubeEdges=new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(S*2,S*2,S*2)),
+    new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.22}));
+  cubeEdges.position.copy(CC); scene.add(cubeEdges);
+  /* vertex beacons */
+  const beacons=[];
+  V.slice(0,4).concat(V.slice(5)).forEach(p=>{
+    const b=new THREE.Mesh(new THREE.SphereGeometry(0.06,6,5),wire(CYAN));
+    b.position.copy(p); scene.add(b); beacons.push(b);
+  });
+  /* traced path: one growing segment per leg */
+  const trailPos=new Float32Array(LEGS*6);
+  const trailGeo=new THREE.BufferGeometry();
+  trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+  const trailMat=new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.85});
+  scene.add(new THREE.LineSegments(trailGeo,trailMat));
+  function setTrail(leg,k){ // legs < leg are complete; current leg drawn to fraction k
+    for(let i=0;i<LEGS;i++){
+      const a=V[i], b=V[i+1];
+      const f=i<leg?1:(i===leg?k:0);
+      trailPos[i*6]=a.x; trailPos[i*6+1]=a.y; trailPos[i*6+2]=a.z;
+      trailPos[i*6+3]=a.x+(b.x-a.x)*f; trailPos[i*6+4]=a.y+(b.y-a.y)*f; trailPos[i*6+5]=a.z+(b.z-a.z)*f;
+    }
+    trailGeo.attributes.position.needsUpdate=true;
+  }
+
+  /* ---- ambient dust ---- */
+  const PC=mobile?450:1100;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+
+  /* ---- trace timing: approach, 8 legs with dwells, admire, repeat ---- */
+  const APPROACH=1.2, LEG_T=1.1, DWELL=0.25, ADMIRE=2.8;
+  const CYCLE=APPROACH+LEGS*(LEG_T+DWELL)+ADMIRE;
+  const home=new THREE.Vector3(1.6,FLOOR+3.3,-2.2);
+  const wristTarget=new THREE.Vector3().copy(home);
+  const smoothstep=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  const wp=i=>new THREE.Vector3(V[i].x,V[i].y+TOOL,V[i].z); // wrist sits TOOL above the vertex
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      const ct=t%CYCLE;
+      if(ct<APPROACH){                       // moveJ to the first corner
+        wristTarget.lerpVectors(home,wp(0),smoothstep(ct/APPROACH));
+        setTrail(0,0);
+        trailMat.opacity=0.85;
+      }else if(ct<APPROACH+LEGS*(LEG_T+DWELL)){
+        const lt=ct-APPROACH;
+        const leg=Math.min(Math.floor(lt/(LEG_T+DWELL)),LEGS-1);
+        const p=lt-leg*(LEG_T+DWELL);
+        const k=p<LEG_T?smoothstep(p/LEG_T):1; // moveL leg, then a beat at the vertex
+        wristTarget.lerpVectors(wp(leg),wp(leg+1),k);
+        setTrail(leg,k);
+      }else{                                 // admire: retreat while the cube pulses
+        const at=ct-(APPROACH+LEGS*(LEG_T+DWELL));
+        wristTarget.lerpVectors(wp(LEGS),home,smoothstep(at/1.2));
+        setTrail(LEGS-1,1);
+        trailMat.opacity=0.55+Math.sin(t*4)*0.3;
+      }
+      aimArm(wristTarget);
+      cubeEdges.rotation.y=0;
+      beacons.forEach((b,i)=>{ b.material.opacity=0.4+Math.sin(t*2+i)*0.25; });
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.6)*13+mx*1.6;
+    camera.position.z=Math.cos(d*0.6)*13;
+    camera.position.y=3.2-Math.min(d*1.5,3);
+    camera.lookAt(0.3,FLOOR+1.7,CC.z-0.4);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

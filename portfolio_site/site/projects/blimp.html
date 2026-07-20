@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="AeroFusion — autonomous blimp with YOLOv5 vision autonomy, Kalman sensor fusion, and PI control on a custom airframe. RAS 598 project by Prajjwal Dutta, continued in ASU's AMASS Lab.">
+<title>Autonomous Blimp — AeroFusion — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #blimpscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.8rem 1.4rem;border-radius:8px;border:1px solid var(--cyan);
+    color:var(--cyan);transition:background .25s,color .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img{display:block;width:100%;height:auto;}
+  figure img.diagram{padding:1.6rem 1.8rem;box-sizing:border-box;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="blimpscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>RAS 598 · Robotic Systems Deployment · Spring 2025</span><span>with Nihar Masurkar &amp; Tatwik Meesala</span></div>
+    <h1 class="reveal">AeroFusion: An Autonomous Blimp, from Custom Airframe to Vision Autonomy</h1>
+    <p class="sub reveal">
+      A lighter-than-air UAV that finds, tracks, and approaches balloon targets on its own:
+      a YOLOv5 detector feeding quadrant-based PI control, a Kalman filter fusing 200 Hz IMU
+      and barometric altitude, and thrust allocation through a pseudo-inverse motor map —
+      all running onboard a Raspberry Pi. Built as a three-person course team, then carried
+      forward as the AMASS Lab's Defend-the-Republic competition platform, where I lead the
+      software stack.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/orgs/RAS598-2025-S-Team03/repositories" target="_blank" rel="noopener" aria-label="GitHub repositories" title="GitHub Repos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="https://github.com/BlimpsCompetitionAMASSLab/Blimp-Competition-AMASS-Lab-ASU/blob/main/Blimp_Project_Weekly_Report.pdf" target="_blank" rel="noopener" aria-label="Platform handoff report PDF" title="Platform Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+      <a class="btn alt" href="https://ras598-2025-s-team03.github.io/" target="_blank" rel="noopener">Team Site ↗</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>~96%</b><span>mAP@0.5 · YOLOv5s</span></div>
+      <div class="metric"><b>50 Hz</b><span>onboard control loop</span></div>
+      <div class="metric"><b>200 Hz</b><span>IMU fusion rate</span></div>
+      <div class="metric"><b>12-state</b><span>Kalman estimator</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <a href="../assets/blimp/gondola_cad.jpg" target="_blank" rel="noopener">
+      <img src="../assets/blimp/gondola_cad.jpg" alt="CAD render of the blimp gondola suspended under the envelope: electronics board, servo and gear drive, and two carbon-fiber motor booms with propellers.">
+    </a>
+    <figcaption><span class="n">FIG 01</span>Gondola CAD — compute, sensing, and gear-driven actuation packed under the envelope, with motor booms carrying the side thrusters.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Mission</div>
+    <h2 class="reveal">Fly slower than a drone. Think harder than a balloon.</h2>
+    <p class="reveal">
+      The team's research question: <strong>how effectively can sensor data fusion enhance
+      control and tracking of hybrid robotic blimps in dynamic environments?</strong> A blimp
+      is a maddening control plant — buoyancy-dominated, underactuated, pushed around by air
+      currents a quadcopter would never notice, with actuators that whisper rather than shout.
+      The mission profile, drawn from the Defend-the-Republic competition format: autonomously
+      detect a balloon target, steer toward it, and capture it — with every sensor and every
+      inference cycle running onboard.
+    </p>
+    <p class="reveal">
+      That constraint shaped everything. No motion-capture crutch, no offboard GPU: a
+      Raspberry Pi, a camera, an IMU, and a barometer had to carry detection, state
+      estimation, and control simultaneously — in real time.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Platform</div>
+    <h2 class="reveal">Every gram argued for its seat.</h2>
+    <p class="reveal">
+      The airframe is a custom SolidWorks design: an ellipsoidal helium envelope with a
+      3D-printed, foam-and-balsa gondola slung at the center of gravity. Onboard: a
+      <strong>Raspberry Pi 4B (8 GB)</strong> with a custom power-distribution PCB, a
+      <strong>BNO085 IMU at 200 Hz</strong>, a <strong>BMP390 barometer at 50 Hz</strong> for
+      altitude, and a <strong>Pi Camera v2</strong> streaming 640×480 at 30 fps. Thrust comes
+      from a differential pair of side motors plus vertical thrust for heave, driven through
+      ESCs at 50 Hz PWM — all fed by a single 7.4 V, 900 mAh LiPo.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/blimp/envelope_cad.jpg" target="_blank" rel="noopener">
+        <img src="../assets/blimp/envelope_cad.jpg" alt="SolidWorks CAD model of the ellipsoidal blimp envelope with the gondola assembly mounted underneath.">
+      </a>
+      <figcaption><span class="n">FIG 02</span>SolidWorks envelope model — the ellipsoid geometry also feeds the dynamics model: volume, inertia, and added-mass terms are computed from this CAD.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Architecture</div>
+    <h2 class="reveal">Sense. Fuse. Decide. Actuate — at 50 Hz.</h2>
+    <div class="law reveal">
+      e<sub>u</sub> = u<sub>c</sub> − 320 &nbsp;<span class="c">// pixel yaw error: detection centroid vs frame center</span><br>
+      ψ<sub>cmd</sub> = <span class="a">K<sub>p,ψ</sub></span>·e<sub>u</sub> + <span class="a">K<sub>i,ψ</sub></span>·∫e<sub>u</sub> dt &nbsp;<span class="c">// vision-based yaw PI</span><br>
+      f<sub>z</sub> = <span class="a">K<sub>p,z</sub></span>·e<sub>z</sub> + <span class="a">K<sub>i,z</sub></span>·∫e<sub>z</sub> dt &nbsp;<span class="c">// barometric altitude PI</span><br>
+      u = T<sup>†</sup>( F<sub>desired</sub> − F<sub>buoyancy</sub> ) &nbsp;<span class="c">// pseudo-inverse thrust allocation → 4× PWM</span>
+    </div>
+    <p class="reveal">
+      The ROS 2 stack is layered: a <strong>sensor layer</strong> publishing three asynchronous
+      streams (200 Hz IMU, 50 Hz barometer, ~30 fps detections); an <strong>estimation
+      layer</strong> where a Kalman filter fuses them into a 12-dimensional state — 6-DoF pose
+      plus linear and angular velocities — recovering the derivatives no sensor measures
+      directly; a <strong>control layer</strong> running the PI laws above; and an
+      <strong>actuation layer</strong> converting desired forces to individual motor commands
+      through the pseudo-inverse of the thrust-allocation matrix, saturated to ESC bounds.
+      A mode switcher arbitrates between joystick manual control, full autonomy, and safety
+      overrides. If the detector loses the balloon, the blimp holds barometric altitude and
+      stops yawing — hover, don't guess — until re-detection.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Vision Autonomy</div>
+    <h2 class="reveal">A quadrant is all the geometry you need.</h2>
+    <p class="reveal">
+      A YOLOv5s model, trained on a custom balloon dataset and quantized to 8-bit for CPU
+      inference, reached <strong>~96% mAP@0.5</strong> — about 20 ms per frame on GPU and
+      under 100 ms on CPU. Rather than full 3D target estimation, navigation uses the
+      detection centroid directly: the image is split into four quadrants plus a center
+      deadband, and each region maps to an intuitive command pair.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Region</th><th>Centroid</th><th>Yaw command</th><th>Vertical command</th></tr></thead>
+      <tbody>
+        <tr><td>Q1 · Northeast</td><td>u&gt;320, v&lt;240</td><td>Right</td><td>Climb</td></tr>
+        <tr><td>Q2 · Northwest</td><td>u&lt;320, v&lt;240</td><td>Left</td><td>Climb</td></tr>
+        <tr><td>Q3 · Southeast</td><td>u&gt;320, v&gt;240</td><td>Right</td><td>Descend</td></tr>
+        <tr><td>Q4 · Southwest</td><td>u&lt;320, v&gt;240</td><td>Left</td><td>Descend</td></tr>
+        <tr class="hl"><td>Center</td><td>|u−320|&lt;ε, |v−240|&lt;ε</td><td>Hold</td><td>Hold altitude</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">Detections below 0.5 confidence are rejected; oversized boxes trigger a safety retreat — the balloon is about to hit the lens.</p>
+    <figure class="reveal">
+      <a href="../assets/blimp/quadrant_feed.jpg" target="_blank" rel="noopener">
+        <img src="../assets/blimp/quadrant_feed.jpg" alt="Live onboard camera feed partitioned into quadrants Q1 to Q4 by a green crosshair, with a balloon target visible in quadrant Q4.">
+      </a>
+      <figcaption><span class="n">FIG 03</span>Live onboard feed, quadrant-partitioned — balloon in Q4 means: yaw left, descend. The PI loops drive it back to center.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Dynamics · Validated on Vicon</div>
+    <h2 class="reveal">A blimp is an underwater vehicle that got lucky.</h2>
+    <p class="reveal">
+      Buoyancy-dominated flight means quadrotor models don't apply — so the team derived a
+      full 6-DoF lighter-than-air model instead: rigid-body mass and inertia extracted from
+      the CAD, <strong>added-mass terms computed via Lamb's k-factors</strong> for the
+      ellipsoid, plus Coriolis, damping, and gravity–buoyancy restoring terms. Single-axis
+      thrust tests tracked with <strong>Vicon motion capture</strong> validated the model:
+      theoretical and experimental trajectories align in both forward and vertical motion,
+      confirming that LTA vehicle dynamics follow the same structure as underwater-vehicle
+      models — with buoyancy doing the work water usually does.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/blimp/vicon_x_dark.png" target="_blank" rel="noopener">
+          <img class="diagram" src="../assets/blimp/vicon_x_dark.png" alt="Plot of forward single-degree-of-freedom test: experimental Vicon trajectory versus theoretical model prediction along the X axis.">
+        </a>
+        <figcaption><span class="n">FIG 04</span>Forward (X-axis) single-DoF test — Vicon ground truth vs the derived dynamic model.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/blimp/vicon_z_dark.png" target="_blank" rel="noopener">
+          <img class="diagram" src="../assets/blimp/vicon_z_dark.png" alt="Plot of vertical single-degree-of-freedom test: experimental Vicon trajectory versus theoretical model prediction along the Z axis.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>Vertical (Z-axis) single-DoF test — heave dynamics against the model's prediction.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Beyond the Course</div>
+    <h2 class="reveal">From class project to competition platform.</h2>
+    <p class="reveal">
+      The blimp outlived the semester. It became the AMASS Lab's Defend-the-Republic
+      competition platform, with a ten-person team building on the stack — and me owning
+      <strong>software architecture and integration</strong> as the primary code reviewer.
+      The 51-page technical handoff we published covers reproducible bring-up from a clean
+      OS image, full mechanical and electronics BOMs, wiring and pin maps, and system-level
+      acceptance tests with explicit pass criteria and archived evidence — logs, plots, and
+      videos pinned to commits.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Acceptance test</th><th>Procedure</th><th>Pass criteria</th></tr></thead>
+      <tbody>
+        <tr><td>Hover stability</td><td>60 s hover at 0.5 m</td><td>altitude std-dev &lt; 0.1 m, drift &lt; 0.2 m</td></tr>
+        <tr><td>Quadrant detection</td><td>10 trials per quadrant</td><td>&gt;90% detection accuracy</td></tr>
+        <tr><td>Cage-gate actuation</td><td>20 open/close cycles</td><td>100% success, &lt; 2 s actuation</td></tr>
+        <tr><td>Vision autonomy</td><td>tethered approach, target at ~2 m</td><td>lock &lt; 15 s, altitude within 0.3 m, hold ≥ 5 s</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">From the platform report's acceptance-test record (release tag platform_report_2026_02), evidence archived per commit.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Autonomy budgets are physical.</strong> Every design call — YOLOv5s over larger
+      models, quadrant logic over 3D estimation, IMU+barometer over GPS — traded capability
+      for grams, milliseconds, and milliamps, and the system flew because those trades were
+      made honestly. <strong>Fusion is what makes cheap sensors act expensive:</strong> no
+      single sensor onboard could localize the blimp, but the Kalman-fused stack held
+      autonomous lock on a moving target. And <strong>platforms outlive projects</strong> —
+      documentation, acceptance tests, and clean handoff turned one semester's build into a
+      lab's ongoing competition program.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">ROS 2</span><span class="tag">YOLOv5</span><span class="tag">Kalman Filtering</span>
+      <span class="tag">PI Control</span><span class="tag">Thrust Allocation</span><span class="tag">SolidWorks</span>
+      <span class="tag">Custom PCB</span><span class="tag">Raspberry Pi</span><span class="tag">Vicon Validation</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the vision-autonomy loop itself — a wireframe blimp pursues a drifting
+     balloon target; a camera frustum projects from the gondola onto a quadrant reticle
+     that tracks the balloon, echoing the Q1–Q4 navigation logic. */
+  const canvas=document.getElementById('blimpscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  camera.position.set(0,2.5,13);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+
+  const grid=new THREE.GridHelper(80,50,0x1c3a66,0x11223f);
+  grid.position.y=-4; grid.material.transparent=true; grid.material.opacity=0.5;
+  scene.add(grid);
+
+  /* ---- blimp ---- */
+  const blimp=new THREE.Group();
+  const hull=new THREE.Mesh(new THREE.SphereGeometry(1.5,16,12),wire(DEEPBLUE));
+  hull.scale.set(1.7,0.64,0.64); blimp.add(hull);
+  const gondola=new THREE.Mesh(new THREE.BoxGeometry(0.85,0.3,0.36),wire(CYAN));
+  gondola.position.y=-1.08; blimp.add(gondola);
+  // camera pod on the gondola nose
+  const camPod=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.22,6),wire(AMBER));
+  camPod.rotation.z=-Math.PI/2; camPod.position.set(0.55,-1.08,0); blimp.add(camPod);
+  // motor booms + props
+  const props=[];
+  [[0.5],[-0.5]].forEach(([z])=>{
+    const boom=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,1.0,5),wire(DEEPBLUE));
+    boom.rotation.x=Math.PI/2; boom.position.set(-0.2,-1.08,z*0.5); blimp.add(boom);
+    const pr=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.5,0.06),wire(AMBER));
+    pr.position.set(-0.2,-1.08,z*1.0);
+    blimp.add(pr); props.push(pr);
+  });
+  [[1],[-1]].forEach(([s])=>{
+    const fin=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.7,4),wire(DEEPBLUE));
+    fin.rotation.z=Math.PI/2;
+    fin.position.set(-2.45,s*0.35,0);
+    blimp.add(fin);
+  });
+  blimp.scale.setScalar(mobile?0.75:1.0);
+  scene.add(blimp);
+
+  /* ---- balloon target ---- */
+  const balloon=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,8),wire(AMBER));
+  const knot=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.18,5),wire(AMBER));
+  knot.position.y=-0.58; balloon.add(knot);
+  scene.add(balloon);
+
+  /* ---- quadrant reticle tracking the balloon ---- */
+  const reticle=new THREE.Group();
+  const RW=2.2,RH=1.65;
+  const frameGeo=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-RW/2,-RH/2,0),new THREE.Vector3(RW/2,-RH/2,0),
+    new THREE.Vector3(RW/2,RH/2,0),new THREE.Vector3(-RW/2,RH/2,0),
+    new THREE.Vector3(-RW/2,-RH/2,0)]);
+  const retMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.55});
+  reticle.add(new THREE.Line(frameGeo,retMat));
+  const crossMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3});
+  const crossH=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-RW/2,0,0),new THREE.Vector3(RW/2,0,0)]);
+  const crossV=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-RH/2,0),new THREE.Vector3(0,RH/2,0)]);
+  reticle.add(new THREE.Line(crossH,crossMat));
+  reticle.add(new THREE.Line(crossV,crossMat));
+  scene.add(reticle);
+
+  /* ---- camera frustum: gondola nose -> reticle corners ---- */
+  const frusGeo=new THREE.BufferGeometry();
+  const frusPos=new Float32Array(8*3);
+  frusGeo.setAttribute('position',new THREE.BufferAttribute(frusPos,3));
+  const frustum=new THREE.LineSegments(frusGeo,new THREE.LineBasicMaterial({
+    color:CYAN,transparent:true,opacity:0.18}));
+  scene.add(frustum);
+
+  /* ---- ambient dust ---- */
+  const PC=mobile?500:1200;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+
+  let target=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{target=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  const bPos=new THREE.Vector3(), nose=new THREE.Vector3(), toB=new THREE.Vector3();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      /* balloon wanders (lissajous) */
+      balloon.position.set(
+        Math.sin(t*0.21)*7.5,
+        1.6+Math.sin(t*0.5)*1.1+Math.sin(t*0.13)*0.8,
+        Math.sin(t*0.34+1.4)*3-2.5);
+      balloon.rotation.y=t*0.3;
+
+      /* blimp pursues with lag: trails the balloon's position */
+      bPos.set(
+        Math.sin((t-6)*0.21)*7.5*0.8-1.5,
+        1.9+Math.sin((t-6)*0.5)*0.6,
+        Math.sin((t-6)*0.34+1.4)*3*0.8+1.0);
+      blimp.position.lerp(bPos,0.02);
+      // yaw toward the balloon
+      toB.subVectors(balloon.position,blimp.position);
+      const desiredYaw=Math.atan2(-toB.z,toB.x);
+      let dy=desiredYaw-blimp.rotation.y;
+      while(dy>Math.PI)dy-=Math.PI*2; while(dy<-Math.PI)dy+=Math.PI*2;
+      blimp.rotation.y+=dy*0.015;
+      blimp.rotation.z=Math.sin(t*0.4)*0.04;
+      props.forEach(p=>{p.rotation.z+=0.45;});
+
+      /* reticle hovers between blimp and balloon, facing the blimp */
+      reticle.position.lerp(balloon.position,0.08);
+      reticle.lookAt(blimp.position);
+      retMat.opacity=0.4+Math.sin(t*2.2)*0.15;
+
+      /* frustum lines from camera pod to reticle corners */
+      nose.set(0.55,-1.08,0).applyMatrix4(blimp.matrixWorld);
+      const corners=[[-RW/2,-RH/2],[RW/2,-RH/2],[RW/2,RH/2],[-RW/2,RH/2]];
+      corners.forEach((c,i)=>{
+        const p=new THREE.Vector3(c[0],c[1],0).applyMatrix4(reticle.matrixWorld);
+        frusPos[i*6]=nose.x; frusPos[i*6+1]=nose.y; frusPos[i*6+2]=nose.z;
+        frusPos[i*6+3]=p.x;  frusPos[i*6+4]=p.y;  frusPos[i*6+5]=p.z;
+      });
+      frusGeo.attributes.position.needsUpdate=true;
+      frustum.material.opacity=0.12+Math.sin(t*2.2)*0.05;
+    }
+    smooth+=(target-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.6)*13+mx*1.6;
+    camera.position.z=Math.cos(d*0.6)*13;
+    camera.position.y=2.5-Math.min(d*1.5,3);
+    camera.lookAt(blimp.position.x*0.4,1,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

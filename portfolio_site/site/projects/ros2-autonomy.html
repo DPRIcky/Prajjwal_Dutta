@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A three-part ROS 2 mobile autonomy stack — OAK-D cylinder perception, a 3D discrete Bayes filter for localization, and energy-aware A* planning with a Turn-Go-Turn controller. ASU RAS 598. By Prajjwal Dutta.">
+<title>ROS 2 Autonomy Stack — Perception, Localization &amp; Planning — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #hubscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:20ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+
+  /* sub-project cards */
+  .subs{display:grid;gap:1.6rem;margin-top:2rem;}
+  .sub-card{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;background:rgba(10,18,38,0.62);
+    transition:border-color .3s,transform .3s,box-shadow .3s;}
+  .sub-card:hover,.sub-card:focus-visible{border-color:rgba(79,216,232,0.5);transform:translateY(-4px);
+    box-shadow:0 18px 40px rgba(2,6,14,0.55);}
+  .sub-card .media{position:relative;background:#04070e;aspect-ratio:16/7;overflow:hidden;}
+  .sub-card .media video,.sub-card .media img{width:100%;height:100%;object-fit:cover;display:block;
+    opacity:0.72;transition:opacity .35s,transform .6s;}
+  .sub-card:hover .media video,.sub-card:hover .media img{opacity:1;transform:scale(1.03);}
+  .sub-card .num{position:absolute;left:0.9rem;top:0.75rem;font-family:var(--mono);font-size:0.62rem;
+    letter-spacing:0.2em;color:var(--amber);background:rgba(6,10,20,0.78);border:1px solid var(--line);
+    border-radius:999px;padding:0.22rem 0.7rem;}
+  .sub-card .body{padding:1.3rem 1.5rem 1.5rem;}
+  .sub-card h3{font-family:var(--display);font-weight:700;font-size:1.22rem;letter-spacing:-0.01em;
+    display:flex;align-items:baseline;gap:0.5rem;}
+  .sub-card h3 .arrow{color:var(--cyan);opacity:0;transform:translateX(-6px);
+    transition:opacity .3s,transform .3s;font-size:0.9em;}
+  .sub-card:hover h3 .arrow,.sub-card:focus-visible h3 .arrow{opacity:1;transform:none;}
+  .sub-card:hover h3,.sub-card:focus-visible h3{color:var(--cyan);}
+  .sub-card p{margin:0.6rem 0 0;font-size:0.92rem;}
+  .sub-card .kpis{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:1rem;}
+  .sub-card .kpi{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.08em;color:var(--cyan);
+    border:1px solid rgba(79,216,232,0.28);border-radius:999px;padding:0.26rem 0.75rem;}
+  .sub-card .repo{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.1em;color:var(--muted);
+    margin-top:0.9rem;display:block;}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  .d1{transition-delay:.1s;} .d2{transition-delay:.2s;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="hubscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>ROS 2 Autonomy · Spring 2026</span><span>ASU · RAS 598</span></div>
+    <h1 class="reveal">Three Halves of an Autonomous Robot</h1>
+    <p class="sub reveal">
+      A mobile robot has to answer three questions in a loop: <em>what's out there</em>,
+      <em>where am I</em>, and <em>how do I get there without wasting energy</em>. This is a
+      ROS 2 stack that answers each one from scratch — no <code>nav2</code>, no
+      <code>pcl_ros</code>, no <code>amcl</code> — built as three independent packages against
+      the same simulated cave world. Every algorithm below is hand-implemented: RANSAC on point
+      normals, a histogram filter over half a million belief cells, A* with Bresenham
+      line-of-sight pruning.
+    </p>
+    <div class="metrics reveal">
+      <div class="metric"><b>3</b><span>standalone ROS 2 packages</span></div>
+      <div class="metric"><b>10</b><span>perception stages</span></div>
+      <div class="metric"><b>460,800</b><span>belief cells · 80×80×72</span></div>
+      <div class="metric"><b>34/34</b><span>planner unit tests</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-label reveal">The Stack</div>
+    <h2 class="reveal">Pick one.</h2>
+    <p class="reveal">
+      Each package stands alone with its own repository, its own simulation setup, and its own
+      results. They're presented in the order a robot actually uses them.
+    </p>
+
+    <div class="subs">
+      <a class="sub-card reveal" href="perception-cylinders.html">
+        <div class="media">
+          <video autoplay muted loop playsinline preload="metadata"
+            poster="../assets/perception/perception-cylinders-poster.jpg" aria-hidden="true" tabindex="-1">
+            <source src="../media/perception-cylinders.mp4" type="video/mp4">
+          </video>
+          <span class="num">01 / Perception</span>
+        </div>
+        <div class="body">
+          <h3>OAK-D Cylinder Perception Pipeline<span class="arrow">→</span></h3>
+          <p>
+            RGB-D point clouds into labeled objects across ten stages: box filter, voxel
+            downsample, k-NN + SVD normals, RANSAC plane removal, Euclidean clustering,
+            cylinder fitting from normal cross products, and HSV semantic labeling — with every
+            stage published as its own debug cloud.
+          </p>
+          <div class="kpis"><span class="kpi">10 stages</span><span class="kpi">6 debug topics</span><span class="kpi">50–200 ms/frame</span></div>
+          <span class="repo">github.com/DPRIcky/perception-cylinder-pipeline</span>
+        </div>
+      </a>
+
+      <a class="sub-card reveal d1" href="bayes-localization.html">
+        <div class="media">
+          <video autoplay muted loop playsinline preload="metadata"
+            poster="../assets/bayes/bayes-localization-poster.jpg" aria-hidden="true" tabindex="-1">
+            <source src="../media/bayes-localization.mp4" type="video/mp4">
+          </video>
+          <span class="num">02 / Localization</span>
+        </div>
+        <div class="body">
+          <h3>3D Discrete Bayes Filter Localization<span class="arrow">→</span></h3>
+          <p>
+            A histogram filter holding the full posterior over (x, y, θ) as an 80×80×72 array,
+            predicted by Turn-Go-Turn odometry decomposition with Gaussian diffusion and
+            corrected by range–bearing landmark likelihoods — converging within 0.6 m after two
+            or three sightings, and failing instructively when kidnapped.
+          </p>
+          <div class="kpis"><span class="kpi">460,800 cells</span><span class="kpi">0.6 m convergence</span><span class="kpi">σ_r 0.5 m · σ_b 15°</span></div>
+          <span class="repo">github.com/DPRIcky/bayes-filter-robot-localization</span>
+        </div>
+      </a>
+
+      <a class="sub-card reveal d2" href="energy-planner.html">
+        <div class="media">
+          <video autoplay muted loop playsinline preload="metadata"
+            poster="../assets/energy/energy-planner-poster.jpg" aria-hidden="true" tabindex="-1">
+            <source src="../media/energy-planner.mp4" type="video/mp4">
+          </video>
+          <span class="num">03 / Planning</span>
+        </div>
+        <div class="body">
+          <h3>Energy-Aware A* Motion Planning<span class="arrow">→</span></h3>
+          <p>
+            A* on an intelligently downsampled 80×80 grid, greedy pruning with Bresenham
+            line-of-sight, diagonal corner checks, and a Turn-Go-Turn controller tuned for
+            energy rather than speed — 67× faster planning, 89.8% fewer waypoints, ~90% energy
+            saved, and 34 unit tests proving each layer.
+          </p>
+          <div class="kpis"><span class="kpi">67× faster</span><span class="kpi">108 → 11 waypoints</span><span class="kpi">~90% energy saved</span></div>
+          <span class="repo">github.com/DPRIcky/ros2-energy-planner</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Common Ground</div>
+    <h2 class="reveal">One world, three problems.</h2>
+    <p class="reveal">
+      Localization and planning share the same testbed — a <strong>16 × 16 m cave</strong> in
+      the Stage simulator, the same 0.2 m grid resolution, and the same Turn-Go-Turn motion
+      decomposition, which appears in one package as a <em>motion model</em> for prediction and
+      in the other as a <em>controller</em> for execution. That symmetry is the most useful
+      thing these three projects taught together: the same decomposition of movement serves both
+      to guess where you ended up and to decide how to get somewhere.
+    </p>
+    <p class="reveal">
+      The perception package works in sensor space instead — OAK-D RGB-D frames replayed from
+      recorded rosbags — but shares the discipline: publish the intermediate state, tune from a
+      single config, and verify against something other than a screenshot.
+    </p>
+    <table class="reveal">
+      <thead><tr><th></th><th>Perception</th><th>Localization</th><th>Planning</th></tr></thead>
+      <tbody>
+        <tr><td>Input</td><td>/oakd/points</td><td>odometry + fiducials</td><td>occupancy grid PNG</td></tr>
+        <tr><td>Core method</td><td>RANSAC on normals</td><td>histogram Bayes filter</td><td>A* + Bresenham pruning</td></tr>
+        <tr><td>State</td><td>per-frame, stateless</td><td>80×80×72 belief</td><td>path + 3-state machine</td></tr>
+        <tr><td>Environment</td><td>recorded rosbags</td><td>Stage cave world</td><td>Stage cave world</td></tr>
+        <tr class="hl"><td>Output</td><td>labeled cylinder markers</td><td>pose belief + costmap</td><td>/cmd_vel + path markers</td></tr>
+      </tbody>
+    </table>
+    <div class="proj-stack reveal">
+      <span class="tag">ROS 2</span><span class="tag">rclpy</span><span class="tag">Stage Simulator</span>
+      <span class="tag">RViz</span><span class="tag">OAK-D RGB-D</span><span class="tag">RANSAC</span>
+      <span class="tag">Bayes Filtering</span><span class="tag">A* Search</span><span class="tag">NumPy / SciPy</span>
+      <span class="tag">OpenCV</span><span class="tag">pytest</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="perception-cylinders.html">Start with perception →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: all three layers at once. A robot follows a planned path through the cave
+     (planning), trailed by a belief cloud that spreads and tightens (localization), while a
+     sensor cone sweeps ahead and lights up colored cylinders as it sees them (perception). */
+  const canvas=document.getElementById('hubscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.024);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,GREEN=0x63d97a,RED=0xe8544f;
+  const mobile=innerWidth<700;
+  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o});
+
+  const grid=new THREE.GridHelper(32,32,0x1c3a66,0x11223f);
+  grid.material.transparent=true; grid.material.opacity=0.26; scene.add(grid);
+
+  /* ---- obstacles: a sparse cave of wireframe blocks ---- */
+  const OBS=[[-9,-5,4,2.4],[-2.5,-8,3,2],[5,-4,3.6,3],[-7,4,3,2.6],[1.5,5.5,4.2,2.2],[8,3,2.6,3.4]];
+  OBS.forEach(([x,z,w,d])=>{
+    const m=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,1.5,d)),
+      new THREE.LineBasicMaterial({color:DEEPBLUE,transparent:true,opacity:0.45}));
+    m.position.set(x,0.75,z); scene.add(m);
+  });
+
+  /* ---- 01 perception: colored cylinders that light up when the sensor cone sweeps them ---- */
+  const CYLS=[{x:-4.5,z:-2.2,c:RED},{x:2.0,z:-6.0,c:GREEN},{x:6.5,z:1.5,c:0x4f9de8},
+              {x:-6.0,z:6.5,c:GREEN},{x:0.5,z:2.0,c:RED}];
+  const cyls=CYLS.map(c=>{
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,1.2,12,1,true),wire(c.c,0.25));
+    m.position.set(c.x,0.6,c.z); scene.add(m); return m;
+  });
+
+  /* ---- 03 planning: a pruned path the robot drives ---- */
+  const WP=[new THREE.Vector3(-11,0,-9),new THREE.Vector3(-11,0,0),new THREE.Vector3(-4,0,2.5),
+            new THREE.Vector3(-1,0,-3),new THREE.Vector3(6,0,-8),new THREE.Vector3(11,0,-2),
+            new THREE.Vector3(9,0,8),new THREE.Vector3(-2,0,9),new THREE.Vector3(-9,0,9)];
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    WP.concat([WP[0]]).map(p=>new THREE.Vector3(p.x,0.05,p.z))),
+    new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.45})));
+  WP.forEach(p=>{
+    const d=new THREE.Mesh(new THREE.SphereGeometry(0.13,7,6),wire(CYAN,0.5));
+    d.position.set(p.x,0.13,p.z); scene.add(d);
+  });
+
+  /* ---- the robot + its sensor cone ---- */
+  const robot=new THREE.Group(); scene.add(robot);
+  robot.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.55,0.24,0.68),wire(AMBER,0.85)),
+    {position:new THREE.Vector3(0,0.2,0)}));
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(1.5,3.4,4,1,true),wire(CYAN,0.16));
+  cone.rotation.x=-Math.PI/2; cone.position.set(0,0.35,1.7); robot.add(cone);
+
+  /* ---- 02 localization: the belief cloud trailing the true pose ---- */
+  const NB=mobile?260:560;
+  const bPos=new Float32Array(NB*3);
+  const bGeo=new THREE.BufferGeometry();
+  bGeo.setAttribute('position',new THREE.BufferAttribute(bPos,3));
+  const belief=new THREE.Points(bGeo,new THREE.PointsMaterial({color:AMBER,size:0.1,transparent:true,opacity:0.5}));
+  belief.frustumCulled=false; scene.add(belief);
+  const seeds=[];
+  for(let i=0;i<NB;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random());
+    seeds.push({ux:Math.cos(a)*r,uy:Math.sin(a)*r,p:Math.random()*6.28});}
+
+  /* ---- drive ---- */
+  const legLen=WP.map((p,i)=>p.distanceTo(WP[(i+1)%WP.length]));
+  let leg=0,legT=0,heading=0;
+  const est=new THREE.Vector3().copy(WP[0]);
+  const pos=new THREE.Vector3().copy(WP[0]);
+  const dirV=new THREE.Vector3(), toC=new THREE.Vector3();
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.05);
+    const t=clock.elapsedTime;
+    if(!reduced){
+      const a=WP[leg], b=WP[(leg+1)%WP.length];
+      legT+=(3.0*dt)/legLen[leg];
+      if(legT>=1){legT-=1;leg=(leg+1)%WP.length;}
+      pos.copy(a).lerp(b,legT); robot.position.copy(pos);
+      dirV.subVectors(b,a);
+      const want=Math.atan2(dirV.x,dirV.z);
+      let e=want-heading;
+      while(e>Math.PI)e-=6.2832; while(e<-Math.PI)e+=6.2832;
+      heading+=e*Math.min(1,dt*4); robot.rotation.y=heading;
+
+      /* perception: a cylinder lights up while it's inside the sensor cone */
+      cyls.forEach((m,i)=>{
+        toC.subVectors(m.position,pos); toC.y=0;
+        const dist=toC.length();
+        const ang=Math.abs(Math.atan2(toC.x,toC.z)-heading);
+        const inCone=dist<4.2 && (ang<0.5||ang>6.28-0.5);
+        const target=inCone?0.85:0.22;
+        m.material.opacity+=(target-m.material.opacity)*Math.min(1,dt*4);
+        m.rotation.y=t*0.5;
+      });
+
+      /* localization: belief lags and breathes, tightening periodically as if corrected */
+      est.lerp(pos,0.02);
+      const conf=0.5+0.5*Math.sin(t*0.55);           // spread cycles as observations arrive
+      const sA=0.5+conf*1.9, sC=0.35+conf*0.9;
+      const ca=Math.cos(heading), sa=Math.sin(heading);
+      for(let i=0;i<NB;i++){
+        const s=seeds[i], al=s.ux*sA, cr=s.uy*sC;
+        bPos[i*3]=est.x+al*sa+cr*ca;
+        bPos[i*3+1]=0.05;
+        bPos[i*3+2]=est.z+al*ca-cr*sa;
+      }
+      bGeo.attributes.position.needsUpdate=true;
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0011;
+    const orbit=mobile?32:25;
+    camera.position.x=Math.sin(t*0.05+d*0.4)*orbit*0.6+mx*2.4;
+    camera.position.z=orbit+Math.cos(t*0.05+d*0.4)*7;
+    camera.position.y=13+Math.min(d*2.4,6);
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Energy-aware ROS 2 motion planning — A* on a downsampled 80×80 grid, Bresenham line-of-sight pruning to 11 waypoints, diagonal corner checks, and a Turn-Go-Turn controller. 67× planning speedup, ~90% energy savings, 34 unit tests. By Prajjwal Dutta.">
+<title>Energy-Aware A* Motion Planning — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #plscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="plscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="ros2-autonomy.html">← ROS 2 autonomy stack</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Planning · Spring 2026</span><span>ASU · RAS 598</span></div>
+    <h1 class="reveal">Plan on a Coarser Map, Throw Away 90% of the Waypoints, Then Drive Slowly</h1>
+    <p class="sub reveal">
+      A complete ROS 2 navigation stack built around a single question: what actually costs a
+      mobile robot energy? The answer drove every decision — plan on a
+      <strong>downsampled grid</strong> so search is cheap, prune the path with
+      <strong>Bresenham line-of-sight</strong> so the robot stops turning, and drive it with a
+      <strong>Turn-Go-Turn</strong> state machine at conservative velocity. Result: planning
+      <strong>67× faster</strong>, waypoints cut by <strong>89.8%</strong>, and roughly
+      <strong>90% energy savings</strong> against baseline — with 34 unit tests holding it in
+      place.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/ros2-energy-planner" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>67×</b><span>faster planning</span></div>
+      <div class="metric"><b>108 → 11</b><span>waypoints after pruning</span></div>
+      <div class="metric"><b>~90%</b><span>total energy savings</span></div>
+      <div class="metric"><b>34/34</b><span>unit tests passing</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/energy/energy-planner-poster.jpg"
+      aria-label="The planner running in Stage and RViz: the green raw A star path, the blue pruned path, and the robot driving the mission.">
+      <source src="../media/energy-planner.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>The full system — Stage, RViz, energy-tracking scout, and planner launched together. Green is the raw A* path, blue is the pruned path, red is the active goal waypoint.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">Resolution</div>
+    <h2 class="reveal">The map you store and the map you search are different maps.</h2>
+    <p class="reveal">
+      The occupancy grid is a 500 × 500 PNG at 0.032 m/pixel over a 16 × 16 m world — good
+      detail, terrible for search: 250,000 cells, ~183,000 A* expansions, roughly
+      <strong>ten seconds</strong> to plan. Planning directly at the required 0.2 m resolution
+      would be fast but throws away obstacle detail. The resolution is instead treated as a
+      <strong>downsampling problem</strong>: keep the fine map, search a coarse one derived from
+      it via <code>cv2.resize</code> with <strong>INTER_NEAREST</strong>.
+    </p>
+    <p class="reveal">
+      The interpolation choice is the whole trick. Any averaging kernel would blur an obstacle
+      boundary into a half-occupied cell and invent passages that don't exist. Nearest-neighbor
+      preserves hard boundaries, so a wall stays a wall at 0.2 m.
+    </p>
+    <div class="law reveal">
+      500 × 500 @ 0.032 m <span class="c">// stored map — full detail</span><br>
+      &nbsp;&nbsp;↓ <span class="a">cv2.resize(INTER_NEAREST)</span> — 6.25× <span class="c">// no invented passages</span><br>
+      80 × 80 @ 0.2 m <span class="c">// planning grid — 6,400 cells</span>
+    </div>
+    <table class="reveal">
+      <thead><tr><th>Metric</th><th>0.032 m grid</th><th>0.2 m grid</th><th>Gain</th></tr></thead>
+      <tbody>
+        <tr><td>Grid cells</td><td>250,000</td><td>6,400</td><td>39× smaller</td></tr>
+        <tr><td>A* iterations</td><td>~183,456</td><td>~4,717</td><td>39× fewer</td></tr>
+        <tr class="hl"><td>Planning time</td><td>~10 s</td><td>~0.15 s</td><td>67× faster</td></tr>
+        <tr><td>Raw waypoints</td><td>665</td><td>108</td><td>—</td></tr>
+        <tr class="hl"><td>After pruning</td><td>29 (95.6%)</td><td>11 (89.8%)</td><td>3× better ratio</td></tr>
+      </tbody>
+    </table>
+    <figure class="reveal">
+      <a href="../assets/energy/cave-map.jpg" target="_blank" rel="noopener">
+        <img src="../assets/energy/cave-map.jpg" alt="The cave occupancy grid used for planning — black obstacle regions on a white free-space background.">
+      </a>
+      <figcaption><span class="n">FIG 02</span><code>cave_filled.png</code> — the stored occupancy grid the planner downsamples before searching.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Search &amp; Prune</div>
+    <h2 class="reveal">A* finds a path. Line-of-sight makes it worth driving.</h2>
+    <p class="reveal">
+      The global planner is A* with <strong>8-directional</strong> movement, a Euclidean
+      heuristic (admissible and consistent, so the result is optimal on the grid), and a
+      priority queue for O(n log n) node selection. What it returns, though, is a
+      <em>staircase</em> — 108 waypoints that zigzag one cell at a time because that's how grid
+      neighbors work. Driving that literally means turning constantly, and turning is where a
+      differential robot burns its energy.
+    </p>
+    <p class="reveal">
+      So the path is pruned greedily: from the current waypoint, find the
+      <strong>farthest one still visible</strong>, jump straight to it, repeat. Visibility is
+      tested with <strong>Bresenham's line algorithm</strong> rather than sampled interpolation
+      — Bresenham guarantees every grid cell the line touches gets checked, so a shortcut can't
+      slip diagonally through a wall between two samples. 108 waypoints become
+      <strong>11</strong>.
+    </p>
+    <div class="law reveal">
+      pruned = [path[0]]; i = 0<br>
+      while i &lt; len(path)−1:<br>
+      &nbsp;&nbsp;farthest = i+1<br>
+      &nbsp;&nbsp;for j in range(i+2, len(path)):<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;if <span class="a">bresenham_line_of_sight</span>(path[i], path[j]): farthest = j<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;else: break <span class="c">// hit an obstacle — stop extending</span><br>
+      &nbsp;&nbsp;pruned.append(path[farthest]); i = farthest
+    </div>
+    <p class="reveal">
+      Three more collision layers back that up: cell-level occupancy during neighbor expansion,
+      a <strong>0.65 m inflation radius</strong> around obstacles (spec required &gt; 0.6 m), and
+      <strong>diagonal corner checking</strong> — a diagonal step from (x, y) to (x±1, y±1) is
+      only legal if both orthogonal neighbors are clear, which stops the planner from squeezing
+      through the zero-width gap where two walls meet at a corner.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Control</div>
+    <h2 class="reveal">Turn, go, turn — decoupled on purpose.</h2>
+    <p class="reveal">
+      The local controller is a three-state machine: <strong>IDLE</strong> waits for a task,
+      <strong>ROTATE</strong> turns in place until heading error is under
+      <strong>0.15 rad</strong>, and <strong>DRIVE</strong> moves toward the waypoint until it's
+      within <strong>0.2 m</strong>. Separating rotation from translation costs a little time and
+      buys precision — the robot never tries to correct heading and position simultaneously,
+      which is what produces the arcing overshoot that then needs correcting again.
+    </p>
+    <div class="law reveal">
+      ω = clamp(<span class="a">1.5</span> · heading_error, −0.4, 0.4) rad/s <span class="c">// proportional, clamped for stable turns</span><br>
+      v = <span class="a">0.25</span> · (1 − min(dist, 1.0)) m/s <span class="c">// ramps down approaching the waypoint</span>
+    </div>
+    <p class="reveal">
+      Energy savings were budgeted, not hoped for. Pruning contributes the bulk at
+      <strong>~60%</strong> — every eliminated waypoint is an eliminated stop-and-turn. Smooth
+      state transitions add <strong>~25%</strong>, the conservative <strong>0.25 m/s</strong>
+      cap another <strong>~10%</strong>, and distance-based velocity scaling the last
+      <strong>~5%</strong>, for roughly <strong>90% total</strong> against the naive baseline.
+      Actual consumption is tracked live on <code>/energy_consumed</code> from the grading scout,
+      so the claim is measured rather than modeled.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Parameter</th><th>Value</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Grid resolution</td><td>0.2 m/cell</td><td>spec 5.4</td></tr>
+        <tr class="hl"><td>Inflation radius</td><td>0.65 m</td><td>spec &gt; 0.6 m</td></tr>
+        <tr><td>Max linear velocity</td><td>0.25 m/s</td><td>conservative, energy-efficient</td></tr>
+        <tr><td>Max angular velocity</td><td>0.4 rad/s</td><td>stable turns</td></tr>
+        <tr class="hl"><td>Heading threshold</td><td>0.15 rad</td><td>spec 3.3 — ROTATE → DRIVE</td></tr>
+        <tr><td>Waypoint tolerance</td><td>0.2 m</td><td>arrival test</td></tr>
+        <tr><td>A* max iterations</td><td>500,000</td><td>raised from 100k for complex maps</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Verification</div>
+    <h2 class="reveal">34 tests, because "it looked fine in RViz" isn't evidence.</h2>
+    <p class="reveal">
+      Each layer is tested where it can actually fail. Map loading covers the coordinate
+      transforms in both directions plus inflation. A* is tested for a basic path, a complex
+      path, an <strong>unreachable goal</strong>, and <strong>optimality</strong>. Pruning is
+      tested for straight-line reduction, obstacle avoidance, a single waypoint, and the case
+      where no improvement is possible. The controller gets 13 tests — angle wrapping, threshold
+      behavior, velocity scaling, goal arrival — and energy optimization gets 8, including
+      straight-versus-zigzag and a realistic full mission.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Module</th><th>Tests</th><th>Covers</th></tr></thead>
+      <tbody>
+        <tr><td>test_map_loading</td><td>5</td><td>load, pixel↔world, inflation, obstacles</td></tr>
+        <tr><td>test_astar</td><td>4</td><td>basic, complex, unreachable, optimality</td></tr>
+        <tr><td>test_path_pruning</td><td>4</td><td>reduction, avoidance, edge cases</td></tr>
+        <tr class="hl"><td>test_local_controller</td><td>13</td><td>turns, thresholds, wrapping, arrival</td></tr>
+        <tr><td>test_energy_optimization</td><td>8</td><td>velocity/turn energy models, mission</td></tr>
+      </tbody>
+    </table>
+    <p class="reveal">
+      Executed in Stage on <code>cave.world</code>, the mission from <strong>(−7, −7) to
+      (7, 2.5)</strong> ran <strong>100% collision-free</strong> with a clean build — 0 errors,
+      0 warnings.
+    </p>
+    <p class="tnote reveal">Metrics as reported in the repository README (April 2026).</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Optimal on the grid isn't optimal to drive.</strong> A* returns the shortest cell
+      path, but cell paths are staircases, and a staircase is a turn schedule — pruning is where
+      an optimal path becomes an efficient one.
+      <strong>Pick the algorithm whose guarantee matches the risk:</strong> interpolated
+      collision sampling usually works and occasionally clips a corner; Bresenham can't, because
+      covering every touched cell is exactly what it's defined to do.
+      <strong>And energy is a design budget, not a byproduct</strong> — decomposing the ~90%
+      into pruning, state transitions, velocity cap, and scaling is what turned "drive
+      efficiently" into four decisions that could each be tested.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">ROS 2</span><span class="tag">A* Search</span><span class="tag">Bresenham LOS</span>
+      <span class="tag">Path Pruning</span><span class="tag">Occupancy Grids</span><span class="tag">OpenCV</span>
+      <span class="tag">Obstacle Inflation</span><span class="tag">State Machine</span><span class="tag">Proportional Control</span>
+      <span class="tag">Stage Simulator</span><span class="tag">RViz Markers</span><span class="tag">pytest</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="bayes-localization.html">← Bayes filter localization</a>
+    <a href="ros2-autonomy.html">Autonomy stack →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the planner, actually running. A real A* search expands over an inflated
+     occupancy grid (cells light up in expansion order), the raw staircase path appears in
+     green, Bresenham line-of-sight pruning collapses it to the blue path, and a robot drives
+     it with the Turn-Go-Turn state machine. Then it re-plans to a new goal and repeats. */
+  const canvas=document.getElementById('plscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.022);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,160);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,GREEN=0x63d97a,RED=0xe8544f;
+  const mobile=innerWidth<700;
+
+  /* ---- world: a 16 x 16 m cave-ish map on a 0.5 m planning grid ---- */
+  const CELL=0.5, DIM=32, HALF=DIM*CELL/2;           // 16 m across
+  const gx=i=>-HALF+CELL*(i+0.5);
+  const BLOCKS=[                                      // obstacle rectangles [i0,j0,i1,j1]
+    [4,5,11,7],[14,3,16,13],[20,6,27,8],[6,12,9,20],
+    [12,17,20,19],[23,13,26,22],[4,24,14,26],[18,24,24,26]
+  ];
+  const blocked=new Uint8Array(DIM*DIM);
+  const IDX=(i,j)=>j*DIM+i;
+  BLOCKS.forEach(([i0,j0,i1,j1])=>{
+    for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++) if(i<DIM&&j<DIM) blocked[IDX(i,j)]=1;
+  });
+  /* obstacle inflation — the 0.65 m buffer, in cells */
+  const INFL=1;
+  const infl=blocked.slice();
+  for(let i=0;i<DIM;i++)for(let j=0;j<DIM;j++){
+    if(!blocked[IDX(i,j)]) continue;
+    for(let di=-INFL;di<=INFL;di++)for(let dj=-INFL;dj<=INFL;dj++){
+      const a=i+di,b=j+dj; if(a>=0&&a<DIM&&b>=0&&b<DIM) infl[IDX(a,b)]=1;
+    }
+  }
+  /* obstacle geometry */
+  const obsMat=new THREE.LineBasicMaterial({color:DEEPBLUE,transparent:true,opacity:0.55});
+  BLOCKS.forEach(([i0,j0,i1,j1])=>{
+    const w=(i1-i0+1)*CELL,d=(j1-j0+1)*CELL;
+    const m=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,0.9,d)),obsMat);
+    m.position.set((gx(i0)+gx(i1))/2,0.45,(gx(j0)+gx(j1))/2);
+    scene.add(m);
+  });
+  const grid=new THREE.GridHelper(DIM*CELL,DIM,0x1c3a66,0x11223f);
+  grid.material.transparent=true; grid.material.opacity=0.22; scene.add(grid);
+
+  /* ---- expansion cloud: one point per free cell, lit in A* expansion order ---- */
+  const freeCells=[];
+  for(let i=0;i<DIM;i++)for(let j=0;j<DIM;j++) if(!infl[IDX(i,j)]) freeCells.push([i,j]);
+  const cellOf=new Map(); freeCells.forEach((c,n)=>cellOf.set(IDX(c[0],c[1]),n));
+  const exPos=new Float32Array(freeCells.length*3), exCol=new Float32Array(freeCells.length*3);
+  freeCells.forEach((c,n)=>{exPos[n*3]=gx(c[0]);exPos[n*3+1]=0.03;exPos[n*3+2]=gx(c[1]);});
+  const exGeo=new THREE.BufferGeometry();
+  exGeo.setAttribute('position',new THREE.BufferAttribute(exPos,3));
+  exGeo.setAttribute('color',new THREE.BufferAttribute(exCol,3));
+  scene.add(new THREE.Points(exGeo,new THREE.PointsMaterial({size:0.16,vertexColors:true,transparent:true,opacity:0.85})));
+  const C_OFF=new THREE.Color(0x14243c), C_ON=new THREE.Color(CYAN), tmpC=new THREE.Color();
+
+  /* ---- A* with 8-connectivity, Euclidean heuristic, diagonal corner checks ---- */
+  const free=(i,j)=>i>=0&&i<DIM&&j>=0&&j<DIM&&!infl[IDX(i,j)];
+  function astar(s,g){
+    const open=[{i:s[0],j:s[1],f:0}], gS=new Float64Array(DIM*DIM).fill(Infinity), came=new Int32Array(DIM*DIM).fill(-1);
+    const order=[], closed=new Uint8Array(DIM*DIM); gS[IDX(s[0],s[1])]=0;
+    const h=(i,j)=>Math.hypot(i-g[0],j-g[1]);
+    while(open.length){
+      open.sort((a,b)=>a.f-b.f);
+      const cur=open.shift(), ci=cur.i, cj=cur.j, cid=IDX(ci,cj);
+      if(closed[cid]) continue;                 // lazy-deletion queue: skip stale entries
+      closed[cid]=1;
+      order.push(cid);
+      if(ci===g[0]&&cj===g[1]){
+        const path=[]; let k=cid;
+        while(k!==-1){ path.push([k%DIM,Math.floor(k/DIM)]); k=came[k]; }
+        return {path:path.reverse(),order};
+      }
+      for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){
+        if(!di&&!dj) continue;
+        const ni=ci+di,nj=cj+dj;
+        if(!free(ni,nj)) continue;
+        if(di&&dj&&(!free(ci+di,cj)||!free(ci,cj+dj))) continue;   // diagonal corner check
+        const ng=gS[cid]+Math.hypot(di,dj);
+        if(ng<gS[IDX(ni,nj)]){
+          gS[IDX(ni,nj)]=ng; came[IDX(ni,nj)]=cid;
+          open.push({i:ni,j:nj,f:ng+h(ni,nj)});
+        }
+      }
+    }
+    return {path:[],order};
+  }
+  /* ---- Bresenham line of sight + greedy pruning ---- */
+  function los(a,b){
+    let x0=a[0],y0=a[1];const x1=b[0],y1=b[1];
+    const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
+    const sx=x0<x1?1:-1, sy=y0<y1?1:-1; let err=dx-dy;
+    for(;;){
+      if(!free(x0,y0)) return false;
+      if(x0===x1&&y0===y1) return true;
+      const e2=2*err;
+      if(e2>-dy){err-=dy;x0+=sx;}
+      if(e2<dx){err+=dx;y0+=sy;}
+    }
+  }
+  function prune(path){
+    if(path.length<2) return path;
+    const out=[path[0]]; let i=0;
+    while(i<path.length-1){
+      let far=i+1;
+      for(let j=i+2;j<path.length;j++){ if(los(path[i],path[j])) far=j; else break; }
+      out.push(path[far]); i=far;
+    }
+    return out;
+  }
+
+  /* ---- missions: plan between opposite corners of the map ---- */
+  const MISSIONS=[[[1,1],[30,30]],[[30,1],[2,29]],[[1,16],[29,17]]];
+  let mi=0, plan=null, pruned=null;
+  const rawLine=new THREE.Line(new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({color:GREEN,transparent:true,opacity:0}));
+  const pruLine=new THREE.Line(new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0}));
+  rawLine.frustumCulled=false; pruLine.frustumCulled=false;
+  scene.add(rawLine); scene.add(pruLine);
+  const goalDot=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,6),
+    new THREE.MeshBasicMaterial({color:RED,wireframe:true,transparent:true,opacity:0}));
+  scene.add(goalDot);
+  const robot=new THREE.Group(); scene.add(robot);
+  const chassis=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.2,0.5),
+    new THREE.MeshBasicMaterial({color:AMBER,wireframe:true,transparent:true,opacity:0.85}));
+  chassis.position.y=0.18; robot.add(chassis);
+  const nose=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0,0.18,0),new THREE.Vector3(0,0.18,0.55)]),
+    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.8}));
+  robot.add(nose);
+
+  function toV(c,y){return new THREE.Vector3(gx(c[0]),y||0.05,gx(c[1]));}
+  function replan(){
+    const m=MISSIONS[mi%MISSIONS.length]; mi++;
+    const r=astar(m[0],m[1]);
+    if(!r.path.length){ plan=null; return; }
+    plan=r; pruned=prune(r.path);
+    rawLine.geometry.dispose(); rawLine.geometry=new THREE.BufferGeometry().setFromPoints(r.path.map(c=>toV(c,0.06)));
+    pruLine.geometry.dispose(); pruLine.geometry=new THREE.BufferGeometry().setFromPoints(pruned.map(c=>toV(c,0.09)));
+    goalDot.position.copy(toV(m[1],0.2));
+    robot.position.copy(toV(pruned[0],0));
+  }
+  replan();
+
+  /* ---- phases: search → raw path → prune → drive (Turn-Go-Turn) ---- */
+  const SEARCH=3.0, SHOW_RAW=1.0, SHOW_PRU=1.2, DRIVE=9.0;
+  const CYCLE=SEARCH+SHOW_RAW+SHOW_PRU+DRIVE;
+  let phaseT=0, wpI=0, state='ROTATE', heading=0;
+  const HEAD_THRESH=0.15, WP_TOL=0.2, V=2.6, W=2.4;   // scene-scaled analogues of the real gains
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.05);
+    const t=clock.elapsedTime;
+    if(!reduced && plan){
+      phaseT+=dt;
+      if(phaseT>CYCLE){ phaseT=0; wpI=0; state='ROTATE'; replan(); }
+      const p=phaseT;
+      /* 1 — search expansion */
+      const searchK=Math.min(1,p/SEARCH);
+      const shown=Math.floor(plan.order.length*searchK);
+      for(let n=0;n<freeCells.length;n++){ exCol[n*3]=C_OFF.r;exCol[n*3+1]=C_OFF.g;exCol[n*3+2]=C_OFF.b; }
+      for(let k=0;k<shown;k++){
+        const n=cellOf.get(plan.order[k]); if(n===undefined) continue;
+        tmpC.copy(C_OFF).lerp(C_ON,0.35+0.65*(k/Math.max(1,shown)));
+        exCol[n*3]=tmpC.r;exCol[n*3+1]=tmpC.g;exCol[n*3+2]=tmpC.b;
+      }
+      exGeo.attributes.color.needsUpdate=true;
+      /* 2 — raw path, 3 — pruned path, 4 — drive */
+      rawLine.material.opacity=p>SEARCH?Math.min(0.75,(p-SEARCH)*3)*(p>SEARCH+SHOW_RAW+SHOW_PRU?0.45:1):0;
+      pruLine.material.opacity=p>SEARCH+SHOW_RAW?Math.min(0.95,(p-SEARCH-SHOW_RAW)*3):0;
+      goalDot.material.opacity=p>SEARCH?0.5+0.4*Math.sin(t*5):0;
+
+      if(p>SEARCH+SHOW_RAW+SHOW_PRU && pruned && wpI<pruned.length-1){
+        const target=toV(pruned[wpI+1],0);
+        const dx=target.x-robot.position.x, dz=target.z-robot.position.z;
+        const want=Math.atan2(dx,dz);
+        let err=want-heading;
+        while(err>Math.PI) err-=Math.PI*2;
+        while(err<-Math.PI) err+=Math.PI*2;
+        if(state==='ROTATE'){                       // turn in place until aligned
+          heading+=Math.sign(err)*Math.min(Math.abs(err),W*dt);
+          if(Math.abs(err)<HEAD_THRESH) state='DRIVE';
+        }else{                                       // drive, ramping down near the waypoint
+          const dist=Math.hypot(dx,dz);
+          const v=V*(1-Math.min(dist,1.0)*0.35);
+          robot.position.x+=Math.sin(heading)*v*dt;
+          robot.position.z+=Math.cos(heading)*v*dt;
+          if(dist<WP_TOL){ wpI++; state='ROTATE'; }
+          if(Math.abs(err)>HEAD_THRESH*2) state='ROTATE';
+        }
+        robot.rotation.y=heading;
+      }
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0011;
+    const orbit=mobile?30:23;
+    camera.position.x=Math.sin(t*0.045+d*0.4)*orbit*0.55+mx*2.4;
+    camera.position.z=orbit+Math.cos(t*0.045+d*0.4)*7;
+    camera.position.y=14+Math.min(d*2.4,6);
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

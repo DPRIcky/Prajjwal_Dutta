@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Tic-Tac-Toe robot on a MyCobot 280M5 — ArUco-calibrated eye-to-hand vision, color-segmentation board state, alpha-beta game AI, suction-pump picks, plus a MATLAB digital twin writing letters in sim and hardware simultaneously. By Prajjwal Dutta.">
+<title>Tic-Tac-Toe Robot — MyCobot 280M5 — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #tttscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.8rem 1.4rem;border-radius:8px;border:1px solid var(--cyan);
+    color:var(--cyan);transition:background .25s,color .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  .yt{margin:2rem 0;}
+  .yt .frame{position:relative;padding-top:56.25%;background:#04070e;}
+  .yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .yt-play{position:absolute;inset:0;width:100%;height:100%;display:block;padding:0;border:0;
+    background:#04070e;cursor:pointer;}
+  .yt-play img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+    opacity:0.8;transition:opacity .3s,transform .5s;}
+  .yt-play:hover img,.yt-play:focus-visible img{opacity:1;transform:scale(1.03);}
+  .yt-play:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px;}
+  .yt-play .pbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:60px;height:60px;border-radius:50%;border:1px solid var(--cyan);
+    background:rgba(6,10,20,0.75);display:flex;align-items:center;justify-content:center;
+    transition:background .25s,box-shadow .25s;}
+  .yt-play .pbtn svg{width:20px;height:20px;margin-left:3px;fill:var(--cyan);transition:fill .25s;}
+  .yt-play:hover .pbtn,.yt-play:focus-visible .pbtn{background:var(--cyan);
+    box-shadow:0 0 22px rgba(79,216,232,0.45);}
+  .yt-play:hover .pbtn svg,.yt-play:focus-visible .pbtn svg{fill:var(--abyss);}
+  .yt-play .ytm{position:absolute;right:0.8rem;bottom:0.7rem;font-family:var(--mono);
+    font-size:0.58rem;letter-spacing:0.16em;color:var(--text);text-transform:uppercase;
+    background:rgba(6,10,20,0.7);border:1px solid var(--line);border-radius:999px;
+    padding:0.25rem 0.7rem;}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="tttscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Manipulation + CV · Fall 2023</span><span>MyCobot 280M5</span></div>
+    <h1 class="reveal">Tic-Tac-Toe Against a Robot That Watches the Board</h1>
+    <p class="sub reveal">
+      Two demonstrations on one desktop cobot. First, a tic-tac-toe player: an eye-to-hand
+      camera calibrated with ArUco markers reads the board, color segmentation maps each
+      block to a cell, alpha-beta search picks the strongest reply, and a suction-pump end
+      effector places the move. Second, a MATLAB digital twin: a URDF model and Simulink
+      inverse kinematics write letters in simulation and on the physical arm at the same
+      time, streamed joint-by-joint over serial.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/Tic-Tac-Toe-with-Mycobot280M5" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="https://github.com/DPRIcky/Tic-Tac-Toe-with-Mycobot280M5/blob/main/Tic_Tac_Toe_Report.pdf" target="_blank" rel="noopener" aria-label="Project report PDF" title="Project Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>3×3</b><span>vision-mapped board</span></div>
+      <div class="metric"><b>α–β</b><span>game-tree search</span></div>
+      <div class="metric"><b>6-DoF</b><span>MyCobot 280M5</span></div>
+      <div class="metric"><b>2-in-1</b><span>gameplay + digital twin</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/mycobot/tictactoe_poster.jpg"
+      aria-label="Gameplay capture: a human places colored blocks on the 3-by-3 camera zone while the MyCobot 280M5 picks its own blocks with the suction pump and plays its counter-moves.">
+      <source src="../media/mycobot-tictactoe.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>Full game, live capture — the human plays blue, the robot watches the board, thinks, and answers with the suction pump. Green is the robot's O.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Idea</div>
+    <h2 class="reveal">Make a $700 arm see, decide, and play — not just move.</h2>
+    <p class="reveal">
+      Most desktop-cobot demos replay taught waypoints. The goal here was to close the whole
+      loop on an Elephant Robotics <strong>MyCobot 280M5</strong>: perception in, decision in
+      the middle, motion out — with a human in the loop as the opponent. Tic-tac-toe is the
+      right size of problem: small enough to solve exactly, rich enough to force real
+      board-state estimation, coordinate mapping, and pick-and-place precision on every turn.
+    </p>
+    <p class="reveal">
+      The same platform then got a second act: a <strong>digital twin</strong> that writes
+      letters. MATLAB generates the trajectory, a URDF model executes it in simulation, and
+      the identical joint angles stream over serial to the physical arm — both pens moving
+      together.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Perception</div>
+    <h2 class="reveal">Two ArUco markers turn pixels into millimeters.</h2>
+    <p class="reveal">
+      The camera sits eye-to-hand above the play area, covering a <strong>3×3 grid</strong>
+      flanked by labeled staging bins. Two <strong>ArUco markers</strong> at opposite corners
+      of the camera zone anchor the calibration: with their known real-world positions, every
+      pixel maps to a board coordinate, and every detected block lands in the correct cell.
+      Color does the rest — the pipeline segments each block by hue, with
+      <strong>blue mapped to the human's X and green to the robot's O</strong>.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/mycobot/board_with_aruco.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mycobot/board_with_aruco.jpg" alt="Overhead camera view of the empty play area: a white camera zone bordered by two ArUco markers at opposite corners, with staging bins labeled Bin A through Bin D around it.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>Calibration view — two corner ArUco markers pin the camera zone to real coordinates; bins A–D stage the blocks.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mycobot/board_with_cubes.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mycobot/board_with_cubes.jpg" alt="Overhead camera view of the board populated with colored cubes arranged in the 3-by-3 grid: blue, green, and red blocks filling the cells.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>Board-state input — colored cubes on the 3×3 grid, as the segmentation pipeline sees them.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Strategy</div>
+    <h2 class="reveal">The robot doesn't guess. It searches.</h2>
+    <div class="law reveal">
+      best = max<sub>move</sub> min<sub>reply</sub> value(board) &nbsp;<span class="c">// minimax over the full game tree</span><br>
+      prune when <span class="a">α ≥ β</span> &nbsp;<span class="c">// alpha-beta: skip branches the opponent would never allow</span>
+    </div>
+    <p class="reveal">
+      Once the board state is read, an <strong>alpha-beta pruned minimax search</strong>
+      evaluates the remaining game tree and returns the strongest reply — the robot plays
+      strategically rather than picking the first open cell, and stays competitive even
+      moving second. On a 3×3 board the search is exact: the robot never blunders; the best
+      a human can force is a draw.
+    </p>
+    <p class="reveal">
+      The chosen cell then becomes a motion target: the arm's inverse kinematics convert the
+      cell's real-world coordinates into joint angles, the <strong>single-head suction
+      pump</strong> lifts a green block from staging, and the move lands on the board. Camera
+      stream and robot motion give the player immediate feedback; a terminal prompt is the
+      only interface.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Digital Twin</div>
+    <h2 class="reveal">One trajectory, two robots — one of them real.</h2>
+    <p class="reveal">
+      The second demonstration rebuilds the MyCobot as a <strong>URDF rigid-body model</strong>
+      in MATLAB with the Robotics System Toolbox. A MATLAB app takes a letter, converts its
+      shape to waypoints, runs a <strong>Simulink inverse-kinematics trajectory model</strong>,
+      and streams the resulting joint angles over serial — the simulated arm and the physical
+      arm execute the same motion simultaneously, finishing with the letter Z drawn by both.
+    </p>
+    <figure class="reveal">
+      <video autoplay muted loop playsinline preload="metadata"
+        poster="../assets/mycobot/digitaltwin_poster.jpg"
+        aria-label="Digital twin capture: the physical MyCobot writing on paper in a picture-in-picture view while the MATLAB Simscape model of the same arm executes the identical motion.">
+        <source src="../media/mycobot-digitaltwin.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">FIG 04</span>Alphabet-writing digital twin — the MATLAB model and the physical arm trace the same strokes from the same joint stream.</figcaption>
+    </figure>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/mycobot/angles_to_send.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mycobot/angles_to_send.jpg" alt="MATLAB app with six joint-angle sliders and forward and inverse kinematics toggles, next to a terminal printing the six joint angles received back from the cobot.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>The twin's control panel — six joint sliders, FK/IK toggles, and the cobot echoing back the joint angles it received.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mycobot/sim_hw_sync.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mycobot/sim_hw_sync.jpg" alt="Side-by-side of the physical MyCobot workstation with overhead camera and laptop, and the MATLAB Mechanics Explorer rendering of the URDF arm in the matching pose.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>Sim and hardware in the same pose — the URDF model mirrors the bench robot as angles stream over serial.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <a href="../assets/mycobot/letter_z.jpg" target="_blank" rel="noopener">
+        <img src="../assets/mycobot/letter_z.jpg" alt="MATLAB letter-digitization figure showing the rigid-body arm model tracing a Z, with a picture-in-picture of the real MyCobot writing the same Z on paper with a pen.">
+      </a>
+      <figcaption><span class="n">FIG 07</span>The finale — Z written in simulation and on paper at the same time, from one waypoint set.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Demonstrations</div>
+    <h2 class="reveal">Watch it play.</h2>
+    <figure class="yt reveal">
+      <div class="frame">
+        <button class="yt-play" data-id="CiusEVtUcxw" aria-label="Play video: tic-tac-toe and color recognition pipeline">
+          <img src="https://i.ytimg.com/vi/CiusEVtUcxw/hqdefault.jpg" alt="" loading="lazy">
+          <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+          <span class="ytm" aria-hidden="true">YouTube</span>
+        </button>
+      </div>
+      <figcaption><span class="n">VID 01</span>Tic-tac-toe + color recognition — the full pipeline classifying blocks and playing, live.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Perception is the hard 80%.</strong> The game AI is a textbook algorithm; making
+      a camera reliably tell a blue cube from a green one across lighting changes, and land
+      it in the right cell every time, is where the engineering lived — two ArUco markers
+      bought more robustness than any amount of color tuning. <strong>A digital twin is a
+      communication protocol, not a render:</strong> the letter-writing demo works because
+      sim and hardware consume the identical joint stream, so what you see in MATLAB is what
+      the serial port actually said. And <strong>interaction sells autonomy</strong> — the
+      same IK and serial plumbing powers both demos, but the one where a human loses at
+      tic-tac-toe is the one people remember.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">Python</span><span class="tag">OpenCV</span><span class="tag">ArUco</span>
+      <span class="tag">Alpha-Beta Search</span><span class="tag">MATLAB / Simulink</span>
+      <span class="tag">URDF</span><span class="tag">Robotics System Toolbox</span>
+      <span class="tag">Inverse Kinematics</span><span class="tag">Suction Gripper</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* YouTube facades: swap in the player on click; from file:// the embed API
+     rejects referrer-less pages (error 153), so open the video directly instead. */
+  document.querySelectorAll('.yt-play').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id=btn.dataset.id;
+      if(location.protocol==='file:'){
+        window.open('https://www.youtube.com/watch?v='+id,'_blank','noopener');
+        return;
+      }
+      const f=document.createElement('iframe');
+      f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1';
+      f.title=btn.getAttribute('aria-label')||'YouTube video';
+      f.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+      f.setAttribute('allowfullscreen','');
+      btn.replaceWith(f);
+    });
+  });
+
+  /* Background: the game itself — a wireframe 6-DoF arm at the edge of a glowing 3×3 board
+     picks cubes from a staging bin and places them; cyan O-rings are the robot's moves,
+     amber X's fade in as the human replies. An eye-to-hand camera pod hangs overhead,
+     its frustum pinned to the board corners. The game plays to a draw, resets, repeats. */
+  const canvas=document.getElementById('tttscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  camera.position.set(0,3.4,13);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+  const FLOOR=-2.6;
+
+  const grid=new THREE.GridHelper(80,50,0x1c3a66,0x11223f);
+  grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
+  scene.add(grid);
+
+  /* ---- 3x3 board ---- */
+  const CELL=1.3, BOARD=CELL*3;
+  const boardGrp=new THREE.Group();
+  boardGrp.position.set(0,FLOOR+0.02,-1);
+  const bpts=[];
+  for(let i=0;i<=3;i++){
+    const s=-BOARD/2+i*CELL;
+    bpts.push(new THREE.Vector3(s,0,-BOARD/2),new THREE.Vector3(s,0,BOARD/2));
+    bpts.push(new THREE.Vector3(-BOARD/2,0,s),new THREE.Vector3(BOARD/2,0,s));
+  }
+  const bMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.4});
+  boardGrp.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(bpts),bMat));
+  scene.add(boardGrp);
+  const cellPos=i=>new THREE.Vector3(
+    boardGrp.position.x+((i%3)-1)*CELL,
+    boardGrp.position.y,
+    boardGrp.position.z+(Math.floor(i/3)-1)*CELL);
+
+  /* ---- staging bin ---- */
+  const stage=new THREE.Vector3(2.6,FLOOR+0.02,-3.3);
+  const binGeo=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-0.6,0,-0.6),new THREE.Vector3(0.6,0,-0.6),
+    new THREE.Vector3(0.6,0,0.6),new THREE.Vector3(-0.6,0,0.6),new THREE.Vector3(-0.6,0,-0.6)]);
+  const bin=new THREE.Line(binGeo,new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.4}));
+  bin.position.copy(stage); scene.add(bin);
+
+  /* ---- arm: base yaw + 2-link IK in the vertical plane ---- */
+  /* reach check: farthest cell corner is ~4.7 from the shoulder, links give 5.0 */
+  const L1=2.6,L2=2.4;
+  const armBase=new THREE.Group();
+  armBase.position.set(0,FLOOR,-4.2);
+  scene.add(armBase);
+  const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.62,0.8,12),wire(DEEPBLUE));
+  pedestal.position.y=0.4; armBase.add(pedestal);
+  const yawGrp=new THREE.Group(); yawGrp.position.y=0.85; armBase.add(yawGrp);
+  const shoulder=new THREE.Group(); yawGrp.add(shoulder);
+  const upper=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.13,L1,8),wire(CYAN));
+  upper.position.y=L1/2; shoulder.add(upper);
+  const elbow=new THREE.Group(); elbow.position.y=L1; shoulder.add(elbow);
+  const fore=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,L2,8),wire(CYAN));
+  fore.position.y=L2/2; elbow.add(fore);
+  const wrist=new THREE.Group(); wrist.position.y=L2; elbow.add(wrist);
+  const suction=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.3,8),wire(AMBER));
+  suction.rotation.x=Math.PI; suction.position.y=-0.15; // tool hangs below the wrist, tip down
+  wrist.add(suction);
+  const joint1=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,6),wire(AMBER)); shoulder.add(joint1);
+  const joint2=new THREE.Mesh(new THREE.SphereGeometry(0.13,8,6),wire(AMBER)); elbow.add(joint2);
+
+  /* carried cube rides the suction tip; a staged cube waits in the bin */
+  const CUBE=0.34;
+  const carried=new THREE.Mesh(new THREE.BoxGeometry(CUBE,CUBE,CUBE),wire(CYAN));
+  carried.visible=false; scene.add(carried);
+  const stagedCube=new THREE.Mesh(new THREE.BoxGeometry(CUBE,CUBE,CUBE),wire(CYAN));
+  stagedCube.position.set(stage.x,stage.y+CUBE/2,stage.z); scene.add(stagedCube);
+
+  /* point the arm's suction tip at a world target via yaw + 2-link IK */
+  const flat=new THREE.Vector3();
+  function aimArm(world){
+    flat.subVectors(world,armBase.position);
+    const yaw=Math.atan2(-flat.z,flat.x);
+    yawGrp.rotation.y=yaw;
+    const r=Math.sqrt(flat.x*flat.x+flat.z*flat.z);
+    const h=flat.y-0.85;
+    const d=Math.min(Math.sqrt(r*r+h*h),L1+L2-0.01);
+    const a1=Math.atan2(h,r)+Math.acos(Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)));
+    const a2=Math.acos(Math.min(1,Math.max(-1,(L1*L1+L2*L2-d*d)/(2*L1*L2))));
+    shoulder.rotation.z=-(Math.PI/2-a1);
+    elbow.rotation.z=a2-Math.PI; // elbow-up: forearm folds back toward the target
+    wrist.rotation.z=-(shoulder.rotation.z+elbow.rotation.z);
+    armBase.updateMatrixWorld(true); // so tipWorld() is valid this frame
+  }
+  const tip=new THREE.Vector3();
+  function tipWorld(){ tip.set(0,0,0); wrist.localToWorld(tip); return tip; }
+
+  /* ---- marks: a placed cube with its symbol hovering on top —
+     cyan cube + O-ring for the robot, amber cube + X-bars for the human ---- */
+  function makeO(){
+    const o=new THREE.Mesh(new THREE.TorusGeometry(0.32,0.05,6,20),wire(CYAN));
+    o.rotation.x=Math.PI/2; return o;
+  }
+  function makeX(){
+    const g=new THREE.Group();
+    [1,-1].forEach(s=>{
+      const bar=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.08,0.12),wire(AMBER));
+      bar.rotation.y=s*Math.PI/4; g.add(bar);
+    });
+    return g;
+  }
+  const marks=[];
+  function placeMark(cell,type){
+    const grp=new THREE.Group();
+    const cube=new THREE.Mesh(new THREE.BoxGeometry(CUBE,CUBE,CUBE),wire(type==='O'?CYAN:AMBER));
+    cube.position.y=CUBE/2; grp.add(cube);
+    const sym=type==='O'?makeO():makeX();
+    sym.position.y=CUBE+0.16; grp.add(sym);
+    grp.position.copy(cellPos(cell));
+    /* robot's cube is set down physically, so only its symbol grows in;
+       the human's whole piece pops in */
+    const growObj=type==='O'?sym:grp;
+    growObj.scale.setScalar(0.01); growObj.userData.grow=true;
+    grp.userData.growObj=growObj;
+    scene.add(grp); marks.push(grp);
+  }
+
+  /* ---- eye-to-hand camera pod + frustum ---- */
+  const pod=new THREE.Group();
+  pod.position.set(0,FLOOR+6.2,-1);
+  pod.add(new THREE.Mesh(new THREE.BoxGeometry(0.5,0.3,0.3),wire(DEEPBLUE)));
+  const lens=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.26,8),wire(AMBER));
+  lens.rotation.x=Math.PI; lens.position.y=-0.26; pod.add(lens);
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,2.2,5),wire(DEEPBLUE));
+  mast.position.set(0,1.25,0); pod.add(mast);
+  scene.add(pod);
+  const frusGeo=new THREE.BufferGeometry();
+  const frusPos=new Float32Array(8*3);
+  frusGeo.setAttribute('position',new THREE.BufferAttribute(frusPos,3));
+  const frusMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.16});
+  scene.add(new THREE.LineSegments(frusGeo,frusMat));
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach((c,i)=>{
+    frusPos[i*6]=pod.position.x; frusPos[i*6+1]=pod.position.y-0.4; frusPos[i*6+2]=pod.position.z;
+    frusPos[i*6+3]=boardGrp.position.x+c[0]*BOARD/2;
+    frusPos[i*6+4]=boardGrp.position.y;
+    frusPos[i*6+5]=boardGrp.position.z+c[1]*BOARD/2;
+  });
+
+  /* ---- ambient dust ---- */
+  const PC=mobile?450:1100;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+
+  /* NOTE: don't scale the arm or board on mobile — cellPos()/IK work in world
+     units, so scaling the meshes would break pick-and-place alignment. */
+
+  /* ---- game script: X (human, fades in) then O (robot, arm places) — a draw ---- */
+  const script=[
+    {type:'X',cell:0},{type:'O',cell:4},{type:'X',cell:8},{type:'O',cell:2},
+    {type:'X',cell:6},{type:'O',cell:3},{type:'X',cell:5},{type:'O',cell:1},{type:'X',cell:7}
+  ];
+  const MOVE_T=4.2, RESET_T=3.0;
+  const CYCLE=script.length*MOVE_T+RESET_T;
+  let placedThrough=-1, resetDone=true;
+  const home=new THREE.Vector3(1.4,FLOOR+2.9,-2.7);
+  const armTarget=new THREE.Vector3().copy(home);
+  const armSmooth=new THREE.Vector3().copy(home);
+  const smoothstep=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  const seg=(v,a,b)=>smoothstep((v-a)/(b-a));
+  const TOOL=0.30;                 // suction tip hangs this far below the wrist
+  const HOVER=1.9, GRIP=CUBE+TOOL; // wrist heights: transit vs tool tip touching a cube's top
+  const sHi=new THREE.Vector3(),sLo=new THREE.Vector3(),cHi=new THREE.Vector3(),cLo=new THREE.Vector3();
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      const ct=t%CYCLE;
+      const idx=Math.min(Math.floor(ct/MOVE_T),script.length-1);
+      const mt=ct-idx*MOVE_T;
+      if(ct<0.1&&!resetDone){ marks.forEach(m=>scene.remove(m)); marks.length=0; placedThrough=-1; resetDone=true; }
+      if(ct>1)resetDone=false;
+
+      let carrying=false, staged=true;
+      if(ct<script.length*MOVE_T){
+        const mv=script[idx];
+        if(mv.type==='X'){
+          /* human move: arm idles with a gentle sway; X piece pops in mid-slot */
+          armTarget.set(home.x+Math.sin(t*0.6)*0.25,home.y+Math.sin(t*0.9)*0.15,home.z+Math.cos(t*0.5)*0.25);
+          if(mt>1.6&&placedThrough<idx){ placeMark(mv.cell,'X'); placedThrough=idx; }
+        }else{
+          /* robot move — exact keyframed waypoints:
+             approach > dip > dwell-grab > lift > carry arc > dip > dwell-release > retract */
+          const cp=cellPos(mv.cell);
+          sHi.set(stage.x,stage.y+HOVER,stage.z);
+          sLo.set(stage.x,stage.y+GRIP,stage.z);
+          cHi.set(cp.x,cp.y+HOVER,cp.z);
+          cLo.set(cp.x,cp.y+GRIP,cp.z);
+          if(mt<0.9)      armTarget.lerpVectors(home,sHi,seg(mt,0,0.9));
+          else if(mt<1.4) armTarget.lerpVectors(sHi,sLo,seg(mt,0.9,1.4));
+          else if(mt<1.7) armTarget.copy(sLo);                         // suction grabs
+          else if(mt<2.2) armTarget.lerpVectors(sLo,sHi,seg(mt,1.7,2.2));
+          else if(mt<3.1){ const k=seg(mt,2.2,3.1);
+                           armTarget.lerpVectors(sHi,cHi,k);
+                           armTarget.y+=Math.sin(k*Math.PI)*0.3; }     // carry arc
+          else if(mt<3.6) armTarget.lerpVectors(cHi,cLo,seg(mt,3.1,3.6));
+          else if(mt<3.9) armTarget.copy(cLo);                         // set down
+          else            armTarget.lerpVectors(cLo,cHi,seg(mt,3.9,4.2));
+          staged=mt<1.55;                    // bin cube vanishes the moment it's gripped
+          carrying=mt>=1.55&&mt<3.72;
+          if(mt>=3.72&&placedThrough<idx){ placeMark(mv.cell,'O'); placedThrough=idx; }
+        }
+      }else{
+        armTarget.set(home.x+Math.sin(t*0.6)*0.25,home.y+Math.sin(t*0.9)*0.15,home.z+Math.cos(t*0.5)*0.25);
+      }
+      armSmooth.lerp(armTarget,0.22);
+      aimArm(armSmooth);
+      stagedCube.visible=staged;
+      carried.visible=carrying;
+      if(carrying){
+        const tp=tipWorld();
+        carried.position.set(tp.x,tp.y-(TOOL+CUBE/2),tp.z); // hanging off the suction tip
+      }
+
+      /* symbols / pieces grow in */
+      marks.forEach(g=>{ const m=g.userData.growObj;
+        if(m.userData.grow){ const s=Math.min(1,m.scale.x+0.07); m.scale.setScalar(s); if(s>=1)m.userData.grow=false; } });
+
+      bMat.opacity=0.32+Math.sin(t*1.8)*0.1;
+      frusMat.opacity=0.1+Math.sin(t*2.2)*0.05;
+      lens.rotation.y=t*0.8;
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.6)*13+mx*1.6;
+    camera.position.z=Math.cos(d*0.6)*13;
+    camera.position.y=3.4-Math.min(d*1.5,3);
+    camera.lookAt(0.5,FLOOR+1.1,boardGrp.position.z-0.6);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

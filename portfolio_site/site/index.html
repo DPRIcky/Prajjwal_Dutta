@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Prajjwal Dutta — Autonomy engineer. Motion planning, MPC / CLF-CBF-QP control, multi-agent coordination. ROS2 autonomy stacks on ground, aerial, and underwater platforms.">
+<title>Prajjwal Dutta — Autonomous Systems &amp; Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14;
+    --deep:#0a1226;
+    --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8;
+    --amber:#f5a35c;
+    --text:#dfe8f4;
+    --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+    --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:linear-gradient(180deg,var(--abyss) 0%,var(--deep) 55%,var(--abyss) 100%);
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.7;
+    overflow-x:hidden;
+  }
+  #roboscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(4,7,14,0.6) 100%);}
+  main{position:relative;z-index:2;}
+
+  /* ---------- nav ---------- */
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.75),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-links{display:flex;gap:2rem;}
+  .nav-links a{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;
+    color:var(--muted);text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .nav-links a:hover,.nav-links a:focus-visible{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  /* ---------- hero ---------- */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:0 6vw;position:relative;}
+  .eyebrow{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.3em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.9rem;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(2.5rem,8vw,6rem);
+    line-height:1.03;letter-spacing:-0.02em;max-width:16ch;}
+  h1 .glow{color:var(--cyan);text-shadow:0 0 44px rgba(79,216,232,0.35);}
+  .hero-sub{margin-top:1.7rem;max-width:58ch;color:var(--muted);font-size:1rem;}
+  .hero-stats{display:flex;flex-wrap:wrap;gap:2.4rem;margin-top:2.6rem;}
+  .hstat b{display:block;font-family:var(--display);font-weight:700;font-size:1.6rem;color:var(--cyan);}
+  .hstat span{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;}
+  .scroll-cue{position:absolute;bottom:2.2rem;left:6vw;font-family:var(--mono);font-size:0.64rem;
+    letter-spacing:0.24em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:0.8rem;}
+  .scroll-cue .pulse{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse 2.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+
+  /* ---------- sections ---------- */
+  section{padding:8.5rem 6vw;max-width:1200px;margin:0 auto;}
+  .sec-label{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.28em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1.1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.7rem,4.2vw,2.9rem);
+    letter-spacing:-0.015em;margin-bottom:1.5rem;}
+  .lede{color:var(--muted);max-width:66ch;font-size:0.98rem;}
+
+  /* ---------- research / pubs ---------- */
+  .pub{border-left:2px solid var(--line);padding:1.2rem 0 1.2rem 1.6rem;margin-top:1.6rem;
+    transition:border-color .3s;}
+  .pub:hover{border-color:var(--amber);}
+  .pub .venue{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.16em;color:var(--amber);text-transform:uppercase;}
+  .pub h4{font-family:var(--display);font-weight:500;font-size:1.08rem;margin:0.4rem 0 0.3rem;letter-spacing:-0.01em;}
+  .pub p{color:var(--muted);font-size:0.85rem;max-width:70ch;}
+
+  .ra-card{margin-top:3.2rem;border:1px solid var(--line);border-radius:14px;
+    background:linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+    backdrop-filter:blur(6px);padding:2.3rem 2.4rem;}
+  .ra-card .proj-meta{margin-bottom:0.8rem;}
+
+  /* ---------- featured projects ---------- */
+  .project{margin-top:4rem;border:1px solid var(--line);border-radius:14px;
+    background:linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+    backdrop-filter:blur(6px);padding:2.5rem 2.5rem 2.1rem;position:relative;overflow:hidden;
+    transition:border-color .35s,transform .35s;}
+  .project:hover{border-color:rgba(79,216,232,0.35);transform:translateY(-3px);}
+  .project::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,var(--cyan),transparent 65%);opacity:.7;}
+  .proj-meta{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.16em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:0.9rem;display:flex;gap:1.3rem;flex-wrap:wrap;}
+  .proj-link{color:inherit;text-decoration:none;transition:color .25s;}
+  .proj-link:hover{color:var(--cyan);}
+  .proj-link .arrow{opacity:0;transition:opacity .25s;color:var(--cyan);font-weight:400;}
+  .proj-link:hover .arrow{opacity:1;}
+  .project h3{font-family:var(--display);font-weight:500;font-size:clamp(1.25rem,2.5vw,1.8rem);
+    margin-bottom:1rem;letter-spacing:-0.01em;}
+  .project p{color:var(--muted);max-width:68ch;font-size:0.93rem;}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:1.9rem;}
+  .metric{background:rgba(6,10,20,0.65);padding:1rem 1.1rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.45rem;
+    color:var(--cyan);letter-spacing:-0.01em;}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+  .proj-stack{margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+
+  /* ---------- project grid (more work) ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.3rem;margin-top:3rem;}
+  .gcard{border:1px solid var(--line);border-radius:12px;padding:1.6rem 1.5rem;
+    background:rgba(14,24,48,0.45);transition:border-color .3s,transform .3s;position:relative;}
+  .gcard:hover{border-color:rgba(245,163,92,0.4);transform:translateY(-3px);}
+  .gcard .gm{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.14em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:0.6rem;display:block;}
+  .gcard h4{font-family:var(--display);font-weight:500;font-size:1.02rem;margin-bottom:0.6rem;letter-spacing:-0.01em;}
+  .gcard p{color:var(--muted);font-size:0.82rem;line-height:1.65;}
+  .gcard .kpi{font-family:var(--mono);font-size:0.68rem;color:var(--cyan);margin-top:0.8rem;display:block;letter-spacing:0.06em;}
+  .award{border-color:rgba(245,163,92,0.45);}
+  .award::after{content:'★ 1ST PLACE';position:absolute;top:1.1rem;right:1.2rem;
+    font-family:var(--mono);font-size:0.58rem;letter-spacing:0.14em;color:var(--amber);}
+  .archive-note{margin-top:2.4rem;font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;}
+  .archive-note a{color:var(--cyan);text-decoration:none;}
+
+  /* ---------- skills ---------- */
+  .skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.3rem;margin-top:2.8rem;}
+  .skill-card{border:1px solid var(--line);border-radius:12px;padding:1.6rem 1.5rem;background:rgba(14,24,48,0.45);}
+  .skill-card h4{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:0.9rem;}
+  .skill-card ul{list-style:none;}
+  .skill-card li{color:var(--muted);font-size:0.85rem;padding:0.3rem 0;border-bottom:1px dashed rgba(140,170,220,0.1);}
+  .skill-card li:last-child{border-bottom:none;}
+
+  /* ---------- contact ---------- */
+  .contact{padding-bottom:7rem;}
+  .contact-links{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2.3rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:46px;height:46px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:27px;height:27px;display:block;}
+  .btn{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.85rem 1.55rem;border-radius:8px;
+    border:1px solid var(--cyan);color:var(--cyan);transition:background .25s,color .25s,box-shadow .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);box-shadow:0 0 34px rgba(79,216,232,0.35);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;box-shadow:none;}
+  .contact-meta{margin-top:2rem;font-family:var(--mono);font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;line-height:2.1;}
+  footer{position:relative;z-index:2;font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;
+    color:var(--muted);text-transform:uppercase;padding:2rem 6vw;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;}
+
+  /* ---------- reveals ---------- */
+  .reveal{opacity:0;transform:translateY(34px);
+    transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  .reveal.d1{transition-delay:.12s}.reveal.d2{transition-delay:.24s}.reveal.d3{transition-delay:.36s}
+
+  @media (max-width:680px){
+    .nav-links{display:none;}
+    section{padding:6rem 7vw;}
+    .project,.ra-card{padding:1.8rem 1.4rem;}
+    .hero-stats{gap:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;}
+    .reveal{opacity:1;transform:none;transition:none;}
+    .scroll-cue .pulse{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="roboscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="#top">P.DUTTA</a>
+  <div class="nav-links">
+    <a href="#about">About</a>
+    <a href="#research">Research</a>
+    <a href="#work">Work</a>
+    <a href="#projects">Projects</a>
+    <a href="#skills">Skills</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero" style="max-width:none;">
+    <div class="eyebrow reveal">Autonomy Engineer · Controls · Multi-Agent Systems</div>
+    <h1 class="reveal d1">Prajjwal Dutta builds fleets that stay <span class="glow">connected &amp; safe.</span></h1>
+    <p class="hero-sub reveal d2">
+      Dual-M.S. autonomy engineer (Robotics + Manufacturing Engineering, ASU) specializing in
+      motion planning, MPC / CLF–CBF–QP control, and multi-agent coordination. I build
+      end-to-end ROS 2 autonomy stacks — planning, estimation, perception, control — and
+      validate them on ground, aerial, and underwater platforms.
+    </p>
+    <div class="hero-stats reveal d3">
+      <div class="hstat"><b>IROS '26</b><span>First-author paper</span></div>
+      <div class="hstat"><b>ICRA '25</b><span>Workshop publication</span></div>
+      <div class="hstat"><b>70</b><span>Robots coordinated</span></div>
+      <div class="hstat"><b>4.33</b><span>GPA · MS MfgE</span></div>
+    </div>
+    <div class="scroll-cue"><span class="pulse"></span> Scroll — swarm holds formation</div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="sec-label reveal">01 / Background</div>
+    <h2 class="reveal">From flow fields to safety guarantees — proven on hardware.</h2>
+    <p class="lede reveal d1">
+      The swarm behind this page is the problem I work on: agents drifting in a flow field,
+      holding a connectivity graph while staying collision-free. My research at ASU's AMASS Lab
+      (NSF- &amp; NIWC-funded) develops decentralized, connectivity-preserving control for robot
+      fleets in dynamic environments — from AUVs in ocean currents to custom aerial platforms I
+      designed, fabricated, and flight-tested for sim-to-real validation. BTech in Electronics &amp;
+      Communication (VIT Vellore) · M.S. Robotics &amp; Autonomous Systems (ASU '25, thesis) ·
+      M.S. Manufacturing Engineering (ASU, Dec '26).
+    </p>
+  </section>
+
+  <!-- RESEARCH -->
+  <section id="research">
+    <div class="sec-label reveal">02 / Research &amp; Publications</div>
+    <h2 class="reveal">Peer-reviewed, first-author.</h2>
+
+    <div class="pub reveal">
+      <span class="venue">IROS 2026 · IEEE/RSJ Intl. Conf. on Intelligent Robots and Systems · Accepted</span>
+      <h4>Distributed Control and Communication Framework for Connectivity Preservation in Flow-Driven Robot Fleets</h4>
+      <p>P. Dutta, G. Hollinger, X. Yu — distributed connectivity-preserving control for robot fleets operating in flow fields.</p>
+    </div>
+    <div class="pub reveal d1">
+      <span class="venue">ICRA 2025 · RoboAcoustics Workshop</span>
+      <h4><a class="proj-link" href="https://sites.google.com/view/roboacoustics#:~:text=Connectivity%2DAware%20Coordination%20of%20AUV%20Fleets" target="_blank" rel="noopener">Connectivity-Aware Coordination of AUV Fleets in Dynamic Underwater Environments<span class="arrow"> ↗</span></a></h4>
+      <p>P. Dutta, J. Das, X. Yu — distributed multi-agent control under bandwidth-constrained acoustic communication.</p>
+    </div>
+    <div class="pub reveal d2">
+      <span class="venue">M.S. Thesis · Arizona State University, 2025</span>
+      <h4><a class="proj-link" href="https://www.proquest.com/openview/c88d15605cfd593444572bd0197a8a09/1?pq-origsite=gscholar&amp;cbl=18750&amp;diss=y" target="_blank" rel="noopener">Connectivity-Aware Coordination and Control of Autonomous Underwater Vehicles in Environment Dynamics<span class="arrow"> ↗</span></a></h4>
+      <p>ProQuest ID: 32122670.</p>
+    </div>
+    <div class="pub reveal d3">
+      <span class="venue">PeerJ · Peer-Reviewed Journal</span>
+      <h4><a class="proj-link" href="https://peerj.com/articles/cs-1250/" target="_blank" rel="noopener">Healthy–Unhealthy Animal Detection Using Semi-Supervised GAN<span class="arrow"> ↗</span></a></h4>
+      <p>Computer-vision feature extraction feeding a semi-supervised generative adversarial network for animal health classification.</p>
+    </div>
+
+    <div class="ra-card reveal">
+      <div class="proj-meta"><span>AMASS Lab · Research Assistant</span><span>Aug 2024 – Present · NSF &amp; NIWC funded</span></div>
+      <h3 style="font-family:var(--display);font-weight:500;font-size:1.4rem;margin-bottom:0.9rem;">Decentralized Multi-Robot Coordination Under Degraded Comms</h3>
+      <p style="color:var(--muted);font-size:0.93rem;max-width:68ch;">
+        Designed a scalable decentralized coordination system combining graph-pruning algorithms
+        with CLF–CBF–QP safety-constrained control. Built a warehouse navigation stack
+        benchmarking A*, Hybrid A*, and RRT* against MPC, LQR, Pure Pursuit, Stanley, and PID —
+        deployed on an Agile X Limo with MoCap ground truth. Designed and built a custom aerial
+        platform to flight-test the connectivity-maintenance control law, confirming sim-to-real transfer.
+      </p>
+      <div class="metrics">
+        <div class="metric"><b>96%</b><span>faster convergence</span></div>
+        <div class="metric"><b>99.3%</b><span>less comm overhead</span></div>
+        <div class="metric"><b>100%</b><span>connectivity, all trials</span></div>
+        <div class="metric"><b>1.28 m</b><span>best max lat. dev (Limo)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED WORK -->
+  <section id="work">
+    <div class="sec-label reveal">03 / Featured Work</div>
+    <h2 class="reveal">Deploy. Control. Guarantee.</h2>
+
+    <article class="project reveal">
+      <div class="proj-meta"><span>Safety-Critical Control · Fall 2025</span><span>EGR 611</span></div>
+      <h3><a href="projects/clf-cbf-qp.html" class="proj-link">CLF–CBF–QP Safety Filtering for 70-Robot Fleets<span class="arrow"> →</span></a></h3>
+      <p>
+        A quadratic-program safety filter keeping a 70-robot team collision-free and line-of-sight
+        connected through cluttered workspaces and vortex flow fields. Benchmarked quadprog, CVX,
+        and OSQP on identical safety-critical QP instances; used KKT multipliers to read out which
+        constraints steer the fleet at every instant.
+      </p>
+      <div class="metrics">
+        <div class="metric"><b>70</b><span>robots coordinated</span></div>
+        <div class="metric"><b>8.6 ms</b><span>avg QP solve (OSQP)</span></div>
+        <div class="metric"><b>3.5×</b><span>speedup vs quadprog</span></div>
+        <div class="metric"><b>79</b><span>iters — all goals reached</span></div>
+      </div>
+      <div class="proj-stack">
+        <span class="tag">Control Barrier Functions</span><span class="tag">Convex Optimization</span>
+        <span class="tag">MATLAB</span><span class="tag">OSQP / CVX</span><span class="tag">Graph Connectivity</span>
+      </div>
+    </article>
+
+    <article class="project reveal">
+      <div class="proj-meta"><span>Robust Vehicle Control · Spring 2026</span><span>EGR 560</span></div>
+      <h3><a href="projects/tube-mpc.html" class="proj-link">Tube-MPC Lateral Path Tracking — CarSim Co-Simulation<span class="arrow"> →</span></a></h3>
+      <p>
+        Robust lateral control for automated driving: nominal MPC plans the tube center, a
+        discrete LQR ancillary loop rejects disturbance, actuator-aware scaling and saturation
+        keep commands realizable. Simulink validation cut max lateral error from 18.80 m to
+        0.032 m; the full CarSim high-fidelity co-simulation at 54 km/h held 0.29 m max deviation.
+      </p>
+      <div class="metrics">
+        <div class="metric"><b>0.032 m</b><span>max error (Simulink)</span></div>
+        <div class="metric"><b>0.29 m</b><span>max dev · CarSim 54 km/h</span></div>
+        <div class="metric"><b>587×</b><span>error reduction</span></div>
+        <div class="metric"><b>30 s</b><span>closed-loop validation</span></div>
+      </div>
+      <div class="proj-stack">
+        <span class="tag">Tube-MPC</span><span class="tag">LQR</span><span class="tag">Simulink</span>
+        <span class="tag">CarSim</span><span class="tag">Vehicle Dynamics</span>
+      </div>
+    </article>
+
+    <article class="project reveal">
+      <div class="proj-meta"><span>Aerial Autonomy · Hardware · Spring 2025</span><span>RAS 598</span></div>
+      <h3><a href="projects/blimp.html" class="proj-link">Autonomous Blimp — Custom Airframe to Vision Autonomy<span class="arrow"> →</span></a></h3>
+      <p>
+        Full-stack lighter-than-air autonomy: designed the airframe in SolidWorks, fabricated the
+        platform, and laid out a custom integration PCB in Altium (ESC, IMU, barometer, JST power);
+        brought up hardware with oscilloscope and logic analyzer. ROS 2 stack fuses a 200 Hz IMU
+        and 30 fps camera through a Kalman filter, with YOLOv5 detection driving vision-based
+        control — a hardware testbed for multi-agent sim-to-real experiments.
+      </p>
+      <div class="metrics">
+        <div class="metric"><b>96%</b><span>mAP@0.5 detection</span></div>
+        <div class="metric"><b>&lt;100 ms</b><span>CPU inference</span></div>
+        <div class="metric"><b>200 Hz</b><span>IMU fusion rate</span></div>
+        <div class="metric"><b>Altium</b><span>custom PCB design</span></div>
+      </div>
+      <div class="proj-stack">
+        <span class="tag">ROS 2</span><span class="tag">YOLOv5</span><span class="tag">Kalman Filtering</span>
+        <span class="tag">PCB Design</span><span class="tag">Raspberry Pi + ESP32</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- PROJECT GRID -->
+  <section id="projects">
+    <div class="sec-label reveal">04 / More Projects</div>
+    <h2 class="reveal">Ground, arm, aerial, industrial.</h2>
+
+    <div class="grid">
+      <div class="gcard award reveal">
+        <span class="gm">Competition · Spring 2024</span>
+        <h4>MATLAB Mini Drone Competition</h4>
+        <p>Led a 4-person team to 1st place with a Simulink sim-to-real autonomy pipeline — SLAM and path following — deployed and validated on physical hardware.</p>
+        <span class="kpi">→ 1st place · full hardware deployment</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Ground Robotics · Spring 2026</span>
+        <h4><a href="projects/turtlebot4-sft.html" class="proj-link">TurtleBot 4 Human-Following System<span class="arrow"> →</span></a></h4>
+        <p>OAK-D ArUco 6-DoF pose estimation, dual Kalman / 300-particle filter estimators, PD control with a 3-state FSM, and LiDAR collision avoidance — validated on hardware.</p>
+        <span class="kpi">→ 0.04 m mean tracking error, zero divergence</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">ROS 2 Autonomy · Spring 2026</span>
+        <h4><a href="projects/ros2-autonomy.html" class="proj-link">Perception, Localization &amp; Energy-Aware Planning<span class="arrow"> →</span></a></h4>
+        <p>Three standalone ROS 2 packages: OAK-D RANSAC cylinder perception, 3D Bayes-filter localization (80×80×72 belief), and A* planning with Bresenham line-of-sight pruning behind a Turn-Go-Turn controller. 34 unit tests.</p>
+        <span class="kpi">→ 3 projects · ~90% energy reduction · 67× planning speedup</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Digital Twin · Spring 2026</span>
+        <h4><a href="projects/rosmaster-x3.html" class="proj-link">ROSMASTER X3 Warehouse Navigation<span class="arrow"> →</span></a></h4>
+        <p>Gazebo digital twin of the AWS RoboMaker warehouse with a custom A* global planner in move_base, AMCL localization, DWA local planning, layered costmaps, SLAM (gmapping / Cartographer), and marker-conditioned stop / caution behavior.</p>
+        <span class="kpi">→ ±15 cm goal accuracy · 95%+ goal success rate</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Manipulation · Fall 2025</span>
+        <h4>ROS 2 Visual Servoing — FANUC LR Mate</h4>
+        <p>Camera-based target tracking mapping 2D detections to 3D workspace goals through geometric inverse kinematics with elbow-up collision avoidance — autonomous end-effector positioning without explicit goal programming.</p>
+        <span class="kpi">→ detection-driven manipulation</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">UAV + Optimal Control · Fall 2025</span>
+        <h4><a href="projects/space-robotics.html" class="proj-link">LQR Stabilization &amp; PX4 Precision Landing<span class="arrow"> →</span></a></h4>
+        <p>LQR cart-pole stabilization under a 0.5–4 Hz earthquake disturbance, PD-tuned boustrophedon coverage planning, and a PX4 SITL UAV using RTAB-Map SLAM with RGB-D sensing for autonomous target detection and precision landing.</p>
+        <span class="kpi">→ 0.09 rad pole deviation · 70 N peak force · &lt;0.2 unit cross-track error</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Multi-Agent · Fall 2025</span>
+        <h4><a href="projects/flocking-mrs.html" class="proj-link">50-Agent Flocking &amp; Multi-AUV Coordination<span class="arrow"> →</span></a></h4>
+        <p>Co-operative navigation without GPS or vision: a 6-DoF AUV dynamics model with derived thruster transfer functions, LiDAR-only tracking and maze obstacle avoidance, and 50 agents converging on 90°-FOV local sensing alone.</p>
+        <span class="kpi">→ 50 agents, decentralized · range and bearing only</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Deep RL · Spring 2025</span>
+        <h4><a href="projects/sac-ball-plate.html" class="proj-link">SAC for Continuous Robot Control<span class="arrow"> →</span></a></h4>
+        <p>Soft Actor-Critic with dynamic entropy tuning: 22-D observation vector, twin critics and a Gaussian actor, Simscape Multibody contact physics — 2-DOF continuous torque control balancing a ball on a plate, converging on multiple distinct strategies rather than one.</p>
+        <span class="kpi">→ 6,000 episodes on RTX 4090 · 660.48 peak reward</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Bio-Inspired · Fall 2024</span>
+        <h4><a href="projects/foldable-bat.html" class="proj-link">Foldable Flapping-Wing Robot<span class="arrow"> →</span></a></h4>
+        <p>Bat-inspired foldable wings — two-layer vinyl/flexure lamination with vein hinges — flapped by a single central servo through a gear-driven four-bar linkage, with measured stiffness, compliance, and inertia feeding MuJoCo and SolidWorks models.</p>
+        <span class="kpi">→ measured parameters → simulation → flapping prototype</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Industrial Automation · 2026</span>
+        <h4>PLC Tank Level Control — Codesys × Factory IO</h4>
+        <p>IEC 61131-3 Function Block Diagram controller with custom TON/TOF-timed valve sequencing and hysteresis set-point logic, validated in closed loop against Factory IO industrial co-simulation.</p>
+        <span class="kpi">→ real-time virtual process control</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Manipulation + CV · Fall 2023</span>
+        <h4><a href="projects/mycobot-tictactoe.html" class="proj-link">Tic-Tac-Toe Robot — MyCobot 280M5<span class="arrow"> →</span></a></h4>
+        <p>ArUco-calibrated eye-to-hand pipeline, color-segmentation board state, alpha-beta pruning AI, IK-computed suction-pump picks — plus a MATLAB digital twin synchronizing a URDF model with the physical arm.</p>
+        <span class="kpi">→ competitive gameplay on hardware</span>
+      </div>
+      <div class="gcard reveal">
+        <span class="gm">Manipulation · Fall 2023</span>
+        <h4><a href="projects/ur5.html" class="proj-link">UR5 Multi-Task Manipulation<span class="arrow"> →</span></a></h4>
+        <p>Programmed the UR5 across PolyScope, RoboDK, and URScript for precision waypoint execution, pick-and-place, and assembly with torque-controlled fastening at 3 N·m.</p>
+        <span class="kpi">→ three programming paradigms, one arm</span>
+      </div>
+    </div>
+
+    <p class="archive-note reveal">
+      Earlier work — Arduino RC vehicle, ROS path-planning comparisons, RFID parking, water-level
+      control, MEDICO health app — lives in the <a href="https://robopod.in/portfolio.html" target="_blank" rel="noopener">archive →</a>
+    </p>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills">
+    <div class="sec-label reveal">05 / Capabilities</div>
+    <h2 class="reveal">Toolkit</h2>
+    <div class="skills-grid">
+      <div class="skill-card reveal">
+        <h4>Controls &amp; Autonomy</h4>
+        <ul>
+          <li>MPC · Tube-MPC · LQR · CLF-CBF-QP</li>
+          <li>Nonlinear control · visual servoing</li>
+          <li>Multi-agent coordination</li>
+          <li>Deep RL (SAC) · coverage planning</li>
+        </ul>
+      </div>
+      <div class="skill-card reveal d1">
+        <h4>Planning &amp; Estimation</h4>
+        <ul>
+          <li>A* · Hybrid A* · RRT*</li>
+          <li>SLAM · Kalman &amp; particle filtering</li>
+          <li>Sensor fusion · Bayes filtering</li>
+          <li>State estimation</li>
+        </ul>
+      </div>
+      <div class="skill-card reveal d2">
+        <h4>Software &amp; Simulation</h4>
+        <ul>
+          <li>Python · C++ · MATLAB/Simulink</li>
+          <li>ROS 2 · OpenCV · point clouds</li>
+          <li>Gazebo · MuJoCo · CarSim · HoloOcean · PX4 SITL</li>
+          <li>Linux · Docker · Git · PLC (Ladder, Codesys)</li>
+        </ul>
+      </div>
+      <div class="skill-card reveal d3">
+        <h4>Platforms &amp; Hardware</h4>
+        <ul>
+          <li>TurtleBot 4 · Agile X Limo · ROSMASTER X3</li>
+          <li>FANUC LR Mate · UR5 · MyCobot</li>
+          <li>Blimp · custom aerial platform · Parrot Mambo</li>
+          <li>OAK-D RGB-D · MoCap · PCB (Altium)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="contact">
+    <div class="sec-label reveal">06 / Contact</div>
+    <h2 class="reveal">Building autonomy somewhere hard?<br>Let's talk.</h2>
+    <p class="lede reveal d1">
+      Open to industry roles in autonomous systems, robotics, and controls starting January 2027.
+    </p>
+    <div class="contact-links reveal d2">
+      <a class="btn" href="./resume.pdf" target="_blank" rel="noopener">Resume ↓</a>
+      <a class="icon-link" href="mailto:pdutta9@asu.edu" aria-label="Email — pdutta9@asu.edu" title="Email">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M1.636 21h3.819v-9.273L0 7.636v11.728C0 20.268.732 21 1.636 21z"/>
+          <path fill="#34A853" d="M18.545 21h3.819C23.268 21 24 20.268 24 19.364V7.636l-5.455 4.091V21z"/>
+          <path fill="#FBBC04" d="M18.545 5.455v6.272L24 7.636V6.273c0-2.023-2.309-3.178-3.927-1.964l-1.528 1.146z"/>
+          <path fill="#EA4335" d="M5.455 11.727V5.455L12 10.364l6.545-4.909v6.272L12 16.636z"/>
+          <path fill="#C5221F" d="M0 6.273v1.363l5.455 4.091V5.455L3.927 4.309C2.309 3.095 0 4.25 0 6.273z"/>
+        </svg>
+      </a>
+      <a class="icon-link" href="https://www.linkedin.com/in/prajjwal-dutta-4a9801193/" target="_blank" rel="noopener" aria-label="LinkedIn profile" title="LinkedIn">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect width="24" height="24" rx="2.6" fill="#0A66C2"/>
+          <path fill="#fff" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452z"/>
+        </svg>
+      </a>
+      <a class="icon-link" href="https://github.com/DPRIcky" target="_blank" rel="noopener" aria-label="GitHub profile" title="GitHub">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="https://scholar.google.com/citations?hl=en&amp;user=ZDtbedQAAAAJ" target="_blank" rel="noopener" aria-label="Google Scholar profile" title="Google Scholar">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M5.242 13.769 0 9.5 12 0l12 9.5-5.242 4.269C17.548 11.249 14.978 9.5 12 9.5c-2.977 0-5.548 1.749-6.758 4.269z"/>
+          <path fill="#A0C3FF" d="M12 10a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/>
+        </svg>
+      </a>
+    </div>
+    <div class="contact-meta reveal d3">
+      pdutta9@asu.edu · +1 (602) 247-0490 · Tempe / Mesa, AZ
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>© 2026 Prajjwal Dutta</span>
+  <span>robopod.in · Built with Three.js</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = innerWidth < 700;
+
+  /* ---------- scroll reveals ---------- */
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* ================= ROBOTICS SCENE =================
+     Layers:
+     1. Swarm of robot agents moving in a flow field,
+        with live connectivity-graph edges (LOS links)
+     2. Wireframe scanning ground grid with a LiDAR sweep
+     3. Articulated wireframe robot arm, slowly working
+     4. Sparse ambient particles for depth
+  =================================================== */
+  const canvas = document.getElementById('roboscene');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x060a14, 0.048);
+  const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 120);
+  camera.position.set(0, 2.2, 15);
+
+  const CYAN = 0x4fd8e8, AMBER = 0xf5a35c, DEEPBLUE = 0x2a6bb0;
+
+  /* ---------- 1. SWARM + CONNECTIVITY GRAPH ---------- */
+  const N = mobile ? 26 : 46;
+  const BOUND = {x:16, y:5.5, z:8};
+  const agents = [];
+  const agentGeo = new THREE.OctahedronGeometry(0.13, 0);
+  for(let i=0;i<N;i++){
+    const isLeader = i % 12 === 0;
+    const mat = new THREE.MeshBasicMaterial({
+      color: isLeader ? AMBER : CYAN, wireframe:true,
+      transparent:true, opacity: isLeader ? 0.95 : 0.8
+    });
+    const m = new THREE.Mesh(agentGeo, mat);
+    m.position.set(
+      (Math.random()-0.5)*BOUND.x*2,
+      (Math.random()-0.5)*BOUND.y*2 + 1.5,
+      (Math.random()-0.5)*BOUND.z*2
+    );
+    m.userData.vel = new THREE.Vector3();
+    m.userData.leader = isLeader;
+    // small glow sprite behind each agent
+    scene.add(m);
+    agents.push(m);
+  }
+
+  // connectivity edges — rebuilt every frame like an LOS graph
+  const MAXE = N*4;
+  const edgePos = new Float32Array(MAXE*2*3);
+  const edgeGeo = new THREE.BufferGeometry();
+  edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgePos,3));
+  const edgeMat = new THREE.LineBasicMaterial({color:CYAN, transparent:true, opacity:0.28});
+  const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  scene.add(edges);
+  const R_COMM = 3.4; // comm radius
+
+  function flow(x,y,z,t){
+    const s=0.14;
+    return [
+      Math.sin(y*s + t*0.3) + Math.cos(z*s*1.2 - t*0.2),
+      (Math.sin(z*s - t*0.25) + Math.cos(x*s + t*0.17))*0.4,
+      Math.sin(x*s*1.1 + t*0.22) + Math.cos(y*s*0.9 + t*0.14)
+    ];
+  }
+
+  /* ---------- 2. GROUND GRID + LIDAR SWEEP ---------- */
+  const grid = new THREE.GridHelper(90, 60, 0x1c3a66, 0x11223f);
+  grid.position.y = -4.4;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.55;
+  scene.add(grid);
+
+  // radial LiDAR sweep on the ground
+  const sweepGeo = new THREE.RingGeometry(0.1, 14, 48, 1, 0, Math.PI/5);
+  const sweepMat = new THREE.MeshBasicMaterial({
+    color:CYAN, transparent:true, opacity:0.07, side:THREE.DoubleSide
+  });
+  const sweep = new THREE.Mesh(sweepGeo, sweepMat);
+  sweep.rotation.x = -Math.PI/2;
+  sweep.position.y = -4.38;
+  scene.add(sweep);
+
+  // expanding scan rings (sonar pings)
+  const rings = [];
+  for(let i=0;i<3;i++){
+    const rg = new THREE.RingGeometry(0.98, 1, 64);
+    const rm = new THREE.MeshBasicMaterial({color:AMBER, transparent:true, opacity:0, side:THREE.DoubleSide});
+    const ring = new THREE.Mesh(rg, rm);
+    ring.rotation.x = -Math.PI/2;
+    ring.position.y = -4.36;
+    ring.userData.phase = i/3;
+    scene.add(ring);
+    rings.push(ring);
+  }
+
+  /* ---------- 3. WIREFRAME ROBOT ARM ---------- */
+  const arm = new THREE.Group();
+  const wire = c => new THREE.MeshBasicMaterial({color:c, wireframe:true, transparent:true, opacity:0.65});
+
+  // base
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.75,0.95,0.5,10), wire(DEEPBLUE));
+  arm.add(base);
+  // shoulder joint pivot
+  const shoulder = new THREE.Group(); shoulder.position.y = 0.35; arm.add(shoulder);
+  const shoulderJ = new THREE.Mesh(new THREE.SphereGeometry(0.32,10,8), wire(CYAN));
+  shoulder.add(shoulderJ);
+  const link1 = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.2,2.4,8), wire(CYAN));
+  link1.position.y = 1.2; shoulder.add(link1);
+  // elbow
+  const elbow = new THREE.Group(); elbow.position.y = 2.4; shoulder.add(elbow);
+  const elbowJ = new THREE.Mesh(new THREE.SphereGeometry(0.26,10,8), wire(CYAN));
+  elbow.add(elbowJ);
+  const link2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.16,2.0,8), wire(CYAN));
+  link2.position.y = 1.0; elbow.add(link2);
+  // wrist + gripper
+  const wristG = new THREE.Group(); wristG.position.y = 2.0; elbow.add(wristG);
+  const wristJ = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6), wire(AMBER));
+  wristG.add(wristJ);
+  const f1 = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.5,0.14), wire(AMBER));
+  const f2 = f1.clone();
+  f1.position.set(0.14,0.32,0); f2.position.set(-0.14,0.32,0);
+  wristG.add(f1); wristG.add(f2);
+
+  arm.position.set(mobile ? 0 : 8.5, -4.15, mobile ? -6 : -2.5);
+  arm.scale.setScalar(mobile ? 0.8 : 1.15);
+  scene.add(arm);
+
+  /* ---------- 3b. QUADCOPTER DRONE ---------- */
+  const drone = new THREE.Group();
+  const dBody = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.16,0.5), wire(CYAN));
+  drone.add(dBody);
+  const dRotors = [];
+  [[0.55,0.55],[0.55,-0.55],[-0.55,0.55],[-0.55,-0.55]].forEach(([x,z],i)=>{
+    const armBar = new THREE.Mesh(new THREE.BoxGeometry(0.78,0.05,0.07), wire(DEEPBLUE));
+    armBar.position.set(x/2, 0.02, z/2);
+    armBar.rotation.y = Math.atan2(z, x);
+    drone.add(armBar);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28,0.02,6,18), wire(CYAN));
+    ring.rotation.x = Math.PI/2;
+    ring.position.set(x, 0.08, z);
+    drone.add(ring);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.015,0.05), wire(AMBER));
+    blade.position.set(x, 0.1, z);
+    blade.userData.dir = i%2===0 ? 1 : -1;
+    drone.add(blade);
+    dRotors.push(blade);
+  });
+  const navLight = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,5),
+    new THREE.MeshBasicMaterial({color:AMBER, transparent:true}));
+  navLight.position.y = -0.12;
+  drone.add(navLight);
+  drone.scale.setScalar(mobile ? 0.8 : 1.05);
+  scene.add(drone);
+
+  /* ---------- 3c. GROUND ROVER + LIDAR + WAYPOINT PATH ---------- */
+  const rover = new THREE.Group();
+  const rBody = new THREE.Mesh(new THREE.BoxGeometry(1.1,0.42,0.75), wire(CYAN));
+  rBody.position.y = 0.42; rover.add(rBody);
+  const rWheels = [];
+  [[0.42,0.45],[0.42,-0.45],[-0.42,0.45],[-0.42,-0.45]].forEach(([x,z])=>{
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.12,10), wire(DEEPBLUE));
+    w.rotation.x = Math.PI/2;
+    w.position.set(x, 0.22, z);
+    rover.add(w); rWheels.push(w);
+  });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6,0,Math.PI*2,0,Math.PI/2), wire(AMBER));
+  dome.position.y = 0.72; rover.add(dome);
+  // rotating LiDAR fan beam from the dome
+  const beamG = new THREE.Group(); beamG.position.y = 0.75; rover.add(beamG);
+  const beamGeo = new THREE.CircleGeometry(3.2, 20, -Math.PI/14, Math.PI/7);
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({
+    color:CYAN, transparent:true, opacity:0.1, side:THREE.DoubleSide}));
+  beam.rotation.x = -Math.PI/2;
+  beamG.add(beam);
+  rover.position.y = -4.4;
+  rover.scale.setScalar(mobile ? 0.85 : 1.1);
+  scene.add(rover);
+
+  // rover patrol path: visible dashed ellipse + waypoint markers
+  const PATH = {cx:-6.5, cz:2.0, rx:5.2, rz:3.4};
+  const pathPts = [];
+  for(let i=0;i<=72;i++){
+    const th=i/72*Math.PI*2;
+    pathPts.push(new THREE.Vector3(PATH.cx+PATH.rx*Math.cos(th), -4.35, PATH.cz+PATH.rz*Math.sin(th)));
+  }
+  const pathGeo = new THREE.BufferGeometry().setFromPoints(pathPts);
+  const pathLine = new THREE.Line(pathGeo, new THREE.LineDashedMaterial({
+    color:AMBER, transparent:true, opacity:0.4, dashSize:0.35, gapSize:0.28}));
+  pathLine.computeLineDistances();
+  scene.add(pathLine);
+  const wps = [];
+  for(let i=0;i<4;i++){
+    const th=i/4*Math.PI*2;
+    const wp = new THREE.Mesh(new THREE.OctahedronGeometry(0.16,0), wire(AMBER));
+    wp.position.set(PATH.cx+PATH.rx*Math.cos(th), -4.1, PATH.cz+PATH.rz*Math.sin(th));
+    scene.add(wp); wps.push(wp);
+  }
+
+  /* ---------- 3d. BLIMP (AeroFusion) ---------- */
+  const blimp = new THREE.Group();
+  const hull = new THREE.Mesh(new THREE.SphereGeometry(1.5,14,10), wire(DEEPBLUE));
+  hull.scale.set(1.65,0.62,0.62); blimp.add(hull);
+  const gondola = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.28,0.34), wire(CYAN));
+  gondola.position.y = -1.05; blimp.add(gondola);
+  const bProps = [];
+  [[-0.55],[0.55]].forEach(([z])=>{
+    const pr = new THREE.Mesh(new THREE.BoxGeometry(0.02,0.5,0.06), wire(AMBER));
+    pr.position.set(-0.5, -1.05, z*0.34);
+    blimp.add(pr); bProps.push(pr);
+  });
+  [[1],[-1]].forEach(([s])=>{
+    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.32,0.7,4), wire(DEEPBLUE));
+    fin.rotation.z = Math.PI/2; fin.rotation.y = s>0?0:Math.PI;
+    fin.position.set(-2.4, s*0.28*0, 0); fin.position.y = s*0.35;
+    blimp.add(fin);
+  });
+  blimp.position.set(-9, 7.5, -9);
+  blimp.scale.setScalar(mobile ? 0.75 : 1.05);
+  scene.add(blimp);
+
+  /* ---------- 3e. COMM TOWER + UPLINK ---------- */
+  const tower = new THREE.Group();
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.14,4.6,6), wire(DEEPBLUE));
+  mast.position.y = 2.3; tower.add(mast);
+  for(let i=0;i<3;i++){
+    const strut = new THREE.Mesh(new THREE.TorusGeometry(0.34-i*0.08,0.02,4,10), wire(DEEPBLUE));
+    strut.rotation.x = Math.PI/2; strut.position.y = 1.2+i*1.3;
+    tower.add(strut);
+  }
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.55,10,7,0,Math.PI*2,0,Math.PI/2.6), wire(AMBER));
+  dish.rotation.x = Math.PI/1.7;
+  dish.position.y = 4.75;
+  tower.add(dish);
+  const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.06,6,5),
+    new THREE.MeshBasicMaterial({color:CYAN, transparent:true}));
+  antTip.position.y = 5.15; tower.add(antTip);
+  tower.position.set(mobile ? -8 : -14.5, -4.4, -5.5);
+  scene.add(tower);
+  // dashed uplink from tower to blimp
+  const upGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const uplink = new THREE.Line(upGeo, new THREE.LineDashedMaterial({
+    color:CYAN, transparent:true, opacity:0.3, dashSize:0.3, gapSize:0.25}));
+  scene.add(uplink);
+
+  /* ---------- 4. AMBIENT PARTICLES ---------- */
+  const PC = mobile ? 700 : 1600;
+  const pPos = new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){
+    pPos[i*3]=(Math.random()-0.5)*50;
+    pPos[i*3+1]=(Math.random()-0.5)*24;
+    pPos[i*3+2]=(Math.random()-0.5)*30;
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos,3));
+  const pMat = new THREE.PointsMaterial({color:0x3b6ea8, size:0.05, transparent:true, opacity:0.5});
+  const dust = new THREE.Points(pGeo, pMat);
+  scene.add(dust);
+
+  /* ---------- interaction + loop ---------- */
+  let targetScroll=0, smooth=0, mx=0, my=0;
+  addEventListener('scroll', ()=>{ targetScroll = window.scrollY; }, {passive:true});
+  addEventListener('mousemove', e=>{
+    mx=(e.clientX/innerWidth-0.5); my=(e.clientY/innerHeight-0.5);
+  }, {passive:true});
+  addEventListener('resize', ()=>{
+    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+  renderer.setSize(innerWidth, innerHeight);
+
+  const clock = new THREE.Clock();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    if(!reduced){
+      /* swarm dynamics: flow field + gentle cohesion + separation */
+      for(let i=0;i<N;i++){
+        const a = agents[i], p = a.position, v = a.userData.vel;
+        const f = flow(p.x,p.y,p.z,t);
+        v.x = v.x*0.93 + f[0]*0.012;
+        v.y = v.y*0.93 + f[1]*0.012;
+        v.z = v.z*0.93 + f[2]*0.012;
+        // soft box containment (barrier-function-flavored)
+        v.x -= Math.max(0, Math.abs(p.x)-BOUND.x) * Math.sign(p.x)*0.004;
+        v.y -= Math.max(0, Math.abs(p.y-1.5)-BOUND.y) * Math.sign(p.y-1.5)*0.004;
+        v.z -= Math.max(0, Math.abs(p.z)-BOUND.z) * Math.sign(p.z)*0.004;
+        p.add(v);
+        a.rotation.x += 0.004 + i*0.0002;
+        a.rotation.y += 0.006;
+      }
+      /* separation pass */
+      for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+        const pi=agents[i].position, pj=agents[j].position;
+        const dx=pi.x-pj.x, dy=pi.y-pj.y, dz=pi.z-pj.z;
+        const d2=dx*dx+dy*dy+dz*dz;
+        if(d2<1.0 && d2>0.0001){
+          const d=Math.sqrt(d2), push=(1.0-d)*0.01/d;
+          pi.x+=dx*push; pi.y+=dy*push; pi.z+=dz*push;
+          pj.x-=dx*push; pj.y-=dy*push; pj.z-=dz*push;
+        }
+      }
+      /* rebuild connectivity edges */
+      let e=0;
+      for(let i=0;i<N && e<MAXE;i++){
+        for(let j=i+1;j<N && e<MAXE;j++){
+          const pi=agents[i].position, pj=agents[j].position;
+          if(pi.distanceTo(pj) < R_COMM){
+            edgePos[e*6]=pi.x; edgePos[e*6+1]=pi.y; edgePos[e*6+2]=pi.z;
+            edgePos[e*6+3]=pj.x; edgePos[e*6+4]=pj.y; edgePos[e*6+5]=pj.z;
+            e++;
+          }
+        }
+      }
+      for(let k=e*6;k<MAXE*6;k++) edgePos[k]=0;
+      edgeGeo.attributes.position.needsUpdate = true;
+      edgeMat.opacity = 0.22 + Math.sin(t*0.8)*0.06;
+
+      /* arm choreography — slow pick cycle */
+      shoulder.rotation.z = Math.sin(t*0.35)*0.45 - 0.15;
+      shoulder.rotation.y = Math.sin(t*0.2)*0.6;
+      elbow.rotation.z    = Math.sin(t*0.35 + 1.2)*0.7 + 0.5;
+      wristG.rotation.z   = Math.sin(t*0.5)*0.4;
+      const grip = (Math.sin(t*0.7)+1)/2;
+      f1.position.x =  0.08 + grip*0.1;
+      f2.position.x = -0.08 - grip*0.1;
+
+      /* drone: lissajous patrol with spinning rotors */
+      const dx = Math.sin(t*0.22)*9, dz = Math.sin(t*0.31+1.2)*5 - 1.5;
+      const dy = 3.6 + Math.sin(t*0.6)*0.5;
+      // bank toward motion direction
+      const ndx = Math.cos(t*0.22)*0.22*9, ndz = Math.cos(t*0.31+1.2)*0.31*5;
+      drone.position.set(dx, dy, dz);
+      drone.rotation.z = -ndx*0.06;
+      drone.rotation.x =  ndz*0.06;
+      drone.rotation.y = t*0.1;
+      dRotors.forEach(b=>{ b.rotation.y += 0.55*b.userData.dir; });
+      navLight.material.opacity = (Math.sin(t*6)>0.4)?1:0.15;
+
+      /* rover: follows the dashed waypoint ellipse */
+      const rth = t*0.16;
+      rover.position.x = PATH.cx + PATH.rx*Math.cos(rth);
+      rover.position.z = PATH.cz + PATH.rz*Math.sin(rth);
+      rover.rotation.y = -Math.atan2(PATH.rz*Math.cos(rth), -PATH.rx*Math.sin(rth));
+      rWheels.forEach(w=>{ w.rotation.y += 0.12; });
+      beamG.rotation.y = t*1.4;
+      wps.forEach((wp,i)=>{ wp.rotation.y = t*0.8 + i; wp.position.y = -4.1 + Math.sin(t*1.5+i)*0.06; });
+
+      /* blimp: slow crossing drift, spinning props, gentle heave */
+      blimp.position.x = -14 + ((t*0.32) % 30);
+      blimp.position.y = 7.5 + Math.sin(t*0.4)*0.4;
+      blimp.rotation.z = Math.sin(t*0.3)*0.04;
+      bProps.forEach(p=>{ p.rotation.x += 0.4; });
+
+      /* tower: dish scans, uplink tracks the blimp */
+      dish.rotation.y = t*0.4;
+      antTip.material.opacity = (Math.sin(t*3)>0)?0.9:0.2;
+      const upArr = uplink.geometry.attributes.position.array;
+      upArr[0]=tower.position.x; upArr[1]=tower.position.y+4.9; upArr[2]=tower.position.z;
+      upArr[3]=blimp.position.x; upArr[4]=blimp.position.y-0.8; upArr[5]=blimp.position.z;
+      uplink.geometry.attributes.position.needsUpdate = true;
+      uplink.computeLineDistances();
+      uplink.material.opacity = 0.18 + Math.sin(t*2.2)*0.1;
+
+      /* lidar sweep + sonar rings */
+      sweep.rotation.z = -t*0.5;
+      rings.forEach(r=>{
+        const ph = ((t*0.18 + r.userData.phase) % 1);
+        const s = 0.5 + ph*16;
+        r.scale.setScalar(s);
+        r.material.opacity = (1-ph)*0.16;
+      });
+
+      dust.rotation.y = t*0.008;
+    }
+
+    /* scroll-linked camera: orbit + descend toward the swarm */
+    smooth += (targetScroll - smooth)*0.05;
+    const d = smooth*0.0012;
+    camera.position.x = Math.sin(d)*15 + mx*2.0;
+    camera.position.z = Math.cos(d)*15;
+    camera.position.y = 2.2 - Math.min(d*2.2, 4.5) + (-my*1.2);
+    camera.lookAt(0, 0.6, 0);
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

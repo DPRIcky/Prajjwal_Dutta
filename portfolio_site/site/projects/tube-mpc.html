@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Tube-MPC lateral path tracking with MATLAB/Simulink–CarSim co-simulation. Robust control project by Prajjwal Dutta.">
+<title>Tube-MPC Path Tracking — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #tubescene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.8rem 1.4rem;border-radius:8px;border:1px solid var(--cyan);
+    color:var(--cyan);transition:background .25s,color .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  /* dark-baked transparent diagrams get breathing room inside the panel */
+  figure img.diagram{padding:1.6rem 1.8rem;box-sizing:border-box;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="tubescene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>EGR 560 · Vehicle Dynamics &amp; Control · Spring 2026</span><span>with Vamsi Sai Korlapati</span></div>
+    <h1 class="reveal">Tube-MPC Lateral Path Tracking with CarSim Co-Simulation</h1>
+    <p class="sub reveal">
+      A robust lateral controller for automated driving that survives what breaks nominal
+      controllers: disturbance, model mismatch, and actuator saturation. Nominal MPC plans the
+      tube center; a discrete LQR ancillary loop pulls the real vehicle back toward it — first
+      proven in Simulink, then validated end-to-end against a high-fidelity CarSim vehicle.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/EGR-560-Project-2026/Carsim-tubemp-matlab-cosimulation/tree/main/MPC%20Controller%20example" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="https://github.com/EGR-560-Project-2026/Carsim-tubemp-matlab-cosimulation/blob/main/MPC%20Controller%20example/EGR560_Final_Report_IEEE.pdf" target="_blank" rel="noopener" aria-label="IEEE report PDF" title="IEEE Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>591×</b><span>error cut · tube on vs off</span></div>
+      <div class="metric"><b>46%</b><span>better than MPC, disturbed</span></div>
+      <div class="metric"><b>54 km/h</b><span>CarSim validation speed</span></div>
+      <div class="metric"><b>0.455 m</b><span>max tube error e₁ · CarSim</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/tubempc/carsim_visualizer.jpg"
+      aria-label="Animated CarSim VS Visualizer run: the vehicle tracks a curved road under Tube-MPC control while nine live plots of tracking error, trajectory, steering, and lateral acceleration update in real time.">
+      <source src="../media/tube-mpc-carsim.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>Final closed-loop CarSim run (live capture) — the vehicle holds the centerline through curves at 54 km/h while live plots log tracking error, trajectory, steering, and lateral acceleration.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Problem</div>
+    <h2 class="reveal">Nominal controllers are optimists.</h2>
+    <p class="reveal">
+      A controller tuned on a clean linear bicycle model tracks that model beautifully — and can
+      fall apart on a real vehicle with nonlinear tires, different mass properties, crosswind,
+      and a steering actuator that saturates. In our benchmarks, an unconstrained LQR under
+      sustained sinusoidal disturbance hit <strong>30.4% steering saturation and diverged
+      outright</strong>. The project asks: how do you keep MPC's interpretability while adding a
+      formal robustness margin?
+    </p>
+    <p class="reveal">
+      Tube-MPC answers by separating planning from correction. The MPC only has to steer a
+      disturbance-free <em>nominal</em> model; a fast ancillary feedback loop handles the gap
+      between that nominal trajectory and reality, keeping the true state inside a bounded
+      "tube" around the plan.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Architecture</div>
+    <h2 class="reveal">One law, two loops.</h2>
+    <div class="law reveal">
+      u<sub>k</sub> = v<sub>k</sub> + sat( tube_on · <span class="a">K</span> · e<sub>k</sub> )<br>
+      e<sub>k</sub> = x<sub>k</sub> − z<sub>k</sub> &nbsp;<span class="c">// tube error: sampled CarSim state − nominal state</span><br>
+      z<sub>k+1</sub> = A<sub>d</sub> z<sub>k</sub> + B<sub>d</sub> v<sub>k</sub> &nbsp;<span class="c">// discrete nominal model propagates the tube center</span><br>
+      <span class="a">K</span> = [−0.1285 &nbsp;−2.8146 &nbsp;−0.3521 &nbsp;−0.3329] &nbsp;<span class="c">// discrete LQR gain, closed-loop |λ| &lt; 1</span>
+    </div>
+    <p class="reveal">
+      The state is the four-vector [e<sub>y</sub>, e<sub>ψ</sub>, v<sub>y</sub>, r] — lateral
+      error, heading error, lateral velocity, yaw rate. The MPC block outputs the nominal
+      steering v<sub>k</sub>; a discrete nominal model generates the tube center z<sub>k</sub>;
+      the sampled plant (or CarSim) state x<sub>k</sub> is compared against it; and the LQR gain
+      K applies the correction. Critically, the correction is <strong>saturated before it
+      touches the steering interface</strong> — the raw ancillary term peaked at 87.8 in the
+      final run, and unbounded injection would have destabilized the high-fidelity vehicle.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/tubempc/carsim_simulink_model_dark.png" target="_blank" rel="noopener">
+        <img class="diagram" src="../assets/tubempc/carsim_simulink_model_dark.png" alt="Simulink block diagram of the Tube-MPC CarSim co-simulation model showing MPC block, nominal model, tube error computation, ancillary gain, saturation, and CarSim S-Function.">
+      </a>
+      <figcaption><span class="n">FIG 02</span>CarSim-wired Simulink model — MPC, discrete nominal model, sampled-state construction, ancillary gain K, correction saturation, and steering-wheel conversion into the CarSim S-Function.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Phase 1 · Fair Benchmark</div>
+    <h2 class="reveal">LQR vs MPC vs Tube-MPC — same model, same disturbance.</h2>
+    <p class="reveal">
+      All three controllers ran on one common discrete bicycle model (T<sub>s</sub> = 0.02 s),
+      in a nominal case and under a sustained sinusoidal disturbance on the lateral channels.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Controller · Disturbed</th><th>RMS e<sub>y</sub></th><th>Peak |e<sub>y</sub>|</th><th>Saturation</th></tr></thead>
+      <tbody>
+        <tr><td>LQR</td><td>diverged</td><td>—</td><td>30.4%</td></tr>
+        <tr><td>Constrained MPC (N<sub>p</sub>=20)</td><td>0.0386 m</td><td>0.1021 m</td><td>0.00%</td></tr>
+        <tr class="hl"><td>Tube-MPC</td><td>0.0208 m</td><td>0.0489 m</td><td>0.00%</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">Nominal case: MPC and Tube-MPC both reached 0.0016 m RMS — 36% better than LQR's 0.0025 m. Verified run, April 2026.</p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/tubempc/controller_comparison.png" target="_blank" rel="noopener">
+          <img src="../assets/tubempc/controller_comparison.png" alt="Four plots comparing LQR, MPC, and Tube-MPC lateral and heading error in nominal and disturbed cases; LQR diverges under disturbance while Tube-MPC halves MPC's error.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>Nominal vs disturbed: LQR diverges at saturation; Tube-MPC halves MPC's peak error.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/tubempc/trajectory_xy.png" target="_blank" rel="noopener">
+          <img src="../assets/tubempc/trajectory_xy.png" alt="XY trajectory plot of the three controllers following the reference path.">
+        </a>
+        <figcaption><span class="n">FIG 04</span>XY trajectories against the reference path across controllers.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The single most dramatic number came from the tube-on / tube-off ablation on the Simulink
+      plant: with ancillary feedback disabled, max sampled error under disturbance was
+      <strong>18.80 m</strong>; enabling the tube collapsed it to <strong>0.0318 m — a 591×
+      reduction</strong> from a four-element gain vector.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Phase 2 · CarSim Validation</div>
+    <h2 class="reveal">Surviving contact with a real vehicle model.</h2>
+    <p class="reveal">
+      Phase 2 swapped the simplified plant for a CarSim external-driver co-simulation while
+      preserving the exact Tube-MPC signal flow. This is where implementation reality lives:
+      unit conversion, steering-ratio and yaw-frame mapping, sampled four-state vector
+      construction from CarSim outputs, and correction saturation. The final 30 s run at
+      54 km/h completed closed-loop with <strong>bounded tube errors (e₁ max 0.455, e₃ max
+      0.324)</strong>, max steering-wheel demand of 45.8°, and a fully reproducible results
+      package — saved MAT runs, summary_metrics.csv, plot scripts, and the visualizer animation.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/tubempc/lateral_error.jpg" target="_blank" rel="noopener">
+          <img src="../assets/tubempc/lateral_error.jpg" alt="Lateral path error over the 30 second CarSim run, bounded throughout.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>Lateral/path error over the 30 s CarSim run — bounded throughout.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/tubempc/actual_vs_nominal.jpg" target="_blank" rel="noopener">
+          <img src="../assets/tubempc/actual_vs_nominal.jpg" alt="Sampled actual CarSim state versus nominal model state for state 1; the gap between traces is the tube error.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>Actual vs nominal state 1 — the gap between traces is the tube error fed to K.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/tubempc/raw_vs_saturated.jpg" target="_blank" rel="noopener">
+          <img src="../assets/tubempc/raw_vs_saturated.jpg" alt="Raw ancillary correction compared with the saturated correction actually injected into the steering path.">
+        </a>
+        <figcaption><span class="n">FIG 07</span>Raw vs saturated correction — theory can shout; the actuator interface only hears a bounded command.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Robustness is structural, not tuned.</strong> Tube-MPC's advantage came from
+      architecture — separating nominal planning from error correction — not from cranking
+      weights. <strong>Constraints are the difference between degradation and divergence:</strong>
+      the same disturbance that LQR could not survive left both constrained controllers stable.
+      And <strong>sim-to-high-fidelity transfer is an engineering discipline of its own</strong> —
+      signal frames, unit conversions, and saturation placement mattered as much as the control
+      law once CarSim entered the loop.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">Tube-MPC</span><span class="tag">Discrete LQR</span><span class="tag">quadprog MPC</span>
+      <span class="tag">MATLAB / Simulink</span><span class="tag">CarSim</span><span class="tag">Bicycle Model</span>
+      <span class="tag">ZOH Discretization</span><span class="tag">Actuator Saturation</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the tube itself — nominal trajectory (center line), a translucent
+     wireframe tube around it, and an "actual vehicle" weaving inside but never leaving. */
+  const canvas=document.getElementById('tubescene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
+  camera.position.set(0,2.5,13);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+
+  const grid=new THREE.GridHelper(80,50,0x1c3a66,0x11223f);
+  grid.position.y=-4; grid.material.transparent=true; grid.material.opacity=0.5;
+  scene.add(grid);
+
+  // reference path curve (gentle S / oval feel)
+  const pts=[];
+  for(let i=0;i<=140;i++){
+    const s=i/140*Math.PI*4;
+    pts.push(new THREE.Vector3((i/140-0.5)*36, Math.sin(s*0.5)*0.8, Math.sin(s)*3.2));
+  }
+  const curve=new THREE.CatmullRomCurve3(pts);
+  // the tube (robust bound)
+  const tubeGeo=new THREE.TubeGeometry(curve,120,1.1,10,false);
+  const tube=new THREE.Mesh(tubeGeo,new THREE.MeshBasicMaterial({
+    color:CYAN,wireframe:true,transparent:true,opacity:0.14}));
+  scene.add(tube);
+  // nominal center line
+  const centerGeo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(200));
+  scene.add(new THREE.Line(centerGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.5})));
+
+  // actual trajectory trail (amber), weaving inside the tube
+  const TRAIL=90;
+  const trailPos=new Float32Array(TRAIL*3);
+  const trailGeo=new THREE.BufferGeometry();
+  trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+  const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.85}));
+  scene.add(trail);
+
+  // vehicle marker
+  const car=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.22,0.34),
+    new THREE.MeshBasicMaterial({color:AMBER,wireframe:true}));
+  scene.add(car);
+
+  // ambient dust
+  const PC=innerWidth<700?500:1200;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+
+  let target=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{target=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  const up=new THREE.Vector3(0,1,0);
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      const u=(t*0.03)%1;
+      const base=curve.getPointAt(u);
+      const tan=curve.getTangentAt(u);
+      const normal=new THREE.Vector3().crossVectors(tan,up).normalize();
+      // disturbance weave: bounded inside tube radius
+      const dev=Math.sin(t*1.7)*0.55+Math.sin(t*0.6)*0.25;
+      const devY=Math.sin(t*1.1)*0.35;
+      car.position.copy(base).addScaledVector(normal,dev);
+      car.position.y+=devY;
+      car.lookAt(car.position.clone().add(tan));
+      // shift trail
+      for(let i=TRAIL-1;i>0;i--){
+        trailPos[i*3]=trailPos[(i-1)*3];
+        trailPos[i*3+1]=trailPos[(i-1)*3+1];
+        trailPos[i*3+2]=trailPos[(i-1)*3+2];
+      }
+      trailPos[0]=car.position.x;trailPos[1]=car.position.y;trailPos[2]=car.position.z;
+      trailGeo.attributes.position.needsUpdate=true;
+      tube.material.opacity=0.12+Math.sin(t*0.8)*0.03;
+    }
+    smooth+=(target-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.6)*13+mx*1.6;
+    camera.position.z=Math.cos(d*0.6)*13;
+    camera.position.y=2.5-Math.min(d*1.5,3);
+    camera.lookAt(car.position.x*0.3,0.4,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

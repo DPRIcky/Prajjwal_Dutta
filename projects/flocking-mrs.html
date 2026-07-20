@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Co-operative navigation in multi-AUV systems — a 6-DoF AUV dynamics model, LiDAR-only tracking and obstacle avoidance, and a 50-agent flocking simulation that converges without GPS or vision. ASU Multi-Robot Systems. By Prajjwal Dutta.">
+<title>50-Agent Flocking &amp; Multi-AUV Coordination — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #flockscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;
+    padding:0.6rem 1.2rem;transition:border-color .25s,color .25s,transform .25s;}
+  .btn:hover,.btn:focus-visible{color:var(--cyan);border-color:var(--cyan);transform:translateY(-2px);}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+  em.q{font-style:italic;color:var(--text);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figure img{background:#f6f8fb;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  figcaption a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+  .fig-grid figure{margin:0.6rem 0;}
+  .fig-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;align-items:start;}
+  .fig-3 figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid,.fig-3{grid-template-columns:1fr;}}
+  .narrow{max-width:560px;margin-left:auto;margin-right:auto;}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="flockscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Multi-Agent · Fall 2024</span><span>ASU · Multi-Robot Systems</span></div>
+    <h1 class="reveal">Fifty Robots Find Each Other in the Dark</h1>
+    <p class="sub reveal">
+      Underwater, almost every sensor a robot relies on stops working. No GPS. No useful vision.
+      Radio doesn't propagate. What's left is short-range ranging and dead reckoning — and the
+      question of whether a fleet can still stay together on that alone. This project builds the
+      answer in three layers: a <strong>6-DoF AUV dynamics model</strong> with real thruster and
+      hydrodynamic behavior, a <strong>LiDAR-only tracking and obstacle-avoidance</strong>
+      controller navigating a maze, and a <strong>50-agent flocking simulation</strong> where
+      robots scattered at random converge into a coherent group using nothing but range and
+      bearing to whoever happens to be in view.
+    </p>
+    <div class="actions reveal">
+      <a class="btn" href="../assets/mrs/mrs-report.pdf" target="_blank" rel="noopener">Project report ↓</a>
+      <a class="icon-link" href="https://youtu.be/16jqQIGX92Q" target="_blank" rel="noopener" aria-label="Simulation video on YouTube" title="Simulation Video (YouTube)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FF0000" d="M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.51A3.02 3.02 0 0 0 .5 6.2C0 8.09 0 12 0 12s0 3.91.5 5.8a3.02 3.02 0 0 0 2.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51a3.02 3.02 0 0 0 2.12-2.14C24 15.91 24 12 24 12s0-3.91-.5-5.8ZM9.55 15.57V8.43L15.82 12l-6.27 3.57Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>50</b><span>point-mass agents</span></div>
+      <div class="metric"><b>90°</b><span>LiDAR field of view</span></div>
+      <div class="metric"><b>6-DoF</b><span>AUV dynamics · 5 thrusters</span></div>
+      <div class="metric"><b>0</b><span>GPS · vision · global comms</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/mrs/flocking-poster.jpg"
+      aria-label="The 50-agent flocking simulation running: robots scattered across the workspace draw together into a single dense cluster.">
+      <source src="../media/mrs-flocking.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>The grouping model running — 50 agents starting spread across the workspace, pulling into one cohesive cluster on local sensing alone.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Premise</div>
+    <h2 class="reveal">A lighthouse, and everyone else following the light.</h2>
+    <p class="reveal">
+      The coordination problem is framed around a <strong>"lighthouse"</strong>: one vehicle in
+      the fleet carries the full AUV dynamics and moves through the environment as ground truth,
+      publishing 2D positions to a tracking model. Every other robot has no idea where it is in
+      any global sense — it only knows what its LiDAR currently sees. If the lighthouse falls
+      inside a robot's sensing cone and range, that robot follows. If not, it searches.
+    </p>
+    <p class="reveal">
+      That asymmetry is a deliberate simplification with a real justification: modeling full
+      hydrodynamics for every agent is expensive, and the environmental forces that matter most
+      are the ones acting on the vehicle whose trajectory everyone else is keyed to. Environment
+      effects were applied to the lighthouse and omitted for the followers — which the report is
+      explicit about as a limitation rather than a design choice.
+    </p>
+    <p class="reveal">
+      The workspace is a bounded <strong>maze</strong>, walls acting as obstacles. Unbounded
+      would be more realistic; bounded makes obstacle avoidance, tracking, and flocking
+      observable in the same scene.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Vehicle</div>
+    <h2 class="reveal">Motor curves, drag, buoyancy — modeled, not assumed.</h2>
+    <p class="reveal">
+      The AUV is a <strong>10 kg</strong> vehicle with <strong>five thrusters</strong>: two
+      T200s for surge, two T100s for lateral motion, and one T200 for heave. Rather than
+      treating thrust as an ideal command, the motors were characterized from first principles —
+      the electrical equation with back-EMF and the mechanical torque balance — and their
+      <strong>transfer functions derived in MATLAB</strong>, so commanded voltage maps to actual
+      angular velocity with the right dynamics in between.
+    </p>
+    <div class="law reveal">
+      <span class="c">electrical:</span> V<sub>a</sub>(s) = I<sub>a</sub>(s)R<sub>a</sub> + sL<sub>a</sub>I<sub>a</sub>(s) + <span class="a">K<sub>b</sub>ω(s)</span><br>
+      <span class="c">mechanical:</span> T<sub>m</sub>(s) = Jsω(s) + Bω(s) + T<sub>L</sub>(s), &nbsp; T<sub>m</sub> = K<sub>t</sub>I<sub>a</sub>(s)<br>
+      <span class="c">rigid body:</span> <span class="a">τ = M(q)q̈ + C(q,q̇)q̇ + D(q,q̇) + G(q)</span> <span class="c">// inertia, Coriolis, hydrodynamic, buoyancy</span>
+    </div>
+    <p class="reveal">
+      A <strong>PID translation controller</strong> tracks waypoints from a reference generator,
+      its output passing through a dead zone (−0.5 to +0.5) before conversion to PWM — so small
+      errors don't produce thruster chatter. Drag and lift are computed from velocity components
+      resolved into body axes, combined with propulsion forces into a total wrench, and fed to a
+      <strong>6-DoF body-to-Euler block</strong> that returns position, orientation, rates, and
+      accelerations. Post-processing extracts angle of attack, side-slip, and IMU data — the
+      signals a real vehicle would actually have to navigate on.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/mrs/auv-simulink.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/auv-simulink.jpg" alt="Simulink model of the AUV: reference waypoint generator, PID translation controller, thrust allocation, hydrodynamic force blocks, and a 6-DoF body block.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>The AUV model — reference, PID translation control, thrust allocation, hydrodynamics, 6-DoF integration.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mrs/blimp-model.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/blimp-model.jpg" alt="Rendered model of the blimp-shaped vehicle used as the AUV analog in MATLAB.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>The vehicle geometry — a blimp form standing in for the AUV, chosen because air and water dynamics rhyme.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal narrow">
+      <a href="../assets/mrs/position-3d.jpg" target="_blank" rel="noopener">
+        <img src="../assets/mrs/position-3d.jpg" alt="3D plot of the AUV's x, y and z position trace through the simulated environment.">
+      </a>
+      <figcaption><span class="n">FIG 04</span>The lighthouse vehicle's 3D trajectory — the ground truth every follower is keyed to.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Sensing</div>
+    <h2 class="reveal">Range, bearing, field of view, and nothing else.</h2>
+    <p class="reveal">
+      The detector model is deliberately austere, because austerity is the point. A sensor sits
+      at an offset from the robot body, so its world pose accounts for that offset rotated into
+      the body frame. For each object it computes Euclidean range and a bearing wrapped to
+      [−π, π], discards anything outside the <strong>90° field of view</strong> or beyond max
+      range, sorts what survives by distance, and returns only the nearest few.
+    </p>
+    <div class="law reveal">
+      x<sub>sensor</sub> = x + d<sub>x</sub>cos θ − d<sub>y</sub>sin θ,&nbsp; y<sub>sensor</sub> = y + d<sub>x</sub>sin θ + d<sub>y</sub>cos θ<br>
+      r<sub>i</sub> = ‖p<sub>i</sub> − p<sub>sensor</sub>‖,&nbsp; φ<sub>i</sub> = <span class="a">wrapToPi</span>( atan2(Δy, Δx) − θ<sub>sensor</sub> )<br>
+      <span class="c">keep if</span> |φ<sub>i</sub>| ≤ FoV/2 <span class="c">and</span> r<sub>i</sub> ≤ r<sub>max</sub>, <span class="c">then sort by r and cap at maxDetections</span>
+    </div>
+    <p class="reveal">
+      That last step — capping the number of detections — is the one that makes this scale.
+      A robot never reasons about 49 neighbors; it reasons about the handful closest to it,
+      which is both what a real sensor delivers and what keeps the controller's cost independent
+      of fleet size.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Tracking</div>
+    <h2 class="reveal">If you can't see it, turn until you can.</h2>
+    <p class="reveal">
+      The follower behavior is a small state machine driven entirely by what the LiDAR returns.
+      Instantaneous bearings are compared against the sensor's angular window and range gate.
+      When the average detection angle goes negative — the lighthouse is not in front — the
+      robot <strong>rotates in place to reacquire</strong> rather than wandering. Once the
+      target is in view it drives toward it at constant velocity, and the tracking law then
+      holds a set standoff distance from both the lighthouse and the other followers, which is
+      what stops a following behavior from collapsing into a pile-up.
+    </p>
+    <div class="fig-3">
+      <figure class="reveal">
+        <a href="../assets/mrs/maze-a.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/maze-a.jpg" alt="Maze environment plot with robots shown as circles, dashed LiDAR rays radiating outward and a magenta track between them.">
+        </a>
+        <figcaption><span class="n">FIG 05</span>Robots spread through the maze, LiDAR rays dashed.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mrs/maze-b.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/maze-b.jpg" alt="The same maze later: two followers have converged on the lighthouse robot while others hold position.">
+        </a>
+        <figcaption><span class="n">FIG 06</span>Two followers close on the lighthouse once it enters range.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mrs/maze-c.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/maze-c.jpg" alt="A later frame showing the group maintaining spacing while avoiding the two robots treated as obstacles.">
+        </a>
+        <figcaption><span class="n">FIG 07</span>Spacing held while the non-team robots are avoided as obstacles.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Flocking</div>
+    <h2 class="reveal">Fifty agents, no leader, no map, one group.</h2>
+    <p class="reveal">
+      The grouping model scales the same primitives to <strong>50 point-mass robots</strong>,
+      each with LiDAR, IMU, and a 90° field of view, sharing the parameters of the tracking model
+      so the layers stay consistent. Every robot carries an ID, is assigned to a team, and moves
+      according to <strong>the average position and orientation of the teammates it can
+      currently see</strong> — an averaging law, not a global optimization, with nothing
+      broadcast and no shared map.
+    </p>
+    <div class="law reveal">
+      U<sub>attraction</sub> = k<sub>attr</sub> · range,&nbsp;&nbsp; U<sub>repulsion</sub> = k<sub>repel</sub> · range <span class="c">// cohesion vs. collision avoidance</span><br>
+      θ̄ = (1/N) Σ θ<sub>i</sub>,&nbsp;&nbsp; r̄ = (1/N) Σ r<sub>i</sub> <span class="c">// averaged over visible teammates only</span><br>
+      x(t+Δt) = x(t) + v·Δt·cos θ,&nbsp; y(t+Δt) = y(t) + v·Δt·sin θ,&nbsp; θ(t+Δt) = θ(t) + ω·Δt
+    </div>
+    <p class="reveal">
+      Attraction and repulsion are opposing potential fields — one pulls the group together, the
+      other keeps members from colliding — and the equilibrium between them <em class="q">is</em>
+      the formation. Nobody computes the formation; it's what's left when the two forces balance.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/mrs/grouping-initial.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/grouping-initial.jpg" alt="Fifty numbered robots scattered at random positions across the workspace, each with a heading indicator.">
+        </a>
+        <figcaption><span class="n">FIG 08</span>Initial state — 50 robots at random positions and headings.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mrs/grouping-final.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/grouping-final.jpg" alt="The same fifty robots converged into a single tight cluster near the center of the workspace.">
+        </a>
+        <figcaption><span class="n">FIG 09</span>Converged — one cohesive group, from local sensing only.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The same controller produces <strong>multiple simultaneous groups</strong> by changing team
+      assignment alone — three teams starting interleaved sort themselves into three separate
+      clusters without any change to the control law. That's the useful property for a real
+      survey fleet, where sub-teams need to cover different areas and regroup later.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/mrs/teams-initial.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/teams-initial.jpg" alt="Robots colored red, green and blue by team assignment, initially interleaved across the workspace.">
+        </a>
+        <figcaption><span class="n">FIG 10</span>Three teams, interleaved at the start.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mrs/teams-final.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/teams-final.jpg" alt="The three colored teams separated into three distinct converged clusters.">
+        </a>
+        <figcaption><span class="n">FIG 11</span>Same law, three clusters — only the team assignment changed.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The trajectory plots are where convergence stops being visual and becomes measurable.
+      In the x–y view every path spirals inward to a common region; in position-versus-time
+      the fifty traces fan out early and then <strong>collapse into a stable band</strong> and
+      stay there — the signature the theoretical analysis predicted.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/mrs/trajectories-xy.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/trajectories-xy.jpg" alt="Robot trajectories in the x-y plane: fifty colored paths spiraling inward toward a common center.">
+        </a>
+        <figcaption><span class="n">FIG 12</span>Trajectories in x–y — every agent spiraling into the group.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/mrs/trajectories-time.jpg" target="_blank" rel="noopener">
+          <img src="../assets/mrs/trajectories-time.jpg" alt="Position versus time for all robots: traces spread widely at first then converge into a narrow stable band.">
+        </a>
+        <figcaption><span class="n">FIG 13</span>Position vs. time — spread, then a stable band. That's convergence.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Walkthrough</div>
+    <h2 class="reveal">The models, running.</h2>
+    <p class="reveal">
+      A recorded pass through the three simulation layers — the AUV Simulink model and its
+      thruster dynamics, the object tracking and avoidance behavior, and the grouping model
+      converging.
+    </p>
+    <figure class="reveal">
+      <video controls preload="none"
+        poster="../assets/mrs/walkthrough-poster.jpg"
+        aria-label="Recorded walkthrough of the AUV Simulink model, tracking behavior, and the 50-agent grouping simulation.">
+        <source src="../media/mrs-walkthrough.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 01</span>Project demo walkthrough. Also on <a href="https://youtu.be/16jqQIGX92Q" target="_blank" rel="noopener">YouTube ↗</a>, with the <a href="https://youtube.com/shorts/o3sujP4HZNI" target="_blank" rel="noopener">hardware clip ↗</a> separately.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Hardware</div>
+    <h2 class="reveal">Air is a cheap ocean.</h2>
+    <p class="reveal">
+      Testing AUV hardware requires water, weeks, and money. The workaround: build the vehicle
+      as a <strong>blimp</strong> and swap the density of water for the density of air. The
+      buoyancy-dominated, drag-heavy, slow-inertia regime is close enough that the same
+      dynamics model transfers with a fluid-property change — and a blimp can be flown in a
+      corridor.
+    </p>
+    <p class="reveal">
+      The build flew and held a steady level autonomously with <strong>three motors instead of
+      five</strong>, but the full vehicle was not completed inside the course — the report is
+      direct that hardware implementation remains open, alongside the unmodeled environmental
+      effects on the follower robots. This platform thread continued afterward on a much more
+      capable airframe: <a href="blimp.html">AeroFusion (Spring 2025) →</a>
+    </p>
+    <p class="tnote reveal">Team project — Prajjwal Dutta, Vivek Sunil Kulkarni, Niyati Abhijeet Vaidya (Arizona State University). Per the report, the theoretical analysis and mathematical modeling were led by Prajjwal and Niyati; the Simulink model construction and validation by Niyati and Vivek. All figures from the team's report, linked above.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Global behavior doesn't require global information.</strong> Fifty agents converge
+      with no map, no GPS, no broadcast — only range and bearing to whoever is inside a 90° cone.
+      The group structure is emergent, and that's exactly why it survives losing communication.
+      <strong>Capping detections is what makes it scale:</strong> each robot's cost depends on
+      how many neighbors it can see, not how many exist, so 50 agents run the same controller as
+      4. <strong>And the model has to be honest where it matters</strong> — deriving motor
+      transfer functions and hydrodynamic forces rather than assuming ideal thrust is what
+      separates a flocking demo from a simulation of an actual vehicle. The report's own honesty
+      about what was skipped — environmental forces on the followers — is part of the same
+      discipline.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">Multi-Robot Systems</span><span class="tag">Flocking</span><span class="tag">Swarm Control</span>
+      <span class="tag">Potential Fields</span><span class="tag">LiDAR Sensing</span><span class="tag">Obstacle Avoidance</span>
+      <span class="tag">AUV Dynamics</span><span class="tag">6-DoF Modeling</span><span class="tag">Hydrodynamics</span>
+      <span class="tag">PID Control</span><span class="tag">MATLAB / Simulink</span><span class="tag">Blimp Hardware</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="blimp.html">AeroFusion blimp →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the grouping model itself. 50 agents start scattered and steer on the averaged
+     position and heading of the teammates inside a 90-degree cone and a finite range — attraction
+     pulling in, repulsion holding spacing. Sensing links are drawn only where a neighbour is
+     actually visible, so the communication graph forms itself as the flock condenses. */
+  const canvas=document.getElementById('flockscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.022);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,160);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+
+  const grid=new THREE.GridHelper(40,20,0x1c3a66,0x11223f);
+  grid.position.y=-3.2; grid.material.transparent=true; grid.material.opacity=0.18; scene.add(grid);
+
+  /* ---- the fleet: 50 agents, three teams ---- */
+  const N=mobile?26:50, TEAMS=3;
+  const FOV=Math.PI/2, RANGE=7.0;              // 90 degrees, finite sensing range
+  const TEAM_COLORS=[0x63d97a,0xe8544f,0x4f9de8];
+  const agents=[];
+  const body=new THREE.ConeGeometry(0.16,0.62,6,1,true);
+  const mats=TEAM_COLORS.map(c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.8}));
+  for(let i=0;i<N;i++){
+    const team=i%TEAMS;
+    const m=new THREE.Mesh(body,mats[team]);
+    m.rotation.x=Math.PI/2;                    // point the cone along +z of its holder
+    const g=new THREE.Group(); g.add(m); scene.add(g);
+    agents.push({g,team,
+      x:(Math.random()-0.5)*26,y:(Math.random()-0.5)*9,z:(Math.random()-0.5)*20,
+      vx:0,vy:0,vz:0,yaw:Math.random()*6.28,pitch:0});
+  }
+
+  /* ---- sensing links, rebuilt each frame from who can actually see whom ---- */
+  const MAXL=N*4;
+  const linkPos=new Float32Array(MAXL*6);
+  const linkGeo=new THREE.BufferGeometry();
+  linkGeo.setAttribute('position',new THREE.BufferAttribute(linkPos,3));
+  const links=new THREE.LineSegments(linkGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.16}));
+  links.frustumCulled=false; scene.add(links);
+
+  /* ---- drifting particulate, for the underwater read ---- */
+  const PC=mobile?300:750;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*60;pp[i*3+1]=(Math.random()-0.5)*26;pp[i*3+2]=(Math.random()-0.5)*44;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.06,transparent:true,opacity:0.4})));
+
+  const K_ATTR=0.55, K_REP=2.6, K_ALIGN=0.9, SEP=1.5, VMAX=3.2;
+  let settle=0;
+  function scatter(){
+    agents.forEach(a=>{
+      a.x=(Math.random()-0.5)*26; a.y=(Math.random()-0.5)*9; a.z=(Math.random()-0.5)*20;
+      a.vx=a.vy=a.vz=0;
+    });
+    settle=0;
+  }
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.04);
+    const t=clock.elapsedTime;
+    if(!reduced){
+      let n=0, spread=0;
+      for(let i=0;i<N;i++){
+        const a=agents[i];
+        /* the agent's forward axis, from its current heading */
+        const fx=Math.sin(a.yaw), fz=Math.cos(a.yaw);
+        let cx=0,cy=0,cz=0,ax=0,az=0,seen=0;
+        let rx=0,ry=0,rz=0;
+        for(let j=0;j<N;j++){
+          if(i===j) continue;
+          const b=agents[j];
+          const dx=b.x-a.x, dy=b.y-a.y, dz=b.z-a.z;
+          const d=Math.hypot(dx,dy,dz);
+          if(d<1e-4) continue;
+          if(d<SEP){                                   // repulsion applies to everyone nearby
+            rx-=dx/d*(SEP-d); ry-=dy/d*(SEP-d); rz-=dz/d*(SEP-d);
+          }
+          if(b.team!==a.team) continue;                // teammates only, for cohesion
+          if(d>RANGE) continue;
+          const dot=(dx*fx+dz*fz)/Math.hypot(dx,dz||1e-6);
+          if(dot<Math.cos(FOV/2)) continue;            // and only inside the 90-degree cone
+          cx+=dx; cy+=dy; cz+=dz; ax+=Math.sin(b.yaw); az+=Math.cos(b.yaw); seen++;
+          if(n<MAXL && j>i){                            // draw the sensing link once per pair
+            linkPos[n*6]=a.x;linkPos[n*6+1]=a.y;linkPos[n*6+2]=a.z;
+            linkPos[n*6+3]=b.x;linkPos[n*6+4]=b.y;linkPos[n*6+5]=b.z;
+            n++;
+          }
+        }
+        let dvx=rx*K_REP, dvy=ry*K_REP, dvz=rz*K_REP;
+        if(seen>0){
+          dvx+=(cx/seen)*K_ATTR; dvy+=(cy/seen)*K_ATTR; dvz+=(cz/seen)*K_ATTR;
+          const wantYaw=Math.atan2(ax/seen,az/seen);    // align with the team's average heading
+          let e=wantYaw-a.yaw; while(e>Math.PI)e-=6.2832; while(e<-Math.PI)e+=6.2832;
+          a.yaw+=e*Math.min(1,dt*K_ALIGN);
+        }else{
+          a.yaw+=dt*0.8;                                // nothing in view: sweep to reacquire
+        }
+        a.vx=(a.vx+dvx*dt)*0.97; a.vy=(a.vy+dvy*dt)*0.97; a.vz=(a.vz+dvz*dt)*0.97;
+        const sp=Math.hypot(a.vx,a.vy,a.vz);
+        if(sp>VMAX){a.vx*=VMAX/sp;a.vy*=VMAX/sp;a.vz*=VMAX/sp;}
+        a.x+=a.vx*dt; a.y+=a.vy*dt; a.z+=a.vz*dt;
+        a.g.position.set(a.x,a.y,a.z);
+        if(sp>0.05){
+          a.g.rotation.y=Math.atan2(a.vx,a.vz);
+          a.g.rotation.x=-Math.asin(Math.max(-1,Math.min(1,a.vy/Math.max(sp,1e-3))))*0.6;
+        }else{
+          a.g.rotation.y=a.yaw;
+        }
+        spread+=Math.hypot(a.x,a.y,a.z);
+      }
+      for(let i=n;i<MAXL;i++){ for(let k=0;k<6;k++) linkPos[i*6+k]=0; }
+      linkGeo.attributes.position.needsUpdate=true;
+
+      /* once the flock is condensed, hold a beat and re-deal */
+      spread/=N;
+      settle=spread<5.0?settle+dt:0;
+      if(settle>3.5) scatter();
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0011;
+    const orbit=mobile?32:24;
+    camera.position.x=Math.sin(t*0.06+d*0.4)*orbit*0.7+mx*2.4;
+    camera.position.z=orbit+Math.cos(t*0.06+d*0.4)*7;
+    camera.position.y=5+Math.min(d*2.2,5);
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

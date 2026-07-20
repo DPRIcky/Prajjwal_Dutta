@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="CLF–CBF–QP safety filtering for a 70-robot fleet — safety, line-of-sight connectivity, and input bounds as one convex QP per control step, benchmarked across quadprog, CVX, and OSQP. ASU EGR 611. By Prajjwal Dutta.">
+<title>CLF–CBF–QP Safety Filtering, 70 Robots — Prajjwal Dutta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #qpscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;
+    padding:0.6rem 1.2rem;transition:border-color .25s,color .25s,transform .25s;}
+  .btn:hover,.btn:focus-visible{color:var(--cyan);border-color:var(--cyan);transform:translateY(-2px);}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+  em.q{font-style:italic;color:var(--text);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+  .law .big{font-size:1.05em;}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  figcaption a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+  .scroll-x{overflow-x:auto;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="qpscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html">P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Optimization · Fall 2025</span><span>ASU · EGR 611 Complex Engineering Analysis</span></div>
+    <h1 class="reveal">70 Robots, One Quadratic Program, Solved Three Ways</h1>
+    <p class="sub reveal">
+      A fleet of robots crosses a cluttered workspace while keeping line-of-sight
+      communication alive. At every control step, a convex QP nudges a nominal goal-seeking
+      controller <em class="q">just enough</em> to stay safe, stay connected, and stay inside
+      actuator limits — safety and connectivity as <strong>control barrier functions</strong>,
+      goal convergence as a <strong>control Lyapunov function</strong>. The research question
+      isn't a new barrier function. It's the numerical one underneath: given a fixed
+      safety-critical QP, <strong>how do different solvers behave in the inner loop</strong>,
+      and what do the KKT multipliers say about which constraints are actually driving the
+      fleet?
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/Optimization-of-CLF-CBF-QP-Control" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="btn" href="../assets/clfcbf/final-report.pdf" target="_blank" rel="noopener">Final report ↓</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>70</b><span>robots · 140 decision vars</span></div>
+      <div class="metric"><b>8.63 ms</b><span>OSQP average solve</span></div>
+      <div class="metric"><b>26×</b><span>quadprog faster than CVX</span></div>
+      <div class="metric"><b>~2%</b><span>objective spread across solvers</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/clfcbf/solver-demo-poster.jpg"
+      aria-label="Three side-by-side simulations of 70 robots solved by quadprog, CVX and OSQP, with solve time, objective value and CBF slack plotted below.">
+      <source src="../media/clf-solver-comparison.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">FIG 01</span>The same CLF–CBF–QP at every control step, solved three ways in parallel — <code>quadprog</code>, CVX, OSQP. Bottom row: per-iteration solve time, objective value, and max CBF slack.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Filter</div>
+    <h2 class="reveal">Least-change projection: let the robot do what it wants, minus the parts that kill it.</h2>
+    <p class="reveal">
+      The architecture is a <strong>safety filter</strong>. A nominal controller proposes
+      whatever heads for the goal; the QP finds the closest admissible input to that proposal.
+      Nothing about the nominal controller has to be safe, which is the point — safety is
+      enforced structurally, at the last step, rather than woven into every behavior upstream.
+    </p>
+    <p class="reveal">
+      Under single-integrator dynamics, both the CLF and CBF conditions are <strong>affine in
+      the control input</strong>. That's the property the whole method rests on: an objective
+      that's quadratic in u with linear constraints is a convex QP, and a convex QP is
+      something you can solve to global optimality at every tick of a control loop.
+    </p>
+    <div class="law reveal">
+      <span class="big">min<sub>u,δ,ε</sub></span> ‖u − u<sub>nom</sub>‖² + p<sub>cbf</sub>‖δ‖² + p<sub>clf</sub>‖ε‖²<br>
+      <span class="c">s.t.</span> A<sub>cbf</sub>(x)·u − δ ≤ b<sub>cbf</sub>(x) &nbsp;<span class="c">// safety · connectivity · obstacles</span><br>
+      <span class="c">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> A<sub>clf</sub>(x)·u − ε ≤ b<sub>clf</sub>(x) &nbsp;<span class="c">// goal convergence, relaxable</span><br>
+      <span class="c">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> −u<sub>max</sub>𝟙 ≤ u ≤ u<sub>max</sub>𝟙, &nbsp; <span class="a">δ ≥ 0</span>, &nbsp; <span class="a">ε ≥ 0</span>
+    </div>
+    <p class="reveal">
+      The <strong>slack variables carry the priority ordering</strong>. Safety and connectivity
+      get slack δ penalized heavily; goal convergence gets slack ε penalized less. When the two
+      genuinely conflict — a robot must break formation or hit something — the QP stays feasible
+      by relaxing the cheaper constraint, and the magnitude of the slack is a readout of exactly
+      how much was given up. A hard-constrained formulation would simply fail to solve.
+    </p>
+    <div class="scroll-x">
+      <table class="reveal">
+        <thead><tr><th>Constraint</th><th>Barrier</th><th>Inequality</th></tr></thead>
+        <tbody>
+          <tr><td>Inter-robot safety</td><td>h<sup>safe</sup><sub>ij</sub> = d<sub>ij</sub> − R<sub>s</sub></td><td>n<sub>ij</sub>ᵀ(u<sub>i</sub> − u<sub>j</sub>) ≥ −α<sub>s</sub>(d<sub>ij</sub> − R<sub>s</sub>)</td></tr>
+          <tr class="hl"><td>LOS connectivity</td><td>h<sup>conn</sup><sub>ij</sub> = R<sub>c</sub> − d<sub>ij</sub></td><td>n<sub>ij</sub>ᵀ(u<sub>i</sub> − u<sub>j</sub>) ≤ α<sub>c</sub>(R<sub>c</sub> − d<sub>ij</sub>)</td></tr>
+          <tr><td>Obstacle avoidance</td><td>h<sup>obs</sup><sub>io</sub> = d<sub>io</sub> − R<sub>obs</sub></td><td>n<sub>io</sub>ᵀu<sub>i</sub> ≥ −α<sub>o</sub>(d<sub>io</sub> − R<sub>obs</sub>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reveal">
+      Safety and connectivity are the same inequality with the sign flipped — one pushes robots
+      apart below R<sub>s</sub>, the other pulls them together above R<sub>c</sub>. Every pair is
+      squeezed inside an annulus, and connectivity is enforced only along a
+      <strong>minimum spanning tree</strong> of the LOS graph rather than every edge, which keeps
+      the constraint count linear in the fleet size instead of quadratic. That's what makes 70
+      robots tractable.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Why It's Well-Posed</div>
+    <h2 class="reveal">KKT: necessary, sufficient, and physically readable.</h2>
+    <p class="reveal">
+      Because H ⪰ 0 and every constraint is linear, the KKT conditions are
+      <strong>necessary and sufficient</strong> — any point satisfying them is <em class="q">the</em>
+      unique global minimizer. That's not a footnote; it's what makes the entire cross-solver
+      study meaningful. Three different algorithms are provably chasing the same point, so any
+      disagreement between them is numerical, not structural.
+    </p>
+    <p class="reveal">
+      The multipliers are also directly interpretable, which is half the value of solving it
+      this way rather than hand-tuning a potential field:
+    </p>
+    <div class="scroll-x">
+      <table class="reveal">
+        <thead><tr><th>Nonzero multiplier on…</th><th>Physical reading</th></tr></thead>
+        <tbody>
+          <tr><td>a safety row</td><td>two robots sit exactly on the safety boundary; that constraint is steering their relative motion</td></tr>
+          <tr class="hl"><td>a connectivity row</td><td>that LOS edge is about to break and is being actively held together</td></tr>
+          <tr><td>an input bound</td><td>the robot is saturated at ±u<sub>max</sub></td></tr>
+          <tr class="hl"><td>a slack (δ, ε)</td><td>constraints are in genuine conflict — the value is how much safety or convergence was traded away</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reveal">
+      A dual variable, in other words, is a sensor. Rather than inferring why the fleet did
+      something from the trajectories afterward, the QP reports which constraints were binding
+      at that instant and by how much.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Experiment</div>
+    <h2 class="reveal">Four clusters, five obstacles, one vortex.</h2>
+    <p class="reveal">
+      <strong>N = 70</strong> robots in a 10 × 10 m workspace with five rectangular obstacles,
+      initialized in four tight clusters with fixed goals across the map — safety radius
+      R<sub>s</sub> = 0.25 m, communication range R<sub>c</sub> = 4.0 m, obstacle clearance
+      R<sub>obs</sub> = 0.8 m, u<sub>max</sub> = 3.0 m/s. Every solver ran identical initial
+      conditions, goals, and CLF/CBF parameters; the fleet reaches its goals by
+      <strong>iteration 79</strong>.
+    </p>
+    <p class="reveal">
+      Two scenarios: a static workspace, and the same run with a <strong>vortex flow
+      field</strong> superimposed — a stand-in for currents in the underwater setting this work
+      ultimately targets. The flow distorts the trajectories substantially, and the optimization
+      still preserves connectivity and delivers every robot to its goal.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/clfcbf/setup-initial.jpg" target="_blank" rel="noopener">
+        <img src="../assets/clfcbf/setup-initial.jpg" alt="Two side-by-side workspace plots showing 70 robots in four colored clusters with line-of-sight edges, obstacles in black, goals as hollow circles; the right plot adds a vortex flow field of blue arrows.">
+      </a>
+      <figcaption><span class="n">FIG 02</span>Initial configurations — four clusters joined by LOS edges, obstacles black, goals hollow. Right: the same start with a vortex flow field superimposed.</figcaption>
+    </figure>
+    <figure class="reveal">
+      <a href="../assets/clfcbf/trajectories-final.jpg" target="_blank" rel="noopener">
+        <img src="../assets/clfcbf/trajectories-final.jpg" alt="Two plots of final robot trajectories: without flow the paths spread cleanly around obstacles to the goals; with vortex flow the trajectories curve but still converge.">
+      </a>
+      <figcaption><span class="n">FIG 03</span>Trajectories and final positions under the CLF–CBF–QP controller — without flow (left) and with the vortex (right). Connectivity survives both.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Solver Shootout</div>
+    <h2 class="reveal">Same QP, same seed, wildly different clocks.</h2>
+    <p class="reveal">
+      Three solvers, three algorithm families: MATLAB <code>quadprog</code>
+      (<strong>interior-point</strong>), CVX (<strong>conic interior-point</strong> through a
+      disciplined-convex-programming modeling layer), and OSQP
+      (<strong>operator-splitting ADMM</strong>). Solve time, objective value, max CBF slack, and
+      trajectory deviation from the <code>quadprog</code> baseline were recorded every iteration.
+    </p>
+    <div class="scroll-x">
+      <table class="reveal">
+        <thead><tr><th>Solver</th><th>Avg (ms)</th><th>Max (ms)</th><th>Std (ms)</th><th>Total (ms)</th><th>Avg objective</th><th>Pos. diff (m)</th></tr></thead>
+        <tbody>
+          <tr><td>quadprog (IPM)</td><td>30.13</td><td>1101.20</td><td>123.93</td><td>2380.43</td><td>5214.26</td><td>0.00</td></tr>
+          <tr><td>CVX (SDPT3)</td><td>784.90</td><td>7447.64</td><td>766.39</td><td>62006.98</td><td>5111.55</td><td>0.78</td></tr>
+          <tr class="hl"><td>OSQP (ADMM)</td><td>8.63</td><td>27.72</td><td>7.09</td><td>681.98</td><td>5112.53</td><td>0.64</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reveal">
+      <strong>Runtime.</strong> OSQP averages <strong>8.63 ms</strong>, <code>quadprog</code>
+      <strong>30.13 ms</strong>, CVX <strong>784.90 ms</strong> — one to two orders of magnitude
+      slower. Across the full horizon that's 0.68 s, 2.38 s, and 62 s of cumulative solve time.
+      For a controller that must close its loop every step, that's the difference between real
+      time and not.
+    </p>
+    <p class="reveal">
+      <strong>The variance matters more than the mean.</strong> OSQP's worst-case solve is
+      27.72 ms against a 8.63 ms average — a tight, predictable distribution. <code>quadprog</code>
+      averages 30 ms but spikes to <strong>1101 ms</strong>, a 36× excursion, with a standard
+      deviation four times its own mean. For hard-real-time work the tail is the specification,
+      not the average, and this is exactly the plot that argues for ADMM in the inner loop.
+    </p>
+    <p class="reveal">
+      <strong>Agreement.</strong> Average objectives match within ~2%, and all three report
+      essentially identical maximum CBF slack (<strong>≈1.7114</strong>) — they agree on
+      <em class="q">when</em> safety and connectivity are tightest, which is the property that
+      actually matters for a safety filter. Trajectory deviation stays around 0.6–0.8 m in a
+      10 m workspace: visible, but driven by numerical tolerance rather than different control
+      decisions.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/clfcbf/solver-comparison.jpg" target="_blank" rel="noopener">
+        <img src="../assets/clfcbf/solver-comparison.jpg" alt="Six-panel comparison: solve time box plots, cumulative computation time, trajectory deviation, quadprog speedup factors, objective traces, and a summary statistics table.">
+      </a>
+      <figcaption><span class="n">FIG 04</span>Full comparison — solve-time distributions, cumulative time, trajectory deviation from baseline, speedup factors, objective traces, and summary statistics.</figcaption>
+    </figure>
+    <p class="reveal">
+      <strong>Robustness is where the ranking flips.</strong> <code>quadprog</code> never broke
+      down numerically and hands back KKT multipliers directly, which is what makes the
+      constraint-level analysis above possible at all. OSQP occasionally satisfied its stopping
+      criteria while its KKT residuals were still larger than the interior-point solvers' — and
+      on exactly those iterations its objective and trajectory drifted furthest. Fast is not the
+      same as converged.
+    </p>
+    <p class="reveal">
+      The headroom is real, though: OSQP exploits the structure here — P = H is diagonal and A is
+      time-invariant — so its (P + ρI) factorization is computed once and cached across the whole
+      run. With tuned ρ, scaling, and polishing it should be able to replace <code>quadprog</code>
+      in the loop safely. <strong>Verdict:</strong> <code>quadprog</code> as the reliable
+      baseline, OSQP as the real-time candidate pending tuning, CVX as a high-accuracy reference
+      for validating the formulation — never as a controller.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Context</div>
+    <h2 class="reveal">Why a planar toy problem is about ice.</h2>
+    <p class="reveal">
+      This sits inside a larger effort on long-duration exploration of under-ice and subsurface
+      environments with heterogeneous AUV fleets — the <strong>MOTHERSHIP</strong> concept —
+      where communication is acoustic, intermittent, and range-limited, and GPS doesn't exist.
+      Line-of-sight connectivity as a hard constraint isn't an academic flourish there; losing
+      the graph means losing vehicles. The planar single-integrator abstraction is deliberately
+      small so the tooling — the barrier formulation, the MST connectivity structure, the KKT
+      analysis, the solver benchmarking — transfers to the harder vehicle models rather than
+      being rebuilt for them.
+    </p>
+    <p class="reveal">
+      Next steps identified in the report: track how the <strong>active CBF set evolves</strong>
+      over time to quantify how often safety and connectivity genuinely compete; tune OSQP
+      specifically for this QP with polishing, scaling, and warm-starting; and scale to larger
+      teams with realistic AUV dynamics, communication delay, and environmental flow.
+    </p>
+    <p class="tnote reveal">Prajjwal Dutta and Wenlong Zhang, Manufacturing Systems and Networks, Arizona State University. Full formulation, metrics, and 36-entry bibliography in the final report.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What this project proves.</h2>
+    <p class="reveal">
+      <strong>Safety belongs in the constraint set, not the behavior.</strong> A filter that
+      projects any nominal controller onto the admissible set means the planner never has to be
+      trusted — which is the only version of this that survives contact with a learned or
+      hand-tuned policy upstream.
+      <strong>Convexity is the feature.</strong> Affine-in-u barriers turn a coupled 70-agent
+      coordination problem into one QP with a unique global optimum per step, and that's what
+      makes the solver question askable in the first place.
+      <strong>And the solver is part of the controller.</strong> Same math, same seed, same KKT
+      point — and a 90× spread in solve time plus a real difference in worst-case latency and
+      numerical robustness. Choosing between them is a control engineering decision, not an
+      implementation detail.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">CLF</span><span class="tag">Control Barrier Functions</span><span class="tag">Quadratic Programming</span>
+      <span class="tag">KKT / Duality</span><span class="tag">Convex Optimization</span><span class="tag">Safety Filtering</span>
+      <span class="tag">Multi-Robot Coordination</span><span class="tag">Connectivity Maintenance</span><span class="tag">MST</span>
+      <span class="tag">MATLAB</span><span class="tag">quadprog</span><span class="tag">CVX</span><span class="tag">OSQP</span><span class="tag">Python</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="../index.html#contact">Get in touch →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the safety filter itself, running. A fleet of single integrators heads for
+     goals under a nominal controller; each step, pairwise safety and LOS-connectivity barriers
+     modify the input. A live MST over the LOS graph is drawn, edges near the range limit glow
+     amber (connectivity constraint active), pairs near the safety radius glow red — the same
+     "which constraint is binding" readout the KKT multipliers give. */
+  const canvas=document.getElementById('qpscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.02);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,RED=0xe8544f;
+  const mobile=innerWidth<700;
+
+  const W=16;                                  // scene span (the 10 x 10 m workspace, scaled)
+  const grid=new THREE.GridHelper(W,20,0x1c3a66,0x11223f);
+  grid.material.transparent=true; grid.material.opacity=0.24; scene.add(grid);
+
+  /* ---- obstacles: five rectangles, as in the experiment ---- */
+  const OBS=[{x:-2.2,z:-4.4,w:3.4,d:0.7},{x:3.6,z:-2.0,w:0.7,d:2.6},
+             {x:-0.4,z:1.2,w:2.8,d:0.7},{x:4.4,z:3.4,w:3.0,d:0.7},{x:-4.6,z:2.6,w:0.7,d:2.2}];
+  OBS.forEach(o=>{
+    const m=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(o.w,0.5,o.d)),
+      new THREE.LineBasicMaterial({color:DEEPBLUE,transparent:true,opacity:0.5}));
+    m.position.set(o.x,0.25,o.z); scene.add(m);
+  });
+
+  /* ---- the fleet: four clusters of single integrators with fixed goals ---- */
+  const N=mobile?22:40;
+  const Rs=0.42, Rc=3.2, Uma=2.4;              // safety radius, comm range, input bound
+  const CLEAR=0.62, HARD=0.34;                 // barrier standoff, and the hard no-go margin
+  const CLUSTERS=[{x:-6.2,z:-5.6},{x:-5.4,z:-3.6},{x:-6.6,z:-2.0},{x:-4.4,z:-5.0}];
+  const GOALS=[{x:5.8,z:5.4},{x:6.4,z:-4.6},{x:-1.0,z:6.0},{x:6.6,z:1.0}];
+  const bots=[];
+  for(let i=0;i<N;i++){
+    const c=CLUSTERS[i%CLUSTERS.length], g=GOALS[i%GOALS.length];
+    bots.push({x:c.x+(Math.random()-0.5)*1.6, z:c.z+(Math.random()-0.5)*1.6,
+               gx:g.x+(Math.random()-0.5)*1.4, gz:g.z+(Math.random()-0.5)*1.4,
+               ux:0, uz:0, hue:i%CLUSTERS.length});
+  }
+  const CLUSTER_COLORS=[0x63d97a,0xe8544f,0x4f9de8,0xd06ee0];
+  const tmpC=new THREE.Color();
+
+  /* ---- the vehicle: a miniaturised BlueROV — frame, buoyancy block on top, cylindrical
+     electronics enclosure, two side thrusters, two vertical thrusters. Geometries and
+     materials are shared across the fleet so 50-odd of them stay cheap. ---- */
+  const G={
+    frame:new THREE.BoxGeometry(0.30,0.17,0.44),
+    foam:new THREE.BoxGeometry(0.26,0.06,0.32),
+    tube:new THREE.CylinderGeometry(0.07,0.07,0.30,8,1,true),
+    thr:new THREE.CylinderGeometry(0.045,0.045,0.14,6,1,true),
+    vthr:new THREE.CylinderGeometry(0.038,0.038,0.09,6,1,true)
+  };
+  const bodyMats=CLUSTER_COLORS.map(c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.85}));
+  const trimMat=new THREE.MeshBasicMaterial({color:CYAN,wireframe:true,transparent:true,opacity:0.55});
+  const foamMat=new THREE.MeshBasicMaterial({color:0xdfe8f4,wireframe:true,transparent:true,opacity:0.3});
+  function buildRov(hue){
+    const g=new THREE.Group();
+    g.add(new THREE.Mesh(G.frame,bodyMats[hue]));
+    const foam=new THREE.Mesh(G.foam,foamMat); foam.position.y=0.115; g.add(foam);
+    const tube=new THREE.Mesh(G.tube,trimMat); tube.rotation.x=Math.PI/2; g.add(tube);
+    [-1,1].forEach(s=>{
+      const t=new THREE.Mesh(G.thr,trimMat);            // side thrusters, canted like the real vault
+      t.rotation.x=Math.PI/2; t.rotation.y=s*0.35;
+      t.position.set(s*0.17,-0.02,-0.16); g.add(t);
+      const v=new THREE.Mesh(G.vthr,trimMat);           // vertical thrusters
+      v.position.set(s*0.155,0.05,0.13); g.add(v);
+    });
+    g.scale.setScalar(0.85);
+    return g;
+  }
+  bots.forEach(b=>{ b.mesh=buildRov(b.hue); b.yaw=0; b.ph=Math.random()*6.28; scene.add(b.mesh); });
+
+  /* goal markers */
+  GOALS.forEach(g=>{
+    const ring=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+      Array.from({length:20},(_,i)=>{const a=i/20*Math.PI*2;
+        return new THREE.Vector3(g.x+Math.cos(a)*0.35,0.04,g.z+Math.sin(a)*0.35);})),
+      new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.4}));
+    scene.add(ring);
+  });
+
+  /* ---- the LOS/MST graph, rebuilt every frame and colored by which constraint is binding ---- */
+  const MAXE=N*3;
+  const edgePos=new Float32Array(MAXE*6), edgeCol=new Float32Array(MAXE*6);
+  const edgeGeo=new THREE.BufferGeometry();
+  edgeGeo.setAttribute('position',new THREE.BufferAttribute(edgePos,3));
+  edgeGeo.setAttribute('color',new THREE.BufferAttribute(edgeCol,3));
+  const edges=new THREE.LineSegments(edgeGeo,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.5}));
+  edges.frustumCulled=false; scene.add(edges);
+  const C_OK=new THREE.Color(0x2a6bb0), C_TIGHT=new THREE.Color(AMBER), C_SAFE=new THREE.Color(RED);
+
+  /* Prim's MST over the LOS graph — connectivity is enforced on the tree, not every edge */
+  const inTree=new Uint8Array(N), best=new Float64Array(N), parent=new Int32Array(N);
+  function mst(){
+    inTree.fill(0); best.fill(Infinity); parent.fill(-1);
+    best[0]=0; let count=0; const out=[];
+    while(count<N){
+      let u=-1,bd=Infinity;
+      for(let i=0;i<N;i++) if(!inTree[i]&&best[i]<bd){bd=best[i];u=i;}
+      if(u<0) break;
+      inTree[u]=1; count++;
+      if(parent[u]>=0) out.push([parent[u],u]);
+      for(let v=0;v<N;v++){
+        if(inTree[v]) continue;
+        const d=Math.hypot(bots[u].x-bots[v].x,bots[u].z-bots[v].z);
+        if(d<best[v]){best[v]=d;parent[v]=u;}
+      }
+    }
+    return out;
+  }
+
+  /* ---- one control step: nominal goal-seeking input, then barrier corrections ---- */
+  function stepFleet(dt,tree){
+    for(const b of bots){                       // nominal CLF-ish input toward the goal
+      const dx=b.gx-b.x, dz=b.gz-b.z, d=Math.hypot(dx,dz)||1;
+      const v=Math.min(Uma,d*1.2);
+      b.ux=dx/d*v; b.uz=dz/d*v;
+    }
+    for(let i=0;i<N;i++){                       // pairwise safety barrier: push apart
+      for(let j=i+1;j<N;j++){
+        const dx=bots[j].x-bots[i].x, dz=bots[j].z-bots[i].z;
+        const d=Math.hypot(dx,dz)||1e-6;
+        if(d<Rs*2.2){
+          const push=(Rs*2.2-d)*2.6/d;
+          bots[i].ux-=dx*push; bots[i].uz-=dz*push;
+          bots[j].ux+=dx*push; bots[j].uz+=dz*push;
+        }
+      }
+    }
+    for(const [a,b] of tree){                   // connectivity barrier: hold tree edges inside Rc
+      const A=bots[a],B=bots[b];
+      const dx=B.x-A.x, dz=B.z-A.z, d=Math.hypot(dx,dz)||1e-6;
+      if(d>Rc*0.72){
+        const pull=(d-Rc*0.72)*1.5/d;
+        A.ux+=dx*pull; A.uz+=dz*pull;
+        B.ux-=dx*pull; B.uz-=dz*pull;
+      }
+    }
+    /* obstacle barriers, as an axis-aligned minimum-translation test. Working per axis means
+       a robot that is already inside a rectangle still gets a well-defined escape direction —
+       the degenerate case that a closest-point-on-surface push cannot resolve. */
+    for(const b of bots){
+      for(const o of OBS){
+        const hx=o.w/2+CLEAR, hz=o.d/2+CLEAR;
+        const dx=b.x-o.x, dz=b.z-o.z;
+        const px=hx-Math.abs(dx), pz=hz-Math.abs(dz);   // penetration into the inflated box
+        if(px<=0||pz<=0) continue;                      // outside on at least one axis: clear
+        const sx=Math.sign(dx)||1, sz=Math.sign(dz)||1;
+        if(px<pz){                                      // shallowest axis is the way out
+          b.ux+=sx*px*5.0;
+          if(sx*b.ux<0) b.ux=0;                         // and never command into the face
+        }else{
+          b.uz+=sz*pz*5.0;
+          if(sz*b.uz<0) b.uz=0;
+        }
+      }
+      const m=Math.hypot(b.ux,b.uz);            // input bound: |u| <= u_max
+      if(m>Uma){ b.ux*=Uma/m; b.uz*=Uma/m; }
+      b.x+=b.ux*dt; b.z+=b.uz*dt;
+      resolveObstacles(b);                      // hard backstop: never end a step inside one
+    }
+  }
+  /* position-level correction — the barrier can be out-argued by the connectivity pull, so
+     the invariant is enforced after integration too */
+  function resolveObstacles(b){
+    for(const o of OBS){
+      const hx=o.w/2+HARD, hz=o.d/2+HARD;
+      const dx=b.x-o.x, dz=b.z-o.z;
+      const px=hx-Math.abs(dx), pz=hz-Math.abs(dz);
+      if(px<=0||pz<=0) continue;
+      if(px<pz) b.x=o.x+(Math.sign(dx)||1)*hx;
+      else      b.z=o.z+(Math.sign(dz)||1)*hz;
+    }
+  }
+  function scatter(){                            // re-deal the fleet for the next run
+    bots.forEach((b,i)=>{
+      const c=CLUSTERS[i%CLUSTERS.length], g=GOALS[i%GOALS.length];
+      b.x=c.x+(Math.random()-0.5)*1.6; b.z=c.z+(Math.random()-0.5)*1.6;
+      b.gx=g.x+(Math.random()-0.5)*1.4; b.gz=g.z+(Math.random()-0.5)*1.4;
+      resolveObstacles(b);                    // never re-deal a vehicle inside an obstacle
+    });
+  }
+
+  let sTarget=0,smooth=0,mx=0,settled=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.04);
+    const t=clock.elapsedTime;
+    if(!reduced){
+      const tree=mst();
+      stepFleet(dt,tree);
+      bots.forEach(b=>{
+        b.mesh.position.set(b.x,0.19+Math.sin(t*2.1+b.ph)*0.02,b.z);   // slight hover bob
+        const sp=Math.hypot(b.ux,b.uz);
+        if(sp>0.05){                                                    // turn to face travel
+          const want=Math.atan2(b.ux,b.uz);
+          let e=want-b.yaw; while(e>Math.PI)e-=6.2832; while(e<-Math.PI)e+=6.2832;
+          b.yaw+=e*Math.min(1,dt*4);
+        }
+        b.mesh.rotation.y=b.yaw;
+        b.mesh.rotation.x=-Math.min(0.12,sp*0.05);                      // pitch into the move
+      });
+      /* draw the tree, coloring edges by which constraint is closest to binding */
+      let n=0;
+      for(const [a,b] of tree){
+        if(n>=MAXE) break;
+        const A=bots[a],B=bots[b];
+        const d=Math.hypot(B.x-A.x,B.z-A.z);
+        const near=d>Rc*0.66, tight=d<Rs*2.6;
+        tmpC.copy(tight?C_SAFE:(near?C_TIGHT:C_OK));
+        edgePos[n*6]=A.x;edgePos[n*6+1]=0.19;edgePos[n*6+2]=A.z;
+        edgePos[n*6+3]=B.x;edgePos[n*6+4]=0.19;edgePos[n*6+5]=B.z;
+        for(const o of [0,3]){edgeCol[n*6+o]=tmpC.r;edgeCol[n*6+o+1]=tmpC.g;edgeCol[n*6+o+2]=tmpC.b;}
+        n++;
+      }
+      for(let i=n;i<MAXE;i++){                  // park unused segments
+        for(let k=0;k<6;k++){edgePos[i*6+k]=0;edgeCol[i*6+k]=0;}
+      }
+      edgeGeo.attributes.position.needsUpdate=true;
+      edgeGeo.attributes.color.needsUpdate=true;
+      /* when everyone has arrived, hold a beat and redeal */
+      const done=bots.every(b=>Math.hypot(b.gx-b.x,b.gz-b.z)<0.5);
+      settled=done?settled+dt:0;
+      if(settled>2.4){ scatter(); settled=0; }
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0011;
+    const orbit=mobile?24:18;
+    camera.position.x=Math.sin(t*0.045+d*0.4)*orbit*0.5+mx*2.4;
+    camera.position.z=orbit+Math.cos(t*0.045+d*0.4)*6;
+    camera.position.y=11+Math.min(d*2.2,5);
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
