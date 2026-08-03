@@ -134,8 +134,44 @@
   .gcard p{color:var(--muted);font-size:0.82rem;line-height:1.65;}
   .gcard .kpi{font-family:var(--mono);font-size:0.68rem;color:var(--cyan);margin-top:0.8rem;display:block;letter-spacing:0.06em;}
   .award{border-color:rgba(245,163,92,0.45);}
-  .award::after{content:'★ 1ST PLACE';position:absolute;top:1.1rem;right:1.2rem;
-    font-family:var(--mono);font-size:0.58rem;letter-spacing:0.14em;color:var(--amber);}
+  .award::after{content:'★ 1ST PLACE';position:absolute;top:1.1rem;right:1.2rem;z-index:2;
+    font-family:var(--mono);font-size:0.58rem;letter-spacing:0.14em;color:var(--amber);
+    text-shadow:0 1px 8px rgba(6,10,20,0.95),0 0 3px rgba(6,10,20,0.9);}
+
+  /* ---------- card imagery ---------- */
+  .pthumb,.gthumb{display:block;overflow:hidden;position:relative;background:var(--deep);
+    border-bottom:1px solid var(--line);}
+  .pthumb img,.gthumb img{width:100%;height:100%;object-fit:cover;display:block;
+    opacity:.88;transition:opacity .4s,transform .6s;}
+  .pthumb{margin:-2.5rem -2.5rem 1.9rem;aspect-ratio:2.7/1;border-radius:14px 14px 0 0;}
+  .gthumb{margin:-1.6rem -1.5rem 1.35rem;aspect-ratio:16/9;border-radius:12px 12px 0 0;}
+  .pthumb::after,.gthumb::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:linear-gradient(180deg,rgba(6,10,20,0) 58%,rgba(6,10,20,0.6));}
+  .project:hover .pthumb img,.gcard:hover .gthumb img{opacity:1;}
+
+  /* slow parallax drift + periodic scan sweep — starts only once the card reveals */
+  @keyframes tileDrift{
+    from{transform:scale(1.13) translate3d(-2.6%,-1.7%,0);}
+    to{transform:scale(1.13) translate3d(2.6%,1.7%,0);}}
+  @keyframes tileSweep{
+    0%,58%{transform:translateX(-130%);}
+    100%{transform:translateX(130%);}}
+  .project.in .pthumb img,.gcard.in .gthumb img{
+    animation:tileDrift 15s ease-in-out infinite alternate;}
+  .pthumb::before,.gthumb::before{content:'';position:absolute;inset:-10% 0;z-index:1;pointer-events:none;
+    background:linear-gradient(102deg,transparent 40%,rgba(79,216,232,0.17) 50%,transparent 60%);
+    transform:translateX(-130%);}
+  .project.in .pthumb::before,.gcard.in .gthumb::before{
+    animation:tileSweep 9s ease-in-out infinite;}
+  /* stagger so the grid never pulses in unison */
+  .gcard.in:nth-child(3n+2) .gthumb img{animation-duration:18s;animation-delay:-5s;}
+  .gcard.in:nth-child(3n) .gthumb img{animation-duration:21s;animation-delay:-11s;}
+  .gcard.in:nth-child(3n+2) .gthumb::before{animation-duration:11s;animation-delay:-4s;}
+  .gcard.in:nth-child(3n) .gthumb::before{animation-duration:13s;animation-delay:-7s;}
+  .project.in:nth-of-type(2) .pthumb img{animation-duration:19s;animation-delay:-6s;}
+  .project.in:nth-of-type(3) .pthumb img{animation-duration:17s;animation-delay:-12s;}
+  .project.in:nth-of-type(2) .pthumb::before{animation-duration:12s;animation-delay:-5s;}
+  .project.in:nth-of-type(3) .pthumb::before{animation-duration:10s;animation-delay:-8s;}
   .archive-note{margin-top:2.4rem;font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;}
   .archive-note a{color:var(--cyan);text-decoration:none;}
 
@@ -178,11 +214,16 @@
     section{padding:6rem 7vw;}
     .project,.ra-card{padding:1.8rem 1.4rem;}
     .hero-stats{gap:1.4rem;}
+    .pthumb{margin:-1.8rem -1.4rem 1.5rem;aspect-ratio:16/9;}
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto;}
     .reveal{opacity:1;transform:none;transition:none;}
     .scroll-cue .pulse{animation:none;}
+    .pthumb img,.gthumb img{transition:none;}
+    .project.in .pthumb img,.gcard.in .gthumb img,
+    .project.in .pthumb::before,.gcard.in .gthumb::before{animation:none;transform:none;}
+    .pthumb::before,.gthumb::before{display:none;}
   }
 </style>
 </head>
@@ -290,6 +331,7 @@
     <h2 class="reveal">Deploy. Control. Guarantee.</h2>
 
     <article class="project reveal">
+      <a class="pthumb" href="projects/clf-cbf-qp.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/clf-cbf-qp.jpg" alt="" loading="lazy" decoding="async"></a>
       <div class="proj-meta"><span>Safety-Critical Control · Fall 2025</span><span>EGR 611</span></div>
       <h3><a href="projects/clf-cbf-qp.html" class="proj-link">CLF–CBF–QP Safety Filtering for 70-Robot Fleets<span class="arrow"> →</span></a></h3>
       <p>
@@ -311,6 +353,7 @@
     </article>
 
     <article class="project reveal">
+      <a class="pthumb" href="projects/tube-mpc.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/tube-mpc.jpg" alt="" loading="lazy" decoding="async"></a>
       <div class="proj-meta"><span>Robust Vehicle Control · Spring 2026</span><span>EGR 560</span></div>
       <h3><a href="projects/tube-mpc.html" class="proj-link">Tube-MPC Lateral Path Tracking — CarSim Co-Simulation<span class="arrow"> →</span></a></h3>
       <p>
@@ -332,6 +375,7 @@
     </article>
 
     <article class="project reveal">
+      <a class="pthumb" href="projects/blimp.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/blimp.jpg" alt="" loading="lazy" decoding="async"></a>
       <div class="proj-meta"><span>Aerial Autonomy · Hardware · Spring 2025</span><span>RAS 598</span></div>
       <h3><a href="projects/blimp.html" class="proj-link">Autonomous Blimp — Custom Airframe to Vision Autonomy<span class="arrow"> →</span></a></h3>
       <p>
@@ -361,78 +405,91 @@
 
     <div class="grid">
       <div class="gcard award reveal">
+        <div class="gthumb"><img src="assets/ai/matlab-drone.jpg" alt="" loading="lazy" decoding="async"></div>
         <span class="gm">Competition · Spring 2024</span>
         <h4>MATLAB Mini Drone Competition</h4>
         <p>Led a 4-person team to 1st place with a Simulink sim-to-real autonomy pipeline — SLAM and path following — deployed and validated on physical hardware.</p>
         <span class="kpi">→ 1st place · full hardware deployment</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/turtlebot4-sft.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/turtlebot4-sft.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Ground Robotics · Spring 2026</span>
         <h4><a href="projects/turtlebot4-sft.html" class="proj-link">TurtleBot 4 Human-Following System<span class="arrow"> →</span></a></h4>
         <p>OAK-D ArUco 6-DoF pose estimation, dual Kalman / 300-particle filter estimators, PD control with a 3-state FSM, and LiDAR collision avoidance — validated on hardware.</p>
         <span class="kpi">→ 0.04 m mean tracking error, zero divergence</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/ros2-autonomy.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/ros2-autonomy.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">ROS 2 Autonomy · Spring 2026</span>
         <h4><a href="projects/ros2-autonomy.html" class="proj-link">Perception, Localization &amp; Energy-Aware Planning<span class="arrow"> →</span></a></h4>
         <p>Three standalone ROS 2 packages: OAK-D RANSAC cylinder perception, 3D Bayes-filter localization (80×80×72 belief), and A* planning with Bresenham line-of-sight pruning behind a Turn-Go-Turn controller. 34 unit tests.</p>
         <span class="kpi">→ 3 projects · ~90% energy reduction · 67× planning speedup</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/rosmaster-x3.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/rosmaster-x3.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Digital Twin · Spring 2026</span>
         <h4><a href="projects/rosmaster-x3.html" class="proj-link">ROSMASTER X3 Warehouse Navigation<span class="arrow"> →</span></a></h4>
         <p>Gazebo digital twin of the AWS RoboMaker warehouse with a custom A* global planner in move_base, AMCL localization, DWA local planning, layered costmaps, SLAM (gmapping / Cartographer), and marker-conditioned stop / caution behavior.</p>
         <span class="kpi">→ ±15 cm goal accuracy · 95%+ goal success rate</span>
       </div>
       <div class="gcard reveal">
+        <div class="gthumb"><img src="assets/ai/fanuc-servoing.jpg" alt="" loading="lazy" decoding="async"></div>
         <span class="gm">Manipulation · Fall 2025</span>
         <h4>ROS 2 Visual Servoing — FANUC LR Mate</h4>
         <p>Camera-based target tracking mapping 2D detections to 3D workspace goals through geometric inverse kinematics with elbow-up collision avoidance — autonomous end-effector positioning without explicit goal programming.</p>
         <span class="kpi">→ detection-driven manipulation</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/space-robotics.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/lqr-px4-landing.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">UAV + Optimal Control · Fall 2025</span>
         <h4><a href="projects/space-robotics.html" class="proj-link">LQR Stabilization &amp; PX4 Precision Landing<span class="arrow"> →</span></a></h4>
         <p>LQR cart-pole stabilization under a 0.5–4 Hz earthquake disturbance, PD-tuned boustrophedon coverage planning, and a PX4 SITL UAV using RTAB-Map SLAM with RGB-D sensing for autonomous target detection and precision landing.</p>
         <span class="kpi">→ 0.09 rad pole deviation · 70 N peak force · &lt;0.2 unit cross-track error</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/flocking-mrs.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/flocking-mrs.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Multi-Agent · Fall 2025</span>
         <h4><a href="projects/flocking-mrs.html" class="proj-link">50-Agent Flocking &amp; Multi-AUV Coordination<span class="arrow"> →</span></a></h4>
         <p>Co-operative navigation without GPS or vision: a 6-DoF AUV dynamics model with derived thruster transfer functions, LiDAR-only tracking and maze obstacle avoidance, and 50 agents converging on 90°-FOV local sensing alone.</p>
         <span class="kpi">→ 50 agents, decentralized · range and bearing only</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/sac-ball-plate.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/sac-ball-plate.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Deep RL · Spring 2025</span>
         <h4><a href="projects/sac-ball-plate.html" class="proj-link">SAC for Continuous Robot Control<span class="arrow"> →</span></a></h4>
         <p>Soft Actor-Critic with dynamic entropy tuning: 22-D observation vector, twin critics and a Gaussian actor, Simscape Multibody contact physics — 2-DOF continuous torque control balancing a ball on a plate, converging on multiple distinct strategies rather than one.</p>
         <span class="kpi">→ 6,000 episodes on RTX 4090 · 660.48 peak reward</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/foldable-bat.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/foldable-bat.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Bio-Inspired · Fall 2024</span>
         <h4><a href="projects/foldable-bat.html" class="proj-link">Foldable Flapping-Wing Robot<span class="arrow"> →</span></a></h4>
         <p>Bat-inspired foldable wings — two-layer vinyl/flexure lamination with vein hinges — flapped by a single central servo through a gear-driven four-bar linkage, with measured stiffness, compliance, and inertia feeding MuJoCo and SolidWorks models.</p>
         <span class="kpi">→ measured parameters → simulation → flapping prototype</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/micro820-plc.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/micro820-plc.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Industrial Automation · 2026</span>
         <h4><a href="projects/micro820-plc.html" class="proj-link">Micro820 CNC Tool Magazine Controller<span class="arrow"> →</span></a></h4>
         <p>An eight-station pick-and-place tool changer built in six stages on an Allen-Bradley Micro820 — ladder for interlocking, six IEC 61131-3 Structured Text function blocks for arithmetic, and a modulo antipode test that picks the shorter rotational arc to every tool. Verified by reading the ladder compiler's own output.</p>
         <span class="kpi">→ 16 rungs · 56/56 optimal decisions · 3 defects surfaced</span>
       </div>
       <div class="gcard reveal">
+        <div class="gthumb"><img src="assets/ai/plc-tank.jpg" alt="" loading="lazy" decoding="async"></div>
         <span class="gm">Industrial Automation · 2026</span>
         <h4>PLC Tank Level Control — Codesys × Factory IO</h4>
         <p>IEC 61131-3 Function Block Diagram controller with custom TON/TOF-timed valve sequencing and hysteresis set-point logic, validated in closed loop against Factory IO industrial co-simulation.</p>
         <span class="kpi">→ real-time virtual process control</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/mycobot-tictactoe.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/mycobot-tictactoe.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Manipulation + CV · Fall 2023</span>
         <h4><a href="projects/mycobot-tictactoe.html" class="proj-link">Tic-Tac-Toe Robot — MyCobot 280M5<span class="arrow"> →</span></a></h4>
         <p>ArUco-calibrated eye-to-hand pipeline, color-segmentation board state, alpha-beta pruning AI, IK-computed suction-pump picks — plus a MATLAB digital twin synchronizing a URDF model with the physical arm.</p>
         <span class="kpi">→ competitive gameplay on hardware</span>
       </div>
       <div class="gcard reveal">
+        <a class="gthumb" href="projects/ur5.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/ur5.jpg" alt="" loading="lazy" decoding="async"></a>
         <span class="gm">Manipulation · Fall 2023</span>
         <h4><a href="projects/ur5.html" class="proj-link">UR5 Multi-Task Manipulation<span class="arrow"> →</span></a></h4>
         <p>Programmed the UR5 across PolyScope, RoboDK, and URScript for precision waypoint execution, pick-and-place, and assembly with torque-controlled fastening at 3 N·m.</p>
