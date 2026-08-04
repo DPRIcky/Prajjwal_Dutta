@@ -209,6 +209,105 @@
   .reveal.in{opacity:1;transform:none;}
   .reveal.d1{transition-delay:.12s}.reveal.d2{transition-delay:.24s}.reveal.d3{transition-delay:.36s}
 
+  /* ---------- inline video previews on the cards ---------- */
+  .thumb-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+    opacity:0;z-index:1;transition:opacity .35s ease;background:var(--deep);}
+  .thumb-vid.on{opacity:1;}
+  /* once the clip is up, drop the illustrated tile so the two never composite */
+  .pthumb.vplay img,.gthumb.vplay img{animation:none !important;opacity:0;}
+
+  /* play badge — the recruiter's one-click way into the footage */
+  .vbadge{position:absolute;z-index:5;top:0.85rem;right:0.9rem;
+    display:inline-flex;align-items:center;gap:0.45rem;
+    font-family:var(--mono);font-size:0.55rem;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--cyan);background:rgba(6,10,20,0.74);backdrop-filter:blur(6px);
+    border:1px solid rgba(79,216,232,0.4);border-radius:999px;line-height:1;
+    padding:0.36rem 0.72rem 0.36rem 0.56rem;cursor:pointer;
+    transition:background .25s,color .25s,box-shadow .25s,transform .25s,border-color .25s;}
+  .vbadge .tri{width:0;height:0;flex:none;border-left:7px solid currentColor;
+    border-top:4.5px solid transparent;border-bottom:4.5px solid transparent;}
+  .vbadge:hover,.vbadge:focus-visible{background:var(--cyan);color:var(--abyss);
+    border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 0 26px rgba(79,216,232,0.42);}
+
+  /* hero reel entry */
+  .reel-cta{display:inline-flex;align-items:center;gap:0.7rem;margin-top:2.3rem;
+    font-family:var(--mono);font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--cyan);background:rgba(6,10,20,0.45);border:1px solid rgba(79,216,232,0.35);
+    border-radius:999px;padding:0.72rem 1.3rem;cursor:pointer;line-height:1;
+    transition:background .25s,color .25s,box-shadow .25s,transform .25s;}
+  .reel-cta .tri{width:0;height:0;flex:none;border-left:9px solid currentColor;
+    border-top:5.5px solid transparent;border-bottom:5.5px solid transparent;}
+  .reel-cta em{font-style:normal;color:var(--muted);letter-spacing:0.1em;}
+  .reel-cta:hover,.reel-cta:focus-visible{background:var(--cyan);color:var(--abyss);
+    transform:translateY(-2px);box-shadow:0 0 32px rgba(79,216,232,0.35);}
+  .reel-cta:hover em{color:rgba(6,10,20,0.7);}
+
+  /* ---------- video lightbox ---------- */
+  .lb{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    padding:4vh 4vw;opacity:0;pointer-events:none;transition:opacity .3s ease;}
+  .lb.open{opacity:1;pointer-events:auto;}
+  .lb-back{position:absolute;inset:0;background:rgba(4,7,14,0.88);backdrop-filter:blur(9px);}
+  .lb-box{position:relative;width:min(1080px,100%);max-height:92vh;overflow:auto;
+    border:1px solid var(--line);border-radius:14px;background:var(--panel);
+    box-shadow:0 30px 90px rgba(0,0,0,0.6);transform:translateY(14px) scale(.985);
+    transition:transform .35s cubic-bezier(.2,.7,.2,1);}
+  .lb.open .lb-box{transform:none;}
+  .lb-stage{position:relative;background:#03060d;border-radius:13px 13px 0 0;overflow:hidden;}
+  .lb-stage video{display:block;width:100%;max-height:64vh;background:#03060d;}
+  .lb-x{position:absolute;top:0.7rem;right:0.7rem;z-index:3;width:36px;height:36px;
+    border-radius:50%;border:1px solid var(--line);background:rgba(6,10,20,0.72);
+    color:var(--text);font-size:1rem;line-height:1;cursor:pointer;
+    transition:background .2s,color .2s,border-color .2s;}
+  .lb-x:hover{background:var(--cyan);color:var(--abyss);border-color:var(--cyan);}
+  .lb-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;
+    width:42px;height:60px;border:none;border-radius:8px;cursor:pointer;
+    background:rgba(6,10,20,0.55);color:var(--text);font-size:1.7rem;line-height:1;
+    transition:background .2s,color .2s;}
+  .lb-nav:hover{background:var(--cyan);color:var(--abyss);}
+  .lb-nav.prev{left:0.5rem;} .lb-nav.next{right:0.5rem;}
+  .lb-body{padding:1.4rem 1.6rem 1.5rem;}
+  .lb-eyebrow{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.16em;
+    text-transform:uppercase;color:var(--amber);display:flex;gap:1rem;flex-wrap:wrap;}
+  .lb-eyebrow .count{color:var(--muted);}
+  .lb-title{font-family:var(--display);font-weight:500;font-size:1.15rem;margin:0.5rem 0 0.4rem;
+    letter-spacing:-0.01em;}
+  .lb-cap{color:var(--muted);font-size:0.85rem;max-width:74ch;}
+  .lb-cap a{color:var(--cyan);}
+  .lb-actions{display:flex;flex-wrap:wrap;gap:0.7rem;align-items:center;margin-top:1.2rem;}
+  .lb-sm{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
+    text-decoration:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);
+    padding:0.5rem 1rem;cursor:pointer;background:none;line-height:1;
+    transition:border-color .25s,color .25s;}
+  .lb-sm:hover{border-color:var(--cyan);color:var(--cyan);}
+  .lb-sm.key{border-color:var(--cyan);color:var(--cyan);}
+  .lb-strip{display:flex;gap:0.6rem;overflow-x:auto;padding:0 1.6rem 1.5rem;scrollbar-width:thin;}
+  .lb-strip button{flex:none;width:112px;border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;background:var(--deep);cursor:pointer;padding:0;position:relative;
+    transition:border-color .25s,transform .25s;}
+  .lb-strip button img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;opacity:.55;
+    transition:opacity .25s;}
+  .lb-strip button:hover{transform:translateY(-2px);}
+  .lb-strip button:hover img{opacity:.85;}
+  .lb-strip button.cur{border-color:var(--cyan);}
+  .lb-strip button.cur img{opacity:1;}
+  .lb-strip button span{position:absolute;left:0;right:0;bottom:0;font-family:var(--mono);
+    font-size:0.5rem;letter-spacing:0.06em;color:var(--text);text-transform:uppercase;
+    background:linear-gradient(180deg,transparent,rgba(6,10,20,0.92));padding:0.9rem 0.35rem 0.25rem;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  body.lb-lock{overflow:hidden;}
+
+  @media (max-width:680px){
+    .lb{padding:0;}
+    .lb-box{max-height:100vh;height:100%;border-radius:0;border:none;}
+    .lb-stage{border-radius:0;}
+    .lb-nav{width:34px;height:48px;font-size:1.3rem;}
+    .lb-body{padding:1.1rem 1.1rem 1.2rem;}
+    .lb-strip{padding:0 1.1rem 1.2rem;}
+    .vbadge{top:0.6rem;right:0.6rem;font-size:0.5rem;padding:0.3rem 0.6rem 0.3rem 0.46rem;}
+    .reel-cta{font-size:0.57rem;letter-spacing:0.12em;padding:0.62rem 1rem;gap:0.55rem;}
+    .reel-cta .tri{border-left-width:8px;border-top-width:5px;border-bottom-width:5px;}
+  }
+
   @media (max-width:680px){
     .nav-links{display:none;}
     section{padding:6rem 7vw;}
@@ -224,6 +323,8 @@
     .project.in .pthumb img,.gcard.in .gthumb img,
     .project.in .pthumb::before,.gcard.in .gthumb::before{animation:none;transform:none;}
     .pthumb::before,.gthumb::before{display:none;}
+    .thumb-vid{transition:none;}
+    .lb,.lb-box{transition:none;}
   }
 </style>
 </head>
@@ -261,6 +362,11 @@
       <div class="hstat"><b>ICRA '25</b><span>Workshop publication</span></div>
       <div class="hstat"><b>70</b><span>Robots coordinated</span></div>
       <div class="hstat"><b>4.33</b><span>GPA · MS MfgE</span></div>
+    </div>
+    <div class="reveal d3">
+      <button class="reel-cta" id="reelBtn" type="button">
+        <span class="tri"></span>Watch the demo reel <em>· 22 clips</em>
+      </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Scroll — swarm holds formation</div>
   </section>
@@ -331,7 +437,8 @@
     <h2 class="reveal">Deploy. Control. Guarantee.</h2>
 
     <article class="project reveal">
-      <a class="pthumb" href="projects/clf-cbf-qp.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/clf-cbf-qp.jpg" alt="" loading="lazy" decoding="async"></a>
+      <a class="pthumb" href="projects/clf-cbf-qp.html" data-vkey="clf-cbf-qp" aria-hidden="true" tabindex="-1"><img src="assets/ai/clf-cbf-qp.jpg" alt="" loading="lazy" decoding="async"></a>
+      <button class="vbadge" type="button" data-reel="clf-cbf-qp"><span class="tri"></span>Watch</button>
       <div class="proj-meta"><span>Safety-Critical Control · Fall 2025</span><span>EGR 611</span></div>
       <h3><a href="projects/clf-cbf-qp.html" class="proj-link">CLF–CBF–QP Safety Filtering for 70-Robot Fleets<span class="arrow"> →</span></a></h3>
       <p>
@@ -353,7 +460,8 @@
     </article>
 
     <article class="project reveal">
-      <a class="pthumb" href="projects/tube-mpc.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/tube-mpc.jpg" alt="" loading="lazy" decoding="async"></a>
+      <a class="pthumb" href="projects/tube-mpc.html" data-vkey="tube-mpc" aria-hidden="true" tabindex="-1"><img src="assets/ai/tube-mpc.jpg" alt="" loading="lazy" decoding="async"></a>
+      <button class="vbadge" type="button" data-reel="tube-mpc"><span class="tri"></span>Watch</button>
       <div class="proj-meta"><span>Robust Vehicle Control · Spring 2026</span><span>EGR 560</span></div>
       <h3><a href="projects/tube-mpc.html" class="proj-link">Tube-MPC Lateral Path Tracking — CarSim Co-Simulation<span class="arrow"> →</span></a></h3>
       <p>
@@ -412,21 +520,24 @@
         <span class="kpi">→ 1st place · full hardware deployment</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/turtlebot4-sft.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/turtlebot4-sft.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/turtlebot4-sft.html" data-vkey="turtlebot4-sft" aria-hidden="true" tabindex="-1"><img src="assets/ai/turtlebot4-sft.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="turtlebot4-sft"><span class="tri"></span>2 clips</button>
         <span class="gm">Ground Robotics · Spring 2026</span>
         <h4><a href="projects/turtlebot4-sft.html" class="proj-link">TurtleBot 4 Human-Following System<span class="arrow"> →</span></a></h4>
         <p>OAK-D ArUco 6-DoF pose estimation, dual Kalman / 300-particle filter estimators, PD control with a 3-state FSM, and LiDAR collision avoidance — validated on hardware.</p>
         <span class="kpi">→ 0.04 m mean tracking error, zero divergence</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/ros2-autonomy.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/ros2-autonomy.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/ros2-autonomy.html" data-vkey="ros2-autonomy" aria-hidden="true" tabindex="-1"><img src="assets/ai/ros2-autonomy.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="ros2-autonomy"><span class="tri"></span>3 clips</button>
         <span class="gm">ROS 2 Autonomy · Spring 2026</span>
         <h4><a href="projects/ros2-autonomy.html" class="proj-link">Perception, Localization &amp; Energy-Aware Planning<span class="arrow"> →</span></a></h4>
         <p>Three standalone ROS 2 packages: OAK-D RANSAC cylinder perception, 3D Bayes-filter localization (80×80×72 belief), and A* planning with Bresenham line-of-sight pruning behind a Turn-Go-Turn controller. 34 unit tests.</p>
         <span class="kpi">→ 3 projects · ~90% energy reduction · 67× planning speedup</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/rosmaster-x3.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/rosmaster-x3.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/rosmaster-x3.html" data-vkey="rosmaster-x3" aria-hidden="true" tabindex="-1"><img src="assets/ai/rosmaster-x3.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="rosmaster-x3"><span class="tri"></span>3 clips</button>
         <span class="gm">Digital Twin · Spring 2026</span>
         <h4><a href="projects/rosmaster-x3.html" class="proj-link">ROSMASTER X3 Warehouse Navigation<span class="arrow"> →</span></a></h4>
         <p>Gazebo digital twin of the AWS RoboMaker warehouse with a custom A* global planner in move_base, AMCL localization, DWA local planning, layered costmaps, SLAM (gmapping / Cartographer), and marker-conditioned stop / caution behavior.</p>
@@ -440,14 +551,16 @@
         <span class="kpi">→ detection-driven manipulation</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/space-robotics.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/lqr-px4-landing.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/space-robotics.html" data-vkey="space-robotics" aria-hidden="true" tabindex="-1"><img src="assets/ai/lqr-px4-landing.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="space-robotics"><span class="tri"></span>3 clips</button>
         <span class="gm">UAV + Optimal Control · Fall 2025</span>
         <h4><a href="projects/space-robotics.html" class="proj-link">LQR Stabilization &amp; PX4 Precision Landing<span class="arrow"> →</span></a></h4>
         <p>LQR cart-pole stabilization under a 0.5–4 Hz earthquake disturbance, PD-tuned boustrophedon coverage planning, and a PX4 SITL UAV using RTAB-Map SLAM with RGB-D sensing for autonomous target detection and precision landing.</p>
         <span class="kpi">→ 0.09 rad pole deviation · 70 N peak force · &lt;0.2 unit cross-track error</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/flocking-mrs.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/flocking-mrs.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/flocking-mrs.html" data-vkey="flocking-mrs" aria-hidden="true" tabindex="-1"><img src="assets/ai/flocking-mrs.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="flocking-mrs"><span class="tri"></span>2 clips</button>
         <span class="gm">Multi-Agent · Fall 2025</span>
         <h4><a href="projects/flocking-mrs.html" class="proj-link">50-Agent Flocking &amp; Multi-AUV Coordination<span class="arrow"> →</span></a></h4>
         <p>Co-operative navigation without GPS or vision: a 6-DoF AUV dynamics model with derived thruster transfer functions, LiDAR-only tracking and maze obstacle avoidance, and 50 agents converging on 90°-FOV local sensing alone.</p>
@@ -461,14 +574,18 @@
         <span class="kpi">→ 6,000 episodes on RTX 4090 · 660.48 peak reward</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/foldable-bat.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/foldable-bat.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/foldable-bat.html" data-vkey="foldable-bat" aria-hidden="true" tabindex="-1"><img src="assets/ai/foldable-bat.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="foldable-bat"><span class="tri"></span>2 clips</button>
         <span class="gm">Bio-Inspired · Fall 2024</span>
         <h4><a href="projects/foldable-bat.html" class="proj-link">Foldable Flapping-Wing Robot<span class="arrow"> →</span></a></h4>
         <p>Bat-inspired foldable wings — two-layer vinyl/flexure lamination with vein hinges — flapped by a single central servo through a gear-driven four-bar linkage, with measured stiffness, compliance, and inertia feeding MuJoCo and SolidWorks models.</p>
         <span class="kpi">→ measured parameters → simulation → flapping prototype</span>
       </div>
       <div class="gcard reveal">
+        <!-- no data-vkey: the Lab 3 CCW recording is a static ladder screen, so a hover clip
+             would be indistinguishable from the tile. The ▶ badge still opens it full size. -->
         <a class="gthumb" href="projects/micro820-plc.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/micro820-plc.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="micro820-plc"><span class="tri"></span>Watch</button>
         <span class="gm">Industrial Automation · 2026</span>
         <h4><a href="projects/micro820-plc.html" class="proj-link">Micro820 CNC Tool Magazine Controller<span class="arrow"> →</span></a></h4>
         <p>An eight-station pick-and-place tool changer built in six stages on an Allen-Bradley Micro820 — ladder for interlocking, six IEC 61131-3 Structured Text function blocks for arithmetic, and a modulo antipode test that picks the shorter rotational arc to every tool. Verified by reading the ladder compiler's own output.</p>
@@ -482,14 +599,16 @@
         <span class="kpi">→ real-time virtual process control</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/mycobot-tictactoe.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/mycobot-tictactoe.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/mycobot-tictactoe.html" data-vkey="mycobot-tictactoe" aria-hidden="true" tabindex="-1"><img src="assets/ai/mycobot-tictactoe.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="mycobot-tictactoe"><span class="tri"></span>2 clips</button>
         <span class="gm">Manipulation + CV · Fall 2023</span>
         <h4><a href="projects/mycobot-tictactoe.html" class="proj-link">Tic-Tac-Toe Robot — MyCobot 280M5<span class="arrow"> →</span></a></h4>
         <p>ArUco-calibrated eye-to-hand pipeline, color-segmentation board state, alpha-beta pruning AI, IK-computed suction-pump picks — plus a MATLAB digital twin synchronizing a URDF model with the physical arm.</p>
         <span class="kpi">→ competitive gameplay on hardware</span>
       </div>
       <div class="gcard reveal">
-        <a class="gthumb" href="projects/ur5.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/ur5.jpg" alt="" loading="lazy" decoding="async"></a>
+        <a class="gthumb" href="projects/ur5.html" data-vkey="ur5" aria-hidden="true" tabindex="-1"><img src="assets/ai/ur5.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="ur5"><span class="tri"></span>2 clips</button>
         <span class="gm">Manipulation · Fall 2023</span>
         <h4><a href="projects/ur5.html" class="proj-link">UR5 Multi-Task Manipulation<span class="arrow"> →</span></a></h4>
         <p>Programmed the UR5 across PolyScope, RoboDK, and URScript for precision waypoint execution, pick-and-place, and assembly with torque-controlled fastening at 3 N·m.</p>
@@ -587,10 +706,288 @@
   </section>
 </main>
 
+<!-- VIDEO LIGHTBOX -->
+<div class="lb" id="lb" aria-hidden="true">
+  <div class="lb-back" data-close></div>
+  <div class="lb-box" role="dialog" aria-modal="true" aria-label="Project demo video">
+    <div class="lb-stage">
+      <video id="lbVid" playsinline controls preload="metadata"></video>
+      <button class="lb-x" type="button" data-close aria-label="Close video">✕</button>
+      <button class="lb-nav prev" type="button" id="lbPrev" aria-label="Previous clip">‹</button>
+      <button class="lb-nav next" type="button" id="lbNext" aria-label="Next clip">›</button>
+    </div>
+    <div class="lb-body">
+      <div class="lb-eyebrow"><span id="lbProj"></span><span class="count" id="lbCount"></span></div>
+      <h3 class="lb-title" id="lbTitle"></h3>
+      <p class="lb-cap" id="lbCap"></p>
+      <div class="lb-actions">
+        <a class="lb-sm key" id="lbOpen" href="#">Full project write-up →</a>
+        <button class="lb-sm" type="button" id="lbSound">🔊 Unmute</button>
+        <button class="lb-sm" type="button" id="lbAuto">Autoplay next: on</button>
+      </div>
+    </div>
+    <div class="lb-strip" id="lbStrip"></div>
+  </div>
+</div>
+
 <footer>
   <span>© 2026 Prajjwal Dutta</span>
   <span>robopod.in · Built with Three.js</span>
 </footer>
+
+<script>
+/* =========================================================
+   CARD VIDEO LAYER
+   1. tiny 480p muted preview loops autoplay in-viewport, so a
+      10-second scan already shows the robots moving
+   2. the ▶ badge opens a lightbox with the full clips — no
+      page navigation needed to see any demo
+   ========================================================= */
+(function(){
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const conn = navigator.connection || {};
+  const saver = conn.saveData === true;
+
+  /* ---------- clip catalogue ---------- */
+  const GROUPS = [
+    {k:'clf-cbf-qp', page:'projects/clf-cbf-qp.html', proj:'CLF–CBF–QP Safety Filtering', clips:[
+      {f:'clf-solver-comparison', po:'assets/clfcbf/solver-demo-poster.jpg', t:'Three solvers, one QP',
+       x:'The same CLF–CBF–QP at every control step, solved three ways in parallel — quadprog, CVX, OSQP. Bottom row: per-iteration solve time, objective value, and max CBF slack.'}]},
+
+    {k:'tube-mpc', page:'projects/tube-mpc.html', proj:'Tube-MPC Lateral Path Tracking', clips:[
+      {f:'tube-mpc-carsim', po:'assets/tubempc/carsim_visualizer.jpg', t:'CarSim closed-loop run',
+       x:'Final closed-loop CarSim run (live capture) — the vehicle holds the centerline through curves at 54 km/h while live plots log tracking error, trajectory, steering, and lateral acceleration.'}]},
+
+    {k:'turtlebot4-sft', page:'projects/turtlebot4-sft.html', proj:'TurtleBot 4 Human-Following', clips:[
+      {f:'sft-hardware-demo', po:'assets/turtlebot4/hardware_demo_poster.jpg', t:'Hardware run',
+       x:'The TurtleBot 4 follows a walking target holding the ArUco board, while the detection debug view, RViz SLAM map, and node logs stream alongside.'},
+      {f:'sft-simulation-demo', po:'assets/turtlebot4/simulation_demo_poster.jpg', t:'Gazebo verification',
+       x:'Leader–follower pursuit in the simulated test room, with RViz tracking the map, scan, and goal poses in real time.'}]},
+
+    {k:'ros2-autonomy', page:'projects/ros2-autonomy.html', proj:'ROS 2 Autonomy Stack', clips:[
+      {f:'perception-cylinders', po:'assets/perception/perception-cylinders-poster.jpg', t:'RANSAC cylinder perception',
+       pp:'projects/perception-cylinders.html',
+       x:'Detections across all three rosbags — colored CYLINDER markers published to /viz/detections, one per fitted object.'},
+      {f:'bayes-localization', po:'assets/bayes/bayes-localization-poster.jpg', t:'3D Bayes-filter localization',
+       pp:'projects/bayes-localization.html',
+       x:'Stage (left) shows the belief cloud tracking the robot; RViz (right) shows the same belief as a costmap against the ground-truth path.'},
+      {f:'energy-planner', po:'assets/energy/energy-planner-poster.jpg', t:'Energy-aware A* planning',
+       pp:'projects/energy-planner.html',
+       x:'Stage, RViz, energy-tracking scout, and planner launched together. Green is the raw A* path, blue is the pruned path, red is the active goal waypoint.'}]},
+
+    {k:'rosmaster-x3', page:'projects/rosmaster-x3.html', proj:'ROSMASTER X3 Warehouse Navigation', clips:[
+      {f:'rosmaster-obstacle', po:'assets/rosmaster/obstacle-poster.jpg', t:'Dynamic obstacle avoidance',
+       x:'The DWA local planner rolls out a new trajectory the moment the LiDAR sees something the static map does not have.'},
+      {f:'rosmaster-red-stop', po:'assets/rosmaster/red-stop-poster.jpg', t:'Red stop marker',
+       x:'Navigation halts and holds until the path is clear again.'},
+      {f:'rosmaster-yellow-warning', po:'assets/rosmaster/yellow-warning-poster.jpg', t:'Yellow warning marker',
+       x:'The robot keeps going, but slower and scanning.'}]},
+
+    {k:'space-robotics', page:'projects/space-robotics.html', proj:'PX4 Precision Landing', clips:[
+      {f:'ses598-landing-trial1', po:'assets/ses598/landing-trial1-poster.jpg', t:'Landing trial 1',
+       x:'Survey complete, marker detected mid-sweep, controlled descent.', cr:1},
+      {f:'ses598-landing-trial2', po:'assets/ses598/landing-trial2-poster.jpg', t:'Landing trial 2',
+       x:'Hover held over the target before descent is triggered.', cr:1},
+      {f:'ses598-landing-trial3', po:'assets/ses598/landing-trial3-poster.jpg', t:'Landing trial 3',
+       x:'The full pipeline end to end.', cr:1}]},
+
+    {k:'flocking-mrs', page:'projects/flocking-mrs.html', proj:'50-Agent Flocking', clips:[
+      {f:'mrs-flocking', po:'assets/mrs/flocking-poster.jpg', t:'50 agents converging',
+       x:'The grouping model running — 50 agents starting spread across the workspace, pulling into one cohesive cluster on local sensing alone.'},
+      {f:'mrs-walkthrough', po:'assets/mrs/walkthrough-poster.jpg', t:'Project walkthrough', snd:1,
+       x:'Full demo walkthrough with narration. Team project with Vivek Sunil Kulkarni and Niyati Abhijeet Vaidya.'}]},
+
+    {k:'foldable-bat', page:'projects/foldable-bat.html', proj:'Foldable Flapping-Wing Robot', clips:[
+      {f:'foldable-flapping-demo', po:'assets/foldable/flapping-demo-poster.jpg', t:'Prototype flapping',
+       x:'The prototype flapping under servo power — the laminated wing folds along its vein hinges through the stroke.'},
+      {f:'foldable-presentation', po:'assets/foldable/presentation-poster.jpg', t:'Final presentation', snd:1,
+       x:'Final project presentation — Niyati Vaidya, Vivek Kulkarni, Prajjwal Dutta, Yogesh Salvi.'}]},
+
+    {k:'micro820-plc', page:'projects/micro820-plc.html', proj:'Micro820 CNC Tool Magazine', clips:[
+      {f:'micro820-lab3-runtime', po:'assets/micro820/lab3_runtime_poster.jpg', t:'Live CCW runtime',
+       x:'Stage 3 running on the trainer, monitored live in Connected Components Workbench — thumbwheel bits toggle, PositionSelect lands on a value, and power flows through the compare into the motor rungs.'}]},
+
+    {k:'mycobot-tictactoe', page:'projects/mycobot-tictactoe.html', proj:'Tic-Tac-Toe Robot — MyCobot 280M5', clips:[
+      {f:'mycobot-tictactoe', po:'assets/mycobot/tictactoe_poster.jpg', t:'Full game, live capture',
+       x:'The human plays blue; the robot watches the board, thinks, and answers with the suction pump. Green is the robot’s O.'},
+      {f:'mycobot-digitaltwin', po:'assets/mycobot/digitaltwin_poster.jpg', t:'MATLAB digital twin',
+       x:'Alphabet-writing digital twin — the MATLAB model and the physical arm trace the same strokes from the same joint stream.'}]},
+
+    {k:'ur5', page:'projects/ur5.html', proj:'UR5 Multi-Task Manipulation', clips:[
+      {f:'ur5-cube-real', po:'assets/ur5/cube_real_poster.jpg', t:'Cube trace on hardware',
+       x:'Nine waypoints, moveJ to the first corner, then pure moveL: every edge a straight line in Cartesian space.'},
+      {f:'ur5-cube-sim', po:'assets/ur5/cube_sim_poster.jpg', t:'Cube trace in RoboDK',
+       x:'The same trace in simulation — points 1–5 walk the top face, 6–9 the bottom, every leg a straight line.'}]}
+  ];
+
+  const CREDIT = ' Demo footage recorded by classmate <a href="https://github.com/anushka002/RAS-SES-598-Space-Robotics-and-AI" target="_blank" rel="noopener">Anushka Satapathy ↗</a>, from the same class assignment.';
+
+  // flatten into one playable reel
+  const FLAT = [];
+  GROUPS.forEach(g=>g.clips.forEach(c=>FLAT.push(Object.assign({g:g}, c))));
+  const firstOf = {};
+  GROUPS.forEach(g=>{ firstOf[g.k] = FLAT.findIndex(c=>c.g.k===g.k); });
+
+  /* ---------- 1. preview loops ----------
+     The illustrated tile is the resting state. On a mouse, hovering a card
+     swaps in its clip; the file is buffered when the card scrolls into view so
+     the swap is instant. Touch devices have no hover, so there the clip plays
+     while the card is on screen instead.                                    */
+  const canHover = matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  function makeVid(thumb){
+    if(thumb._vid) return thumb._vid;
+    const el = document.createElement('video');
+    el.className = 'thumb-vid';
+    el.muted = true; el.loop = true; el.playsInline = true;
+    el.setAttribute('muted',''); el.setAttribute('playsinline','');
+    el.preload = 'auto'; el.tabIndex = -1;
+    el.setAttribute('aria-hidden','true');
+    el.src = 'media/previews/' + thumb.dataset.vkey + '.mp4';
+    el.addEventListener('playing', ()=>{
+      el.classList.add('on'); thumb.classList.add('vplay');
+    });
+    thumb.appendChild(el);
+    thumb._vid = el;
+    return el;
+  }
+  function startVid(thumb){
+    const p = makeVid(thumb).play();
+    if(p && p.catch) p.catch(()=>{});
+  }
+  function stopVid(thumb){
+    const v = thumb._vid; if(!v) return;
+    v.pause();
+    v.classList.remove('on');
+    thumb.classList.remove('vplay');
+    try{ v.currentTime = 0; }catch(e){}
+  }
+
+  if(!reduced && !saver){
+    const thumbs = document.querySelectorAll('[data-vkey]');
+    // buffer the clip once the card is near the viewport, but don't play it yet
+    const pio = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        const thumb = e.target;
+        if(e.isIntersecting){
+          makeVid(thumb);
+          if(!canHover) startVid(thumb);
+          if(canHover) pio.unobserve(thumb);
+        }else if(!canHover){
+          stopVid(thumb);
+        }
+      });
+    },{threshold:0.3, rootMargin:'0px 0px -8% 0px'});
+    thumbs.forEach(el=>pio.observe(el));
+
+    if(canHover){
+      thumbs.forEach(thumb=>{
+        // hover the whole card, so crossing the ▶ badge doesn't flicker the clip
+        const card = thumb.closest('.project, .gcard') || thumb;
+        card.addEventListener('mouseenter', ()=>startVid(thumb));
+        card.addEventListener('mouseleave', ()=>stopVid(thumb));
+        // keyboard users get the same thing when the card's link takes focus
+        card.addEventListener('focusin', ()=>startVid(thumb));
+        card.addEventListener('focusout', ()=>stopVid(thumb));
+      });
+    }
+  }
+
+  /* ---------- 2. lightbox ---------- */
+  const lb    = document.getElementById('lb');
+  const vid   = document.getElementById('lbVid');
+  const strip = document.getElementById('lbStrip');
+  const elProj= document.getElementById('lbProj');
+  const elCnt = document.getElementById('lbCount');
+  const elTit = document.getElementById('lbTitle');
+  const elCap = document.getElementById('lbCap');
+  const elOpen= document.getElementById('lbOpen');
+  const btnSnd= document.getElementById('lbSound');
+  const btnAut= document.getElementById('lbAuto');
+  let idx = 0, autoNext = false, opener = null, built = false;
+
+  function buildStrip(){
+    if(built) return; built = true;
+    FLAT.forEach((c,i)=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = '<img src="'+c.po+'" alt="" loading="lazy" decoding="async"><span>'+c.t+'</span>';
+      b.title = c.g.proj + ' — ' + c.t;
+      b.addEventListener('click', ()=>load(i));
+      strip.appendChild(b);
+    });
+  }
+
+  function load(i){
+    idx = (i + FLAT.length) % FLAT.length;
+    const c = FLAT[idx];
+    vid.pause();
+    vid.poster = c.po;
+    vid.loop = !autoNext;
+    vid.src = 'media/' + c.f + '.mp4';
+    vid.load();
+    const p = vid.play(); if(p && p.catch) p.catch(()=>{});
+    elProj.textContent = c.g.proj;
+    elCnt.textContent  = 'Clip ' + (idx+1) + ' / ' + FLAT.length;
+    elTit.textContent  = c.t;
+    elCap.innerHTML    = c.x + (c.cr ? CREDIT : '');
+    elOpen.href        = c.pp || c.g.page;
+    btnSnd.style.display = 'inline-block';
+    Array.from(strip.children).forEach((b,j)=>b.classList.toggle('cur', j===idx));
+    const cur = strip.children[idx];
+    if(cur) cur.scrollIntoView({block:'nearest', inline:'center', behavior:'smooth'});
+  }
+
+  function open(i, auto, from){
+    buildStrip();
+    opener = from || null;
+    autoNext = !!auto;
+    btnAut.textContent = 'Autoplay next: ' + (autoNext ? 'on' : 'off');
+    vid.muted = true;
+    btnSnd.textContent = '🔊 Unmute';
+    lb.classList.add('open');
+    lb.setAttribute('aria-hidden','false');
+    document.body.classList.add('lb-lock');
+    load(i);
+    setTimeout(()=>vid.focus({preventScroll:true}), 60);
+  }
+
+  function close(){
+    vid.pause(); vid.removeAttribute('src'); vid.load();
+    lb.classList.remove('open');
+    lb.setAttribute('aria-hidden','true');
+    document.body.classList.remove('lb-lock');
+    if(opener) opener.focus({preventScroll:true});
+  }
+
+  document.querySelectorAll('[data-reel]').forEach(b=>{
+    b.addEventListener('click', ()=>open(firstOf[b.dataset.reel], false, b));
+  });
+  const reelBtn = document.getElementById('reelBtn');
+  if(reelBtn) reelBtn.addEventListener('click', ()=>open(0, true, reelBtn));
+
+  lb.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click', close));
+  document.getElementById('lbPrev').addEventListener('click', ()=>load(idx-1));
+  document.getElementById('lbNext').addEventListener('click', ()=>load(idx+1));
+  btnSnd.addEventListener('click', ()=>{
+    vid.muted = !vid.muted;
+    btnSnd.textContent = vid.muted ? '🔊 Unmute' : '🔇 Mute';
+  });
+  btnAut.addEventListener('click', ()=>{
+    autoNext = !autoNext;
+    vid.loop = !autoNext;
+    btnAut.textContent = 'Autoplay next: ' + (autoNext ? 'on' : 'off');
+  });
+  vid.addEventListener('ended', ()=>{ if(autoNext) load(idx+1); });
+
+  document.addEventListener('keydown', e=>{
+    if(!lb.classList.contains('open')) return;
+    if(e.key === 'Escape'){ close(); }
+    else if(e.key === 'ArrowRight'){ load(idx+1); }
+    else if(e.key === 'ArrowLeft'){ load(idx-1); }
+  });
+})();
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
