@@ -365,7 +365,7 @@
     </div>
     <div class="reveal d3">
       <button class="reel-cta" id="reelBtn" type="button">
-        <span class="tri"></span>Watch the demo reel <em>· 22 clips</em>
+        <span class="tri"></span>Watch the demo reel <em>· 25 clips</em>
       </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Scroll — swarm holds formation</div>
@@ -592,11 +592,14 @@
         <span class="kpi">→ 16 rungs · 56/56 optimal decisions · 3 defects surfaced</span>
       </div>
       <div class="gcard reveal">
-        <div class="gthumb"><img src="assets/ai/plc-tank.jpg" alt="" loading="lazy" decoding="async"></div>
+        <!-- vkey "plc": the preview is the sorting station, the only one of the three
+             recordings with legible motion — the tank footage settles into a static shot. -->
+        <a class="gthumb" href="projects/plc-tank.html" data-vkey="plc" aria-hidden="true" tabindex="-1"><img src="assets/ai/plc-tank.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="plc"><span class="tri"></span>3 clips</button>
         <span class="gm">Industrial Automation · 2026</span>
-        <h4>PLC Tank Level Control — Codesys × Factory IO</h4>
-        <p>IEC 61131-3 Function Block Diagram controller with custom TON/TOF-timed valve sequencing and hysteresis set-point logic, validated in closed loop against Factory IO industrial co-simulation.</p>
-        <span class="kpi">→ real-time virtual process control</span>
+        <h4><a href="projects/plc-tank.html" class="proj-link">Ladder &amp; FBD Plant Control — Codesys × Factory IO<span class="arrow"> →</span></a></h4>
+        <p>Three IEC 61131-3 applications commissioned against Factory I/O 3D plant models over an OPC DA/UA link: FBD analog scaling for a process tank, a seal-in motor starter, and a sequential sorting station built on RS latches and CTUD counters.</p>
+        <span class="kpi">→ 3 projects · both transfer functions verified against the live plant</span>
       </div>
       <div class="gcard reveal">
         <a class="gthumb" href="projects/mycobot-tictactoe.html" data-vkey="mycobot-tictactoe" aria-hidden="true" tabindex="-1"><img src="assets/ai/mycobot-tictactoe.jpg" alt="" loading="lazy" decoding="async"></a>
@@ -812,6 +815,14 @@
        x:'The human plays blue; the robot watches the board, thinks, and answers with the suction pump. Green is the robot’s O.'},
       {f:'mycobot-digitaltwin', po:'assets/mycobot/digitaltwin_poster.jpg', t:'MATLAB digital twin',
        x:'Alphabet-writing digital twin — the MATLAB model and the physical arm trace the same strokes from the same joint stream.'}]},
+
+    {k:'plc', page:'projects/plc-tank.html', proj:'CODESYS × Factory I/O', clips:[
+      {f:'plc-tank', po:'assets/plc/tank-poster.jpg', t:'Tank level control (FBD)',
+       x:'The four FBD networks in online monitoring beside the filling tank — both panel displays track the graduated column, and Tank1_DischargeValve reaches 10 when the centre-detent pot hits its full-clockwise stop.'},
+      {f:'plc-conveyor', po:'assets/plc/conveyor-poster.jpg', t:'Seal-in conveyor (Ladder)',
+       x:'The proof is in the OPC tag table: FIO_B reads 0 while FIO_C stays 1. The latch is holding the drive, not the button.'},
+      {f:'plc-sorting', po:'assets/plc/sorting-poster.jpg', t:'Product sorting station (Ladder)',
+       x:'Full sort cycles through the T-junction, with the counter tallying on the lane exit sensors so a stalled pallet is never credited. This recording has no audio track.'}]},
 
     {k:'ur5', page:'projects/ur5.html', proj:'UR5 Multi-Task Manipulation', clips:[
       {f:'ur5-cube-real', po:'assets/ur5/cube_real_poster.jpg', t:'Cube trace on hardware',

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Three IEC 61131-3 PLC applications in CODESYS V3.5 commissioned against Factory I/O 3D plant simulations over OPC DA/UA — analog scaling for a process tank, a seal-in motor starter, and a sequential product-sorting station. By Prajjwal Dutta.">
+<title>Ladder &amp; FBD Plant Control — CODESYS × Factory I/O — Prajjwal Dutta</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #tankscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
+    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+  .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
+  .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
+    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+  .nav-mark:hover .mark-icon .mark-node{r:5;}
+  @media (prefers-reduced-motion:reduce){
+    .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
+    .nav-mark:hover .mark-icon{transform:none;}
+  }
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  h3{font-family:var(--display);font-weight:500;font-size:1.12rem;letter-spacing:-0.01em;
+    margin:2.2rem 0 0.7rem;color:var(--text);}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;white-space:pre;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  .callout{border-left:2px solid var(--amber);background:rgba(245,163,92,0.05);
+    border-radius:0 10px 10px 0;padding:1.3rem 1.5rem;margin:1.8rem 0;}
+  .callout p{margin-bottom:0;max-width:70ch;}
+  .callout .ctitle{font-family:var(--mono);font-size:0.64rem;letter-spacing:0.18em;
+    text-transform:uppercase;color:var(--amber);margin-bottom:0.6rem;}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  figcaption a{color:var(--cyan);}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+  .tscroll{overflow-x:auto;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="tankscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
+  <a class="back" href="../index.html#projects">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Industrial Automation · 2026</span><span>CODESYS V3.5 SP22 · Factory I/O v2.5.10</span></div>
+    <h1 class="reveal">Three Control Problems, One Simulated Plant</h1>
+    <p class="sub reveal">
+      Discrete latching, sequential material handling, and analog signal conditioning — three
+      IEC 61131-3 applications written in CODESYS and commissioned against Factory I/O
+      3D plant models over an OPC DA/UA link. The PLC never touches the simulator directly,
+      exactly the arrangement used when a real controller is brought up against an HMI/SCADA
+      layer. The headline project is a process tank whose entire job is analog signal
+      conditioning: mapping raw transmitter counts into engineering units, and proving the
+      transfer functions numerically against the running plant before any control law is
+      layered on top.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/PLC-Simulation" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="../assets/plc/PLC_FactoryIO_IEEE_Report.pdf" target="_blank" rel="noopener" aria-label="IEEE-format technical report PDF" title="IEEE Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>3</b><span>projects · LD · LD · FBD</span></div>
+      <div class="metric"><b>0 – 300</b><span>display span · 0–10 raw</span></div>
+      <div class="metric"><b>6 pts</b><span>scaling verified live</span></div>
+      <div class="metric"><b>0</b><span>range faults · Error1–3</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <img src="../assets/plc/p07-overview.jpg" alt="The CODESYS Function Block Diagram program in online monitoring on the left, with live values in orange boxes on each pin, beside the Factory I/O 3D scene on the right showing a tall cylindrical tank filled with blue liquid, a graduated level column, and a control cabinet." loading="lazy" decoding="async">
+    <figcaption><span class="n">FIG 01</span>The commissioning view — FBD program in online monitoring (left) beside the Factory I/O tank scene (right). Every pin carries its live value, so the scaling can be read straight off the running system.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Rig</div>
+    <h2 class="reveal">The PLC never talks to the plant.</h2>
+    <p class="reveal">
+      All three projects share one toolchain. The program runs in the <strong>CODESYS soft-PLC
+      runtime</strong>; <strong>Factory I/O</strong> hosts the 3D plant model and exposes every
+      sensor and actuator as an OPC tag; an <strong>OPC DA/UA server</strong> sits between them.
+      CODESYS publishes the variables of <code>PLC_PRG</code> through a <em>symbol
+      configuration</em> object, the OPC server browses that configuration, and Factory I/O
+      binds each simulated device to one of the resulting items. The PLC therefore sees the
+      plant purely as a set of tags — the same abstraction it would have over a real fieldbus.
+    </p>
+    <div class="law reveal"><span class="c">┌──────────────────┐   OPC item    ┌──────────────────┐   OPC item    ┌──────────────────┐
+│  CODESYS V3.5    │◄─────────────►│   OPC DA/UA      │◄─────────────►│  Factory I/O     │
+│  soft-PLC        │  read/write   │  Channel.Device  │  read/write   │  3D plant model  │
+│  LD / FBD logic  │               │                  │               │  sensors, drives │
+└──────────────────┘               └──────────────────┘               └──────────────────┘</span></div>
+    <p class="reveal">
+      That link matters more than it looks. The OPC round trip adds latency on top of the PLC
+      scan, visible in the recordings as a small lag between a tag changing in the watch table
+      and the corresponding motion in the 3D scene. The logic is written to tolerate it —
+      state lives in latches and counters rather than being inferred from an instantaneous
+      sensor combination, which is the difference between a program that works at one conveyor
+      speed and one that works at any.
+    </p>
+    <p class="reveal">
+      That is also the argument for simulating the plant at all. Ladder logic that compiles is
+      easy; ladder logic that behaves against real actuator travel times, sensor debounce and
+      material inertia is not. A race between a diverter command and a photo-eye — the bug that
+      only appears at speed — surfaces during development instead of during commissioning.
+    </p>
+    <div class="tscroll reveal">
+      <table>
+        <thead><tr><th>Component</th><th>Version</th></tr></thead>
+        <tbody>
+          <tr><td>CODESYS Development System</td><td>V3.5 SP22 Patch 2+</td></tr>
+          <tr><td>CODESYS runtime</td><td>3.5.22.20</td></tr>
+          <tr><td>Symbol configuration object</td><td>4.7.0.0 (library 4.6.0.0)</td></tr>
+          <tr><td>Factory I/O</td><td>v2.5.10 Ultimate Edition</td></tr>
+          <tr><td>OPC interface</td><td>OPC DA / OPC UA client</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Project 07 · The Tank</div>
+    <h2 class="reveal">Four networks, no Boolean logic at all.</h2>
+    <p class="reveal">
+      Two operator potentiometers drive the fill and discharge valves; the level and flow
+      transmitters are scaled into engineering units and shown on two panel displays. Every
+      signal is analog, so the work is entirely in <strong>scaling</strong> — <code>MOVE</code>,
+      three <code>FC_Scaling</code> instances, and two <code>TO_INT</code> conversions across
+      four FBD networks.
+    </p>
+
+    <figure class="reveal">
+      <video controls preload="none" playsinline
+        poster="../assets/plc/tank-poster.jpg"
+        aria-label="Screen recording of the tank project: the four FBD networks in CODESYS online monitoring on the left with live values on every pin, beside the Factory I/O scene where the tank fills and the two panel displays track the graduated level column.">
+        <source src="../media/plc-tank.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 01</span>The run, end to end. Both displays track the graduated column as the level moves; watch <code>Tank1_DischargeValve</code> reach 10 when the centre-detent pot hits its full-clockwise stop at <code>Pot2_Discharge</code> = 5.</figcaption>
+    </figure>
+
+    <figure class="reveal">
+      <img src="../assets/plc/p07-fbd.jpg" alt="Four Function Block Diagram networks in CODESYS online monitoring: a MOVE block passing Pot1_Fill to Tank1_FillValve, an FC_Scaling block mapping Pot2_Discharge from minus five to plus five onto zero to ten, and two further FC_Scaling blocks feeding TO_INT conversions for the level and flow displays. Every pin shows a live value in an orange box." loading="lazy" decoding="async">
+      <figcaption><span class="n">FIG 02</span>Networks 1–4 in online monitoring. Network 1 passes the fill demand straight through; network 2 rescales the bipolar discharge demand; networks 3 and 4 convert raw transmitter signals into engineering units for the displays. <code>Error1</code>–<code>Error3</code> all read FALSE.</figcaption>
+    </figure>
+
+    <div class="tscroll reveal">
+      <table>
+        <thead><tr><th>#</th><th>Function</th><th>Input range</th><th>Output range</th><th>Destination</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>MOVE</td><td>Pot1_Fill</td><td>pass-through</td><td>Tank1_FillValve</td></tr>
+          <tr><td>2</td><td>FC_Scaling</td><td>−5 … +5</td><td>0 … 10</td><td>Tank1_DischargeValve</td></tr>
+          <tr><td>3</td><td>FC_Scaling → TO_INT</td><td>0 … 10</td><td>0 … 300</td><td>Display1_WaterLevel</td></tr>
+          <tr><td>4</td><td>FC_Scaling → TO_INT</td><td>0 … 10</td><td>0 … 30</td><td>Display2_FlowRate</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="reveal">Why network 2 is the interesting one</h3>
+    <p class="reveal">
+      The discharge potentiometer is a <strong>centre-detent</strong> device: it reads −5 at one
+      stop and +5 at the other. The valve, like every valve, only travels one way — 0 to 10.
+      <code>FC_Scaling</code> maps the bipolar span onto the unipolar one:
+    </p>
+    <div class="law reveal">Tank1_DischargeValve = <span class="a">(</span>Pot2_Discharge − (−5)<span class="a">)</span> / <span class="a">(</span>5 − (−5)<span class="a">)</span> × <span class="a">(</span>10 − 0<span class="a">)</span> + 0
+<span class="c">
+live in FIG 02:   Pot2_Discharge = 3.91  →  (3.91 + 5) / 10 × 10  =  8.91  ✓</span></div>
+    <p class="reveal">
+      Networks 3 and 4 run the other direction — raw 0 … 10 transmitter signal into the units
+      printed on the tank's gauge board — then <code>TO_INT</code> converts to the display's
+      integer type. That conversion <strong>rounds</strong> rather than truncates, which the
+      sampled values make plain: a flow of 18.7 shows as 19, and a level of 0.0997 shows as 0.
+    </p>
+
+    <h3 class="reveal">Verifying the transfer functions against the plant</h3>
+    <p class="reveal">
+      Scaling parameters are easy to get wrong and impossible to spot by inspection, so both
+      transfer functions were checked numerically against live values sampled from the online
+      view at three points across the run:
+    </p>
+    <div class="tscroll reveal">
+      <table>
+        <thead><tr><th>Tank1_LevelMeter</th><th>Expected (×30)</th><th>Observed</th><th>Display1_WaterLevel</th></tr></thead>
+        <tbody>
+          <tr><td>3.86</td><td>115.8</td><td>116</td><td>116</td></tr>
+          <tr><td>3.58</td><td>107.4</td><td>107</td><td>107</td></tr>
+          <tr class="hl"><td>0.00337</td><td>0.101</td><td>0.0997</td><td>0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tscroll reveal">
+      <table>
+        <thead><tr><th>Tank1_FlowMeter</th><th>Expected (×3)</th><th>Observed</th><th>Display2_FlowRate</th></tr></thead>
+        <tbody>
+          <tr><td>2.62</td><td>7.86</td><td>7.87</td><td>8</td></tr>
+          <tr><td>5.98</td><td>17.94</td><td>17.9</td><td>18</td></tr>
+          <tr class="hl"><td>6.22</td><td>18.66</td><td>18.7</td><td>19</td></tr>
+        </tbody>
+      </table>
+      <p class="tnote">Both transfer functions match to within display rounding across the full span. The highlighted rows are where the INT conversion is visible.</p>
+    </div>
+    <p class="reveal">
+      Each <code>FC_Scaling</code> instance also drives an <code>Input_Error</code> output.
+      <code>Error1</code>, <code>Error2</code> and <code>Error3</code> read FALSE throughout the
+      recording, confirming that no transmitter ever left its declared span — the range check
+      is part of the evidence, not an afterthought.
+    </p>
+
+    <div class="fig-grid">
+      <figure class="reveal">
+        <img src="../assets/plc/p07-tank-empty.jpg" alt="The Factory I/O process tank at the start of the run, empty, with the graduated level column reading near zero." loading="lazy" decoding="async">
+        <figcaption><span class="n">FIG 03</span>Start of run — tank empty, column at zero.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <img src="../assets/plc/p07-tank-full.jpg" alt="The same Factory I/O process tank filled with blue liquid, the graduated level column reading high, and the two panel displays showing the scaled level and flow values." loading="lazy" decoding="async">
+        <figcaption><span class="n">FIG 04</span>Filled — graduated column and both panel displays track together.</figcaption>
+      </figure>
+    </div>
+
+    <div class="callout reveal">
+      <div class="ctitle">Stated plainly</div>
+      <p>
+        <strong>This project is open-loop. There is no PID block, and none is claimed.</strong>
+        The operator closes the loop by watching the displays and turning the potentiometers.
+        That is the right starting point rather than a shortcut: a regulator tuned against a
+        mis-scaled transmitter will look perfectly stable and still hold the wrong setpoint.
+        The obvious extension is to drive <code>Tank1_FillValve</code> from the error between a
+        setpoint and <code>WaterLevel</code>, keeping the discharge valve as a manual
+        disturbance — and the scaling networks would carry over unchanged, which is the whole
+        point of separating signal conditioning from control.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Project 02 · Seal-In</div>
+    <h2 class="reveal">The smallest piece of memory in ladder logic.</h2>
+    <p class="reveal">
+      Drive a belt conveyor from a two-button station: a momentary <strong>Start</strong> must
+      latch the drive on, releasing it must not stop the belt, and <strong>Stop</strong> must
+      break the circuit at any time. Six BOOLs, two networks.
+    </p>
+
+    <figure class="reveal">
+      <video controls preload="none" playsinline
+        poster="../assets/plc/conveyor-poster.jpg"
+        aria-label="Screen recording of the conveyor project: the CODESYS ladder editor in online monitoring above the Factory I/O conveyor scene, with the live OPC tag table listing all six Boolean tags.">
+        <source src="../media/plc-conveyor.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 02</span>The run, end to end. The proof is in the tag table: <code>FIO_B</code> reads 0 while <code>FIO_C</code> stays 1. The latch is holding the drive, not the button.</figcaption>
+    </figure>
+    <div class="law reveal">C  := <span class="a">NOT</span> A <span class="a">AND</span> (B <span class="a">OR</span> C)                     <span class="c">— seal-in latch</span>
+CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span class="a">NOT</span> AA <span class="a">AND</span> BB)   <span class="c">— exclusive-OR</span></div>
+    <p class="reveal">
+      Three things are load-bearing here. The <code>C</code> contact in parallel with
+      <code>B</code> feeds the coil's own state back into the rung, so the latch — not the
+      button — holds the drive. <code>A</code> sits in series <em>ahead</em> of that parallel
+      block, so Stop can never be overridden by holding Start. And <code>A</code> is evaluated
+      through a normally-closed contact, mirroring real wiring practice: a broken wire to the
+      Stop button de-energises the rung rather than disabling the stop function.
+    </p>
+    <figure class="reveal">
+      <img src="../assets/plc/p02-ladder.png" alt="Two ladder networks in CODESYS online monitoring. Blue conductors indicate power flow and filled contacts are conducting; network one is sealed in through contact C, and network two is blocked because both exclusive-OR inputs are true." loading="lazy" decoding="async">
+      <figcaption><span class="n">FIG 05</span>Both networks in online monitoring. Blue conductors carry power, filled contacts are conducting. Network 1 is sealed in through <code>C</code>; network 2 is correctly blocked because both XOR inputs are TRUE.</figcaption>
+    </figure>
+    <p class="reveal">
+      The tag trace is the proof. <code>B</code> reads 0 in every sampled frame — the Start
+      press is momentary — yet <code>C</code> stays at 1 until <code>A</code> is asserted, at
+      which point the rung breaks. Meanwhile <code>CC</code> stays 0 throughout because
+      <code>AA</code> and <code>BB</code> are both 1, which is the correct XOR result.
+    </p>
+    <div class="tscroll reveal">
+      <table>
+        <thead><tr><th>Time in run</th><th>A</th><th>B</th><th>C</th><th>AA</th><th>BB</th><th>CC</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td>start</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td><td>idle, belt stopped</td></tr>
+          <tr class="hl"><td>after Start</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>latched on, Start already released</td></tr>
+          <tr><td>end</td><td>1</td><td>0</td><td>1→0</td><td>1</td><td>1</td><td>0</td><td>Stop asserted, rung breaks</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <img src="../assets/plc/p02-overview.jpg" alt="The full commissioning view for the conveyor project: the CODESYS ladder editor at top left, the Factory I/O conveyor scene, and the live OPC tag table at bottom right." loading="lazy" decoding="async">
+        <figcaption><span class="n">FIG 06</span>Ladder editor, Factory I/O scene, and the live OPC tag table together.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <img src="../assets/plc/p02-opc-tags.jpg" alt="An OPC quick-client tag table listing each item with its data type, live value, timestamp, quality and update count." loading="lazy" decoding="async">
+        <figcaption><span class="n">FIG 07</span>Rising update counts on <code>A</code> and <code>C</code> confirm the link is live, not cached.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Project 05 · Sequencing</div>
+    <h2 class="reveal">The routing decision cannot be computed from the current sensor vector.</h2>
+    <p class="reveal">
+      A pallet-handling line loads a box, measures its height, routes it down the left or right
+      lane, and tallies throughput on a panel display. Nineteen tags — eighteen BOOL plus a
+      <code>WORD</code> for the display — driving five <code>RS</code> latches and two
+      <code>CTUD</code> counters.
+    </p>
+
+    <figure class="reveal">
+      <video controls muted preload="none" playsinline
+        poster="../assets/plc/sorting-poster.jpg"
+        aria-label="Screen recording of the sorting project: the Factory I/O T-junction station running full sort cycles, with the OPC tag table for all nineteen tags visible top right.">
+        <source src="../media/plc-sorting.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 03</span>The run, end to end. Full sort cycles with the counter tallying on the lane exit sensors. <span class="tnote">(This recording has no audio track.)</span></figcaption>
+    </figure>
+    <figure class="reveal">
+      <img src="../assets/plc/p05-overview.jpg" alt="Overview of the Factory I/O sorting station: an entry conveyor with a pallet loader at top left, a T-junction with two transfer units at the centre, and left and right outfeed lanes." loading="lazy" decoding="async">
+      <figcaption><span class="n">FIG 08</span>The station — entry conveyor with pallet loader, T-junction with two transfer units, and the two outfeed lanes.</figcaption>
+    </figure>
+    <p class="reveal">
+      The height sensors sit <strong>upstream</strong> of the junction. By the time a pallet
+      reaches the diverter the beams have already cleared, so a live sensor read at the
+      junction would always fail. <code>RS_2</code> latches the classification at the moment of
+      measurement and holds it until the transfer completes — that latch, not the sensor, is
+      what makes the routing independent of conveyor speed.
+    </p>
+    <p class="reveal">
+      <code>RS</code> is the <strong>reset-dominant</strong> bistable: when Set and Reset are
+      asserted in the same scan, Reset wins. For a sorting station that is the safe polarity —
+      if a stop or emergency condition coincides with a set condition, the state clears rather
+      than latching a diverter on. Counting happens on the lane <strong>exit</strong> sensor
+      rather than the entry, so a pallet that stalls mid-transfer is never credited to the
+      total.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <img src="../assets/plc/p05-sorting.jpg" alt="Two pallets in the sorting station: one waiting on the entry conveyor and one already diverted into a lane." loading="lazy" decoding="async">
+        <figcaption><span class="n">FIG 09</span>Occupancy latches keep the entry conveyor from feeding a second item into an occupied junction.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <img src="../assets/plc/p05-control-panel.jpg" alt="The operator control panel with a red mushroom emergency stop, Start and Stop pushbuttons, a Reset button, a mode selector, and a digital display." loading="lazy" decoding="async">
+        <figcaption><span class="n">FIG 10</span>Operator panel — E-stop, Start, Stop, Reset, mode selector, and the counter display.</figcaption>
+      </figure>
+    </div>
+    <figure class="reveal">
+      <img src="../assets/plc/p05-opc-tags.jpg" alt="The OPC server tag table showing all nineteen items for the sorting station, each with type, value, quality and update count." loading="lazy" decoding="async">
+      <figcaption><span class="n">FIG 11</span>All 19 items live on the OPC server. Differing update counts separate the signals cycling with each pallet from the static operator inputs.</figcaption>
+    </figure>
+    <div class="callout reveal">
+      <div class="ctitle">Scope of the evidence</div>
+      <p>
+        Project 05's logic is documented from its online instance tree and observed behaviour.
+        The full ladder is not reproduced, because it was not shown in the recording — open
+        <code>Proj+05.project</code> in CODESYS for the authoritative source. The
+        <code>.project</code> files are saved in CODESYS's own container format, so they are
+        neither readable as text nor diff-friendly under version control.
+      </p>
+    </div>
+  </section>
+
+
+  <section>
+    <div class="sec-label reveal">Takeaways</div>
+    <h2 class="reveal">What these three establish.</h2>
+    <div class="tscroll reveal">
+      <table>
+        <thead><tr><th></th><th>Project 02</th><th>Project 05</th><th>Project 07</th></tr></thead>
+        <tbody>
+          <tr><td>Language</td><td>Ladder (LD)</td><td>Ladder (LD)</td><td>FBD</td></tr>
+          <tr><td>Problem class</td><td>Discrete + latch</td><td>Sequential handling</td><td>Analog conditioning</td></tr>
+          <tr><td>Signals</td><td>6 BOOL</td><td>18 BOOL + 1 WORD</td><td>6 REAL + 2 INT</td></tr>
+          <tr><td>Key constructs</td><td>Seal-in, NC stop, XOR</td><td>RS ×5, CTUD ×2</td><td>MOVE, FC_Scaling ×3, TO_INT ×2</td></tr>
+          <tr><td>Memory strategy</td><td>Coil self-seal</td><td>Reset-dominant bistables</td><td>Stateless per-scan transform</td></tr>
+          <tr><td>Validated by</td><td>Tag trace through latch</td><td>Sort cycles + counter tally</td><td>Numerical transfer-function check</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reveal">
+      <strong>Latching is the primitive.</strong> Project 02's seal-in and Project 05's
+      <code>RS</code> blocks are the same idea expressed two ways; choosing between them is a
+      readability decision, not a functional one — except for reset dominance, which
+      <code>RS</code> makes explicit and a seal contact leaves implicit in rung ordering.
+      <strong>Sequential logic needs memory placed at the point of measurement</strong>, because
+      a classification made metres upstream cannot be re-derived at the diverter.
+      <strong>Scaling is a first-class concern</strong> — most of the work in an analog loop
+      happens before any control law is applied, and it can and should be verified numerically
+      against live plant values. And <strong>simulation is what closes the loop on
+      correctness</strong>: every claim here is backed by numbers read off the running system,
+      not by a program that merely compiles.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">IEC 61131-3</span><span class="tag">CODESYS V3.5</span><span class="tag">Factory I/O</span>
+      <span class="tag">Ladder (LD)</span><span class="tag">Function Block Diagram</span><span class="tag">OPC DA / UA</span>
+      <span class="tag">Analog Scaling</span><span class="tag">RS Latches</span><span class="tag">CTUD Counters</span>
+      <span class="tag">HIL Simulation</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#projects">← All work</a>
+    <a href="micro820-plc.html">Micro820 CNC tool magazine →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+
+  /* ================= BACKGROUND: THE PROCESS TANK =================
+     A wireframe vessel filling and draining under the same two operator
+     potentiometers the real project has. The scene runs the project's actual
+     transfer functions every frame — FC_Scaling on the bipolar discharge demand,
+     then FC_Scaling + TO_INT for the level and flow readouts — so the numbers
+     glowing on the two panel displays are the ones the PLC would compute.
+  ================================================================= */
+  const canvas=document.getElementById('tankscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  camera.position.set(0,3.4,14);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o===undefined?0.6:o});
+  const FLOOR=-3.2;
+
+  const grid=new THREE.GridHelper(90,56,0x1c3a66,0x11223f);
+  grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
+  scene.add(grid);
+
+  /* The whole plant sits in a rig offset to one side, so the vessel frames the
+     column of text instead of sitting behind it. */
+  const rig=new THREE.Group();
+  rig.position.set(mobile?0.4:4.9, mobile?-1.4:-0.5, -2.4);
+  rig.scale.setScalar(mobile?0.6:0.78);
+  scene.add(rig);
+
+  /* ---- the vessel ---- */
+  const R=2.1, H=5.2, BASE=FLOOR+0.55;
+  const tank=new THREE.Group(); tank.position.set(0,BASE,0); rig.add(tank);
+  const shell=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,22,4,true),wire(DEEPBLUE,0.32));
+  shell.position.y=H/2; tank.add(shell);
+  const rim=c=>{const m=new THREE.Mesh(new THREE.TorusGeometry(R,0.045,6,26),wire(CYAN,0.4));m.rotation.x=Math.PI/2;return m;};
+  const rimTop=rim(); rimTop.position.y=H; tank.add(rimTop);
+  const rimBot=rim(); rimBot.position.y=0; tank.add(rimBot);
+  /* skid frame */
+  [[R*0.78,R*0.78],[R*0.78,-R*0.78],[-R*0.78,R*0.78],[-R*0.78,-R*0.78]].forEach(([x,z])=>{
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.55,0.12),wire(DEEPBLUE,0.3));
+    leg.position.set(x,-0.28,z); tank.add(leg);
+  });
+
+  /* ---- liquid: a disc that rises, plus a wall band so the column reads from any angle ---- */
+  const liquid=new THREE.Mesh(new THREE.CylinderGeometry(R*0.97,R*0.97,0.04,22),
+    new THREE.MeshBasicMaterial({color:CYAN,transparent:true,opacity:0.20,side:THREE.DoubleSide}));
+  tank.add(liquid);
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(R*0.965,R*0.965,1,22,1,true),
+    new THREE.MeshBasicMaterial({color:CYAN,transparent:true,opacity:0.07,side:THREE.DoubleSide}));
+  tank.add(band);
+
+  /* ---- graduated sight column beside the shell ---- */
+  const colX=R+0.42;
+  const colBar=new THREE.Mesh(new THREE.BoxGeometry(0.05,H,0.05),wire(CYAN,0.28));
+  colBar.position.set(colX,H/2,0); tank.add(colBar);
+  const ticks=[];
+  for(let i=0;i<=10;i++){
+    const major=i%5===0;
+    const t=new THREE.Mesh(new THREE.BoxGeometry(major?0.34:0.2,0.03,0.03),wire(major?AMBER:CYAN,0.32));
+    t.position.set(colX+(major?0.17:0.10),H*i/10,0); tank.add(t); ticks.push(t);
+  }
+  const float=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,6),wire(AMBER,0.7));
+  float.position.x=colX; tank.add(float);
+
+  /* ---- valves: fill on top, discharge at the base. Aperture opens with demand. ---- */
+  function valve(){
+    const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.34,10),wire(AMBER,0.42));
+    body.rotation.z=Math.PI/2; g.add(body);
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.42,6),wire(AMBER,0.42));
+    stem.position.y=0.32; g.add(stem);
+    const hand=new THREE.Mesh(new THREE.TorusGeometry(0.19,0.028,5,14),wire(AMBER,0.5));
+    hand.rotation.x=Math.PI/2; hand.position.y=0.54; g.add(hand);
+    g.userData.hand=hand;
+    return g;
+  }
+  const fillV=valve(); fillV.position.set(-R-0.9,H-0.35,0); tank.add(fillV);
+  const dischV=valve(); dischV.position.set(R+1.5,0.5,0); tank.add(dischV);
+  /* pipe runs */
+  const pipe=(x1,y1,x2,y2)=>{
+    const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x1,y1,0),new THREE.Vector3(x2,y2,0)]);
+    return new THREE.Line(g,new THREE.LineBasicMaterial({color:DEEPBLUE,transparent:true,opacity:0.34}));
+  };
+  tank.add(pipe(-R-0.9,H-0.35,-R+0.1,H-0.35));
+  tank.add(pipe(R+1.5,0.5,R+1.5,0.15));
+  tank.add(pipe(R+1.5,0.15,R-0.1,0.15));
+
+  /* ---- flow particles: down the fill spout, out the discharge ---- */
+  function stream(n){
+    const p=new Float32Array(n*3);
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    const pts=new THREE.Points(g,new THREE.PointsMaterial({color:CYAN,size:0.08,transparent:true,opacity:0.5}));
+    tank.add(pts);
+    return {pts,p,g,n,ph:new Float32Array(n).map(()=>Math.random())};
+  }
+  const NIN=mobile?26:52, NOUT=mobile?20:40;
+  const inflow=stream(NIN), outflow=stream(NOUT);
+
+  /* ---- two panel displays, drawn to a canvas texture ---- */
+  function panel(w,h){
+    const c=document.createElement('canvas'); c.width=256; c.height=128;
+    const tex=new THREE.CanvasTexture(c);
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+      new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.72,side:THREE.DoubleSide}));
+    return {mesh:m,ctx:c.getContext('2d'),tex};
+  }
+  const disp1=panel(2.0,1.0), disp2=panel(2.0,1.0);
+  disp1.mesh.position.set(-R-2.9,BASE+4.3,0.5); disp1.mesh.rotation.y=0.42; rig.add(disp1.mesh);
+  disp2.mesh.position.set(-R-2.9,BASE+3.0,0.5); disp2.mesh.rotation.y=0.42; rig.add(disp2.mesh);
+  function draw(d,label,val,unit){
+    const x=d.ctx;
+    x.clearRect(0,0,256,128);
+    x.fillStyle='rgba(6,10,20,0.82)'; x.fillRect(0,0,256,128);
+    x.strokeStyle='rgba(140,170,220,0.35)'; x.lineWidth=2; x.strokeRect(1,1,254,126);
+    x.fillStyle='#8a9ab5'; x.font='500 17px "IBM Plex Mono",monospace';
+    x.fillText(label,14,30);
+    x.fillStyle='#4fd8e8'; x.font='700 54px "Space Grotesk",sans-serif';
+    x.fillText(String(val),14,92);
+    x.fillStyle='#f5a35c'; x.font='500 17px "IBM Plex Mono",monospace';
+    x.fillText(unit,14,116);
+    d.tex.needsUpdate=true;
+  }
+
+  /* ---- ambient dust ---- */
+  const PC=mobile?400:1000;
+  const pp=new Float32Array(PC*3);
+  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*54;pp[i*3+1]=(Math.random()-0.5)*24;pp[i*3+2]=(Math.random()-0.5)*28;}
+  const pg=new THREE.BufferGeometry();
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+
+  /* ================= the project's own maths =================
+     FC_Scaling is a straight linear map with an out-of-range flag; TO_INT
+     rounds to nearest. Both are reproduced exactly as the FBD uses them.    */
+  function FC_Scaling(input,iMin,iMax,oMin,oMax){
+    const err = input<iMin || input>iMax;
+    const v = (input-iMin)/(iMax-iMin)*(oMax-oMin)+oMin;
+    return {v:Math.min(Math.max(v,oMin),oMax), err};
+  }
+  const TO_INT = v => Math.round(v);
+
+  let level=0.6;            // tank level, 0 … 10 (what Tank1_LevelMeter reads)
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+
+  const clock=new THREE.Clock();
+  let last=0;
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    const dt=Math.min(t-last,0.05); last=t;
+
+    if(!reduced){
+      /* the two operator potentiometers, swept slowly out of phase */
+      const Pot1_Fill      = 5 + Math.sin(t*0.21)*5;        // 0 … 10
+      const Pot2_Discharge = Math.sin(t*0.15+2.1)*5;        // −5 … +5, centre detent
+
+      /* NETWORK 1 — MOVE: fill demand straight through to the valve */
+      const Tank1_FillValve = Pot1_Fill;
+      /* NETWORK 2 — FC_Scaling: bipolar demand onto unipolar valve travel */
+      const disch = FC_Scaling(Pot2_Discharge,-5,5,0,10);
+      const Tank1_DischargeValve = disch.v;
+
+      /* plant: level integrates the difference between the two valve flows */
+      level += (Tank1_FillValve*0.055 - Tank1_DischargeValve*0.052)*dt;
+      level = Math.min(Math.max(level,0),10);
+      const Tank1_LevelMeter = level;
+      const Tank1_FlowMeter  = Math.min(Tank1_FillValve,10);
+
+      /* NETWORKS 3 & 4 — FC_Scaling → TO_INT for the two panel displays */
+      const lvl = FC_Scaling(Tank1_LevelMeter,0,10,0,300);
+      const flw = FC_Scaling(Tank1_FlowMeter,0,10,0,30);
+      const Display1_WaterLevel = TO_INT(lvl.v);
+      const Display2_FlowRate   = TO_INT(flw.v);
+
+      /* --- render the process state --- */
+      const h=Math.max(level/10*H,0.02);
+      liquid.position.y=h;
+      band.scale.y=h; band.position.y=h/2;
+      float.position.y=h;
+
+      fillV.userData.hand.rotation.z  = t*Tank1_FillValve*0.5;
+      dischV.userData.hand.rotation.z = -t*Tank1_DischargeValve*0.5;
+
+      /* inflow falls from the spout to the surface; outflow leaves the base */
+      const inRate=Tank1_FillValve/10, outRate=Tank1_DischargeValve/10;
+      for(let i=0;i<inflow.n;i++){
+        inflow.ph[i]=(inflow.ph[i]+dt*(0.25+inRate*0.85))%1;
+        const k=inflow.ph[i];
+        inflow.p[i*3]   = -R+0.1 + k*(R-0.1)*0.98;
+        inflow.p[i*3+1] = H-0.35 - k*k*(H-0.35-h);
+        inflow.p[i*3+2] = (i%5-2)*0.07;
+      }
+      inflow.g.attributes.position.needsUpdate=true;
+      inflow.pts.material.opacity=0.10+inRate*0.4;
+      for(let i=0;i<outflow.n;i++){
+        outflow.ph[i]=(outflow.ph[i]+dt*(0.2+outRate*0.9))%1;
+        const k=outflow.ph[i];
+        outflow.p[i*3]   = R-0.1 + k*2.0;
+        outflow.p[i*3+1] = 0.15 - k*k*0.5;
+        outflow.p[i*3+2] = (i%5-2)*0.06;
+      }
+      outflow.g.attributes.position.needsUpdate=true;
+      outflow.pts.material.opacity=0.08+outRate*0.4;
+
+      /* an out-of-range input would light the tick marks amber — it never does */
+      const bad = lvl.err||flw.err||disch.err;
+      ticks.forEach(tk=>{ tk.material.color.setHex(bad?AMBER:tk.material.color.getHex()); });
+
+      if(t-Math.floor(t*6)/6 < dt){   // ~6 Hz display refresh, like a real panel
+        draw(disp1,'DISPLAY1_WATERLEVEL',Display1_WaterLevel,'0 – 300');
+        draw(disp2,'DISPLAY2_FLOWRATE',Display2_FlowRate,'0 – 30');
+      }
+    }
+
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.6)*14+mx*1.8;
+    camera.position.z=Math.cos(d*0.6)*14;
+    camera.position.y=3.4-Math.min(d*1.6,3.2);
+    camera.lookAt(rig.position.x*0.5,BASE+2.2,0);
+    renderer.render(scene,camera);
+  }
+  draw(disp1,'DISPLAY1_WATERLEVEL',0,'0 – 300');
+  draw(disp2,'DISPLAY2_FLOWRATE',0,'0 – 30');
+  animate();
+})();
+</script>
+</body>
+</html>
