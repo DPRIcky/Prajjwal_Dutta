@@ -209,6 +209,91 @@
   .reveal.in{opacity:1;transform:none;}
   .reveal.d1{transition-delay:.12s}.reveal.d2{transition-delay:.24s}.reveal.d3{transition-delay:.36s}
 
+  /* =========================================================
+     MOTION LAYER
+     Heading word-splits, clip wipes, cursor glow, press states.
+     Every rule here is neutralised in the prefers-reduced-motion
+     block at the bottom of this stylesheet — keep that in sync.
+     ========================================================= */
+
+  /* --- staggered word reveal: each word rides up out of its own clip box --- */
+  .reveal.split{opacity:1;transform:none;transition:none;}
+  .split .w{display:inline-block;overflow:hidden;vertical-align:top;
+    padding-bottom:0.16em;margin-bottom:-0.16em;}
+  .split .w > i{display:inline-block;font-style:inherit;transform:translateY(115%);
+    transition:transform .95s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0s);}
+  .split.in .w > i{transform:none;}
+
+  /* --- left-to-right wipe for section labels and lede copy ---
+     Masked, not clipped, on purpose: clip-path collapses the element's
+     intersection rectangle to zero width, so the IntersectionObserver
+     that is supposed to reveal it never fires. A mask is paint-only and
+     leaves IO geometry alone. JS drops the class once the wipe finishes
+     so body copy is not left permanently composited behind a mask. */
+  .reveal.wipe{
+    -webkit-mask-image:linear-gradient(90deg,#000 0 100%);mask-image:linear-gradient(90deg,#000 0 100%);
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    -webkit-mask-size:0% 100%;mask-size:0% 100%;}
+  .reveal.wipe.in{
+    -webkit-mask-size:100% 100%;mask-size:100% 100%;
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1),
+               -webkit-mask-size 1.15s cubic-bezier(.16,1,.3,1),
+               mask-size 1.15s cubic-bezier(.16,1,.3,1);}
+
+  /* --- cursor-tracked glow on cards ---
+     --glow is registered so it can be transitioned; the highlight rides in
+     background-image so it always paints under the card's own text. */
+  @property --glow{syntax:'<number>';inherits:false;initial-value:0;}
+  .project,.gcard,.skill-card,.ra-card{--mx:50%;--my:0%;--glow:0;}
+  .project{
+    background-image:
+      radial-gradient(460px circle at var(--mx) var(--my),rgba(79,216,232,calc(0.13*var(--glow,0))),transparent 62%),
+      linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+    transition:border-color .35s,transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s,--glow .45s;}
+  .project:hover{--glow:1;transform:translateY(-4px);box-shadow:0 18px 50px rgba(3,7,16,0.55);}
+  .ra-card{
+    background-image:
+      radial-gradient(460px circle at var(--mx) var(--my),rgba(245,163,92,calc(0.10*var(--glow,0))),transparent 62%),
+      linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+    transition:border-color .35s,--glow .45s;}
+  .ra-card:hover{--glow:1;border-color:rgba(245,163,92,0.30);}
+  .gcard{
+    background-image:radial-gradient(340px circle at var(--mx) var(--my),rgba(245,163,92,calc(0.12*var(--glow,0))),transparent 60%);
+    transition:border-color .3s,transform .3s cubic-bezier(.16,1,.3,1),box-shadow .3s,--glow .4s;}
+  .gcard:hover{--glow:1;transform:translateY(-4px);box-shadow:0 16px 40px rgba(3,7,16,0.5);}
+  .skill-card{
+    background-image:radial-gradient(320px circle at var(--mx) var(--my),rgba(79,216,232,calc(0.10*var(--glow,0))),transparent 60%);
+    transition:border-color .3s,transform .3s cubic-bezier(.16,1,.3,1),--glow .4s;}
+  .skill-card:hover{--glow:1;border-color:rgba(79,216,232,0.30);transform:translateY(-2px);}
+
+  /* --- nav underline sweeps in from the left, out to the right --- */
+  .nav-links a{position:relative;padding-bottom:3px;}
+  .nav-links a::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:var(--cyan);transform:scaleX(0);transform-origin:100% 50%;
+    transition:transform .45s cubic-bezier(.16,1,.3,1);}
+  .nav-links a:hover::after,.nav-links a:focus-visible::after{transform:scaleX(1);transform-origin:0 50%;}
+
+  /* --- press / hover feedback --- */
+  .btn{transition:background .25s,color .25s,box-shadow .25s,transform .2s cubic-bezier(.16,1,.3,1);}
+  .btn:hover{transform:translateY(-2px);}
+  .lb-sm{transition:border-color .25s,color .25s,transform .2s;}
+  .btn:active,.reel-cta:active,.vbadge:active,.lb-sm:active,.icon-link:active{
+    transform:translateY(1px) scale(.985);}
+  .pub{transition:border-color .3s,transform .3s cubic-bezier(.16,1,.3,1);}
+  .pub:hover{transform:translateX(4px);}
+
+  /* counters must not reflow the layout while they tick */
+  .hstat b,.metric b{font-variant-numeric:tabular-nums;}
+
+  /* --- label chip for whichever 3D object the cursor is near --- */
+  #focusTag{position:fixed;left:0;top:0;z-index:5;pointer-events:none;
+    transform:translate3d(var(--x,0px),var(--y,0px),0) translate(-50%,-150%);
+    font-family:var(--mono);font-size:0.56rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--cyan);background:rgba(6,10,20,0.70);backdrop-filter:blur(6px);
+    border:1px solid rgba(79,216,232,0.35);border-radius:999px;padding:0.34rem 0.72rem;
+    white-space:nowrap;opacity:0;transition:opacity .28s ease;}
+  #focusTag.on{opacity:1;}
+
   /* ---------- inline video previews on the cards ---------- */
   .thumb-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
     opacity:0;z-index:1;transition:opacity .35s ease;background:var(--deep);}
@@ -325,6 +410,17 @@
     .pthumb::before,.gthumb::before{display:none;}
     .thumb-vid{transition:none;}
     .lb,.lb-box{transition:none;}
+    /* motion layer off — note .project/.ra-card must keep their gradient,
+       it is their only background (the shorthand leaves background-color transparent) */
+    .split .w > i{transform:none;transition:none;}
+    .reveal.wipe,.reveal.wipe.in{-webkit-mask-image:none;mask-image:none;transition:none;}
+    .project,.ra-card{background-image:linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));}
+    .gcard,.skill-card{background-image:none;}
+    .project,.gcard,.skill-card,.ra-card,.btn,.lb-sm,.pub{transition:border-color .01ms;}
+    .project:hover,.gcard:hover,.skill-card:hover,.btn:hover,.pub:hover,
+    .btn:active,.reel-cta:active,.vbadge:active,.lb-sm:active,.icon-link:active{transform:none;}
+    .nav-links a::after{transition:none;}
+    #focusTag{display:none;}
   }
 </style>
 </head>
@@ -332,6 +428,7 @@
 
 <canvas id="roboscene"></canvas>
 <div class="vignette"></div>
+<div id="focusTag" aria-hidden="true"></div>
 
 <nav>
   <a class="nav-mark" href="#top"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
@@ -1000,17 +1097,157 @@
 })();
 </script>
 
+<script>
+/* =========================================================
+   UI MOTION LAYER
+   1. scroll reveals — headings split into per-word clip boxes
+      that ride up on a stagger, labels and lede copy wipe in
+   2. numeric stats count up when they enter the viewport
+   3. cards carry a cursor-tracked glow
+
+   All of it is inert under prefers-reduced-motion: the split
+   never happens, the wipe class is never added, counters land
+   on their final value, and the glow listeners are not bound.
+   ========================================================= */
+(function(){
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fine    = matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  /* ---------- 1a. split headings into per-word clip boxes ----------
+     Walks text nodes only, so inline markup inside a heading
+     (h1's .glow span, the contact h2's <br>) survives intact.     */
+  function split(el){
+    let n = 0;
+    (function walk(node){
+      // snapshot: we replace children as we go
+      Array.from(node.childNodes).forEach(child=>{
+        if(child.nodeType === 3){
+          if(!child.textContent.trim()) return;
+          const frag = document.createDocumentFragment();
+          child.textContent.split(/(\s+)/).forEach(part=>{
+            if(!part) return;
+            if(/^\s+$/.test(part)){            // keep real spaces as text
+              frag.appendChild(document.createTextNode(part));
+              return;
+            }
+            const w = document.createElement('span');
+            w.className = 'w';
+            const inner = document.createElement('i');
+            inner.textContent = part;
+            inner.style.setProperty('--d', (n++ * 0.045).toFixed(3) + 's');
+            w.appendChild(inner);
+            frag.appendChild(w);
+          });
+          node.replaceChild(frag, child);
+        } else if(child.nodeType === 1){
+          walk(child);
+        }
+      });
+    })(el);
+    if(n) el.classList.add('split');
+  }
+
+  if(!reduced){
+    document.querySelectorAll('h1, h2').forEach(split);
+    document.querySelectorAll('.sec-label, .lede, .eyebrow, .archive-note')
+      .forEach(el=>el.classList.add('wipe'));
+  }
+
+  /* ---------- 1b. reveal observer ---------- */
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      const el = e.target;
+      el.classList.add('in');
+      io.unobserve(el);
+      // drop the mask once the wipe has played out — see the CSS note
+      if(el.classList.contains('wipe')){
+        setTimeout(()=>el.classList.remove('wipe'), 1500);
+      }
+    });
+  },{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* ---------- 2. count-up on numeric stats ----------
+     Strict pattern: a non-alphanumeric prefix, then the number.
+     "96%", "1.28 m", "<100 ms", "3.5×" all match; "IROS '26" and
+     "Altium" do not, so they are left exactly as authored.      */
+  const NUM = /^([^0-9A-Za-z]*)([0-9][0-9,]*(?:\.[0-9]+)?)(.*)$/;
+
+  function countUp(el){
+    const m = el.textContent.trim().match(NUM);
+    if(!m) return;
+    const pre = m[1], numStr = m[2], post = m[3];
+    const target = parseFloat(numStr.replace(/,/g, ''));
+    if(!isFinite(target)) return;
+    const dec = (numStr.split('.')[1] || '').length;
+    const group = dec === 0 && numStr.indexOf(',') >= 0;
+    const fmt = v=>{
+      let s = v.toFixed(dec);
+      if(group) s = s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return pre + s + post;
+    };
+    const DUR = 1100, t0 = performance.now();
+    el.textContent = fmt(0);
+    (function step(now){
+      const k = Math.min(1, (now - t0) / DUR);
+      el.textContent = k < 1
+        ? fmt(target * (1 - Math.pow(1 - k, 4)))   // easeOutQuart
+        : pre + numStr + post;                     // land on the source text exactly
+      if(k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  const stats = document.querySelectorAll('.hstat b, .metric b');
+  if(reduced){
+    /* nothing to do — the authored values are already in the DOM */
+  }else{
+    const cio = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(!e.isIntersecting) return;
+        cio.unobserve(e.target);
+        countUp(e.target);
+      });
+    },{threshold:0.6});
+    stats.forEach(el=>cio.observe(el));
+  }
+
+  /* ---------- 3. cursor-tracked card glow ----------
+     One rect read on pointerenter, reused for every move; the write
+     is coalesced into a single rAF so a fast sweep across a card
+     cannot queue more style writes than there are frames.          */
+  if(!reduced && fine){
+    let stale = false;
+    const markStale = ()=>{ stale = true; };
+    addEventListener('scroll', markStale, {passive:true});
+    addEventListener('resize', markStale, {passive:true});
+
+    document.querySelectorAll('.project, .gcard, .skill-card, .ra-card').forEach(card=>{
+      let rect = null, raf = 0, cx = 0, cy = 0;
+      const write = ()=>{
+        raf = 0;
+        card.style.setProperty('--mx', cx + 'px');
+        card.style.setProperty('--my', cy + 'px');
+      };
+      card.addEventListener('pointerenter', ()=>{
+        rect = card.getBoundingClientRect(); stale = false;
+      }, {passive:true});
+      card.addEventListener('pointermove', e=>{
+        if(!rect || stale){ rect = card.getBoundingClientRect(); stale = false; }
+        cx = e.clientX - rect.left;
+        cy = e.clientY - rect.top;
+        if(!raf) raf = requestAnimationFrame(write);
+      }, {passive:true});
+    });
+  }
+})();
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = innerWidth < 700;
-
-  /* ---------- scroll reveals ---------- */
-  const io = new IntersectionObserver(entries=>{
-    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
-  },{threshold:0.12});
-  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
   /* ================= ROBOTICS SCENE =================
      Layers:
@@ -1266,32 +1503,293 @@
   const dust = new THREE.Points(pGeo, pMat);
   scene.add(dust);
 
-  /* ---------- interaction + loop ---------- */
-  let targetScroll=0, smooth=0, mx=0, my=0;
-  addEventListener('scroll', ()=>{ targetScroll = window.scrollY; }, {passive:true});
-  addEventListener('mousemove', e=>{
-    mx=(e.clientX/innerWidth-0.5); my=(e.clientY/innerHeight-0.5);
+  /* =========================================================
+     5. INTERACTION
+     Pointer and scroll handlers only ever *write* a number.
+     Nothing is smoothed, projected, or rendered here — that all
+     happens once per frame in animate(), so a fast mousemove or
+     a momentum scroll can never queue more work than there are
+     frames, and nothing reads layout inside an event.
+     ========================================================= */
+  let scrollTarget = window.scrollY;
+  addEventListener('scroll', ()=>{ scrollTarget = window.scrollY; }, {passive:true});
+
+  let ptrNX = 0, ptrNY = 0;        // pointer, normalised −0.5..0.5 — the targets
+  let smNX  = 0, smNY  = 0;        // damped values the camera actually uses
+  let ptrX = -1e5, ptrY = -1e5;    // pointer in CSS px, for 3D-object proximity
+  let overUI = false;              // cursor is over a card/nav — suppress object focus
+
+  addEventListener('pointermove', e=>{
+    if(e.pointerType && e.pointerType !== 'mouse') return;  // no parallax lurch on touch
+    ptrX = e.clientX; ptrY = e.clientY;
+    ptrNX = e.clientX / innerWidth  - 0.5;
+    ptrNY = e.clientY / innerHeight - 0.5;
+    overUI = !!(e.target && e.target.closest &&
+      e.target.closest('.project,.gcard,.skill-card,.ra-card,nav,.lb,footer,.reel-cta'));
   }, {passive:true});
-  addEventListener('resize', ()=>{
-    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+
+  function ptrOut(){ ptrNX = ptrNY = 0; ptrX = ptrY = -1e5; overUI = false; }
+  addEventListener('pointerleave', ptrOut, {passive:true});
+  addEventListener('blur', ptrOut);
+
+  /* =========================================================
+     6. CAMERA RIG — one continuous flight through the scene
+     Each shot is pinned to where a real section sits in the
+     document, so the camera arrives somewhere as you arrive at
+     the copy, instead of orbiting on a magic scroll constant.
+     ========================================================= */
+  const SHOTS = [
+    // section          camera position        look-at              swarm formation
+    {sel:'.hero',     pos:[  0.0, 2.2, 15.0], look:[ 0.0, 0.6,  0.0], form:'free'},
+    {sel:'#about',    pos:[ -6.0, 3.6, 12.5], look:[-1.5, 1.4, -1.0], form:'free'},
+    {sel:'#research', pos:[-12.5, 4.2,  7.0], look:[-8.0, 2.0, -5.0], form:'ring'},
+    {sel:'#work',     pos:[ -2.0,-0.6, 10.5], look:[-5.0,-3.2,  1.0], form:'lattice'},
+    {sel:'#projects', pos:[  9.5, 0.6,  8.0], look:[ 8.5,-1.6, -2.5], form:'shell'},
+    {sel:'#skills',   pos:[  0.0, 7.5, 13.0], look:[ 0.0, 1.0, -2.0], form:'plane'},
+    {sel:'#contact',  pos:[  0.0, 2.0, 18.0], look:[ 0.0, 3.0, -4.0], form:'vee'}
+  ];
+  const shots = SHOTS.filter(s=>document.querySelector(s.sel));
+  shots.forEach(s=>{ s.el = document.querySelector(s.sel); s.at = 0; });
+
+  /* Where along the page each shot peaks. Measured, never guessed —
+     and re-measured on resize because reflow moves every section. */
+  function measureShots(){
+    const h = innerHeight;
+    shots.forEach(s=>{
+      const r = s.el.getBoundingClientRect();
+      s.at = Math.max(0, (r.top + window.scrollY) + r.height * 0.5 - h * 0.5);
+    });
+    shots[0].at = 0;
+    for(let i=1;i<shots.length;i++){
+      if(shots[i].at <= shots[i-1].at) shots[i].at = shots[i-1].at + 1;
+    }
+  }
+  measureShots();
+  // fonts and lazy images land after first paint and shift the page
+  addEventListener('load', measureShots);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(measureShots);
+
+  const smoothstep = x => x*x*(3-2*x);
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+
+  const tgtPos  = new THREE.Vector3().fromArray(shots[0].pos);
+  const tgtLook = new THREE.Vector3().fromArray(shots[0].look);
+  const curPos  = tgtPos.clone();
+  const curLook = tgtLook.clone();
+  const scratch = new THREE.Vector3();
+  let segI = 0, segT = 0;          // which leg of the flight, and how far along it
+
+  function sampleRig(y){
+    let i = shots.length - 1;
+    while(i > 0 && y < shots[i].at) i--;
+    const a = shots[i], b = shots[Math.min(i+1, shots.length-1)];
+    segI = i;
+    segT = (b === a) ? 1 : Math.min(1, Math.max(0, (y - a.at) / (b.at - a.at)));
+    const k = smoothstep(segT);
+    tgtPos .fromArray(a.pos ).lerp(scratch.fromArray(b.pos ), k);
+    tgtLook.fromArray(a.look).lerp(scratch.fromArray(b.look), k);
+  }
+
+  /* =========================================================
+     7. OBJECT FOCUS — the machines react to the cursor
+     Screen-space proximity rather than a raycast: wireframes are
+     mostly empty space, so a ray misses far more often than the
+     eye says it should. Projecting the centre and measuring pixel
+     distance gives a soft falloff and costs one project() each.
+     ========================================================= */
+  function wireMats(root){
+    const out = [];
+    root.traverse(o=>{
+      if(o.material && o.material.wireframe){
+        out.push({m:o.material, o0:o.material.opacity, c0:o.material.color.clone()});
+      }
+    });
+    return out;
+  }
+  const HI = new THREE.Color(0x9df3ff);
+  const FOCUS = [
+    {obj:arm,   c:[0, 2.5, 0], rk:1.05, label:'Manipulator · visual servoing'},
+    {obj:drone, c:[0, 0.0, 0], rk:0.75, label:'Quadrotor · patrol'},
+    {obj:rover, c:[0, 0.5, 0], rk:0.85, label:'Rover · LiDAR + A*'},
+    {obj:blimp, c:[0, 0.0, 0], rk:1.00, label:'Blimp · AeroFusion'},
+    {obj:tower, c:[0, 2.6, 0], rk:0.85, label:'Comms uplink · connectivity'}
+  ];
+  FOCUS.forEach(f=>{
+    f.mats = wireMats(f.obj);
+    f.s0 = f.obj.scale.x;
+    f.f = 0;                       // damped focus weight, 0..1
+    f.sx = 0; f.sy = 0;            // last projected screen position
+    f.on = false;
   });
+  const focusTag = document.getElementById('focusTag');
+  let taggedIdx = -1;
+
+  function updateFocus(dt){
+    const R = Math.min(innerWidth, innerHeight) * 0.20;
+    let best = -1, bestF = 0.34;   // must beat this before the chip appears
+
+    for(let i=0;i<FOCUS.length;i++){
+      const f = FOCUS[i];
+      scratch.set(f.c[0], f.c[1], f.c[2]).multiplyScalar(f.s0).add(f.obj.position);
+      scratch.project(camera);
+      const behind = scratch.z > 1;
+      f.sx = ( scratch.x * 0.5 + 0.5) * innerWidth;
+      f.sy = (-scratch.y * 0.5 + 0.5) * innerHeight;
+
+      let want = 0;
+      if(!behind && !overUI && ptrX > -1e4){
+        const dx = ptrX - f.sx, dy = ptrY - f.sy;
+        const d  = Math.sqrt(dx*dx + dy*dy) / (R * f.rk);
+        want = d >= 1 ? 0 : 1 - smoothstep(d);
+      }
+      f.f += (want - f.f) * damp(0.12, dt);
+
+      if(f.f > 0.002 || f.on){
+        const g = f.f;
+        f.on = f.f > 0.002;
+        for(let j=0;j<f.mats.length;j++){
+          const e = f.mats[j];
+          e.m.opacity = Math.min(1, e.o0 * (1 + 0.62*g));
+          e.m.color.copy(e.c0).lerp(HI, 0.55*g);
+        }
+        f.obj.scale.setScalar(f.s0 * (1 + 0.045*g));
+      }
+      if(f.f > bestF){ bestF = f.f; best = i; }
+    }
+
+    if(!focusTag) return;
+    if(best !== taggedIdx){
+      taggedIdx = best;
+      if(best >= 0) focusTag.textContent = FOCUS[best].label;
+      focusTag.classList.toggle('on', best >= 0);
+    }
+    if(best >= 0){
+      focusTag.style.setProperty('--x', FOCUS[best].sx.toFixed(1) + 'px');
+      focusTag.style.setProperty('--y', FOCUS[best].sy.toFixed(1) + 'px');
+    }
+  }
+
+  /* =========================================================
+     8. SWARM FORMATIONS
+     Instead of the swarm popping between backgrounds, each shot
+     names a formation and the agents are pulled toward a blend of
+     the two flanking it — so the reorganisation happens *during*
+     the scroll between sections, not at a boundary.
+     ========================================================= */
+  const PHI = Math.PI * (1 + Math.sqrt(5));
+  function formation(name, i, t, out){
+    switch(name){
+      case 'ring': {                       // orbit — connectivity loop
+        const a = i/N*Math.PI*2 + t*0.10, R = 7.4 + (i%3)*0.9;
+        out.set(Math.cos(a)*R, 1.5 + Math.sin(a*3 + t*0.4)*1.1, Math.sin(a)*R*0.55);
+        break; }
+      case 'lattice': {                    // ranked grid — a fleet on station
+        const c = i%8, r = Math.floor(i/8);
+        out.set((c-3.5)*2.6, 1.5 + (r-2.5)*1.9, -2.0 + Math.sin(t*0.3 + i)*0.4);
+        break; }
+      case 'shell': {                      // fibonacci sphere — full coverage
+        const k = (i+0.5)/N, ph = Math.acos(1-2*k), th = PHI*i + t*0.15, R = 6.2;
+        out.set(Math.sin(ph)*Math.cos(th)*R, 1.5 + Math.cos(ph)*R*0.55, Math.sin(ph)*Math.sin(th)*R*0.7);
+        break; }
+      case 'plane': {                      // flat sweep grid
+        const cols = Math.ceil(Math.sqrt(N)), c = i%cols, r = Math.floor(i/cols);
+        out.set((c-(cols-1)/2)*3.0, 1.5 + Math.sin(t*0.5 + i*0.4)*0.35, (r-(cols-1)/2)*2.6);
+        break; }
+      case 'vee': {                        // formation flight, heading away
+        const s = (i%2) ? 1 : -1, k = Math.floor(i/2);
+        out.set(s*(1 + k*0.42), 1.5 + k*0.16 - 1.8, 6.0 - k*0.42);
+        break; }
+      default: return false;               // 'free' — pure flow field
+    }
+    return true;
+  }
+  const FA = new THREE.Vector3(), FB = new THREE.Vector3(), FT = new THREE.Vector3();
+  const R2_COMM = R_COMM * R_COMM;
+
+  /* =========================================================
+     9. LOOP
+     ========================================================= */
+  function resize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    measureShots();
+    if(reduced) drawStill();
+  }
+  addEventListener('resize', resize, {passive:true});
   renderer.setSize(innerWidth, innerHeight);
 
+  function drawStill(){
+    camera.position.fromArray(shots[0].pos);
+    camera.lookAt(scratch.fromArray(shots[0].look));
+    renderer.render(scene, camera);
+  }
+
+  /* Reduced motion: no flight, no parallax, no rAF at all — the scene
+     is composed once as a still and only redrawn if the window changes. */
+  if(reduced){
+    drawStill();
+    return;
+  }
+
   const clock = new THREE.Clock();
+  let t = 0;                                 // our own clock, so a hidden tab
+  let frames = 0, probe = 0, tuned = false;  // cannot jump the animation forward
 
   function animate(){
     requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
 
-    if(!reduced){
-      /* swarm dynamics: flow field + gentle cohesion + separation */
+    /* clamped dt: a backgrounded tab resumes where it paused instead of
+       fast-forwarding through however many seconds it was hidden for */
+    const dt = Math.min(clock.getDelta(), 0.05);
+    // nothing to render for: hidden tab, or the video lightbox is covering
+    // the canvas. Bailing before t advances freezes the scene rather than
+    // letting it run on unseen and jump when it comes back.
+    if(document.hidden || document.body.classList.contains('lb-lock')) return;
+    t += dt;
+
+    /* one-time quality probe — if this machine cannot hold 45 fps at
+       DPR 2, drop to 1 rather than shipping a stuttering background */
+    if(!tuned){
+      frames++; probe += dt;
+      if(probe > 2.5){
+        tuned = true;
+        if(frames/probe < 45 && renderer.getPixelRatio() > 1){
+          renderer.setPixelRatio(1);
+          renderer.setSize(innerWidth, innerHeight);
+        }
+      }
+    }
+
+    {
+      /* ---- which formation is the swarm being pulled toward? ---- */
+      const fa = shots[segI].form;
+      const fb = shots[Math.min(segI+1, shots.length-1)].form;
+      const fw = smoothstep(segT);
+      const useA = fa !== 'free', useB = fb !== 'free';
+      const bind = (useA && useB) ? 1 : useA ? (1-fw) : useB ? fw : 0;
+      const drift = 0.012 * (1 - bind*0.75);   // flow field yields to the formation
+      const pull  = 0.010 * bind;
+
+      /* swarm dynamics: flow field + formation pull + containment */
       for(let i=0;i<N;i++){
         const a = agents[i], p = a.position, v = a.userData.vel;
         const f = flow(p.x,p.y,p.z,t);
-        v.x = v.x*0.93 + f[0]*0.012;
-        v.y = v.y*0.93 + f[1]*0.012;
-        v.z = v.z*0.93 + f[2]*0.012;
+        v.x = v.x*0.93 + f[0]*drift;
+        v.y = v.y*0.93 + f[1]*drift;
+        v.z = v.z*0.93 + f[2]*drift;
+
+        if(bind > 0.001){
+          if(useA) formation(fa, i, t, FA);
+          if(useB) formation(fb, i, t, FB);
+          if(useA && useB) FT.copy(FA).lerp(FB, fw);
+          else FT.copy(useA ? FA : FB);
+          v.x += (FT.x - p.x)*pull;
+          v.y += (FT.y - p.y)*pull;
+          v.z += (FT.z - p.z)*pull;
+        }
+
         // soft box containment (barrier-function-flavored)
         v.x -= Math.max(0, Math.abs(p.x)-BOUND.x) * Math.sign(p.x)*0.004;
         v.y -= Math.max(0, Math.abs(p.y-1.5)-BOUND.y) * Math.sign(p.y-1.5)*0.004;
@@ -1300,32 +1798,34 @@
         a.rotation.x += 0.004 + i*0.0002;
         a.rotation.y += 0.006;
       }
-      /* separation pass */
-      for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
-        const pi=agents[i].position, pj=agents[j].position;
-        const dx=pi.x-pj.x, dy=pi.y-pj.y, dz=pi.z-pj.z;
-        const d2=dx*dx+dy*dy+dz*dz;
-        if(d2<1.0 && d2>0.0001){
-          const d=Math.sqrt(d2), push=(1.0-d)*0.01/d;
-          pi.x+=dx*push; pi.y+=dy*push; pi.z+=dz*push;
-          pj.x-=dx*push; pj.y-=dy*push; pj.z-=dz*push;
-        }
-      }
-      /* rebuild connectivity edges */
-      let e=0;
-      for(let i=0;i<N && e<MAXE;i++){
-        for(let j=i+1;j<N && e<MAXE;j++){
-          const pi=agents[i].position, pj=agents[j].position;
-          if(pi.distanceTo(pj) < R_COMM){
+
+      /* separation and the connectivity graph share one pair sweep —
+         same O(N²) visit, one squared distance, no sqrt for the edge test */
+      const sepK = 0.01 * (1 - bind*0.5);
+      let e = 0;
+      for(let i=0;i<N;i++){
+        const pi = agents[i].position;
+        for(let j=i+1;j<N;j++){
+          const pj = agents[j].position;
+          let dx=pi.x-pj.x, dy=pi.y-pj.y, dz=pi.z-pj.z;
+          let d2=dx*dx+dy*dy+dz*dz;
+          if(d2<1.0 && d2>0.0001){
+            const d=Math.sqrt(d2), push=(1.0-d)*sepK/d;
+            pi.x+=dx*push; pi.y+=dy*push; pi.z+=dz*push;
+            pj.x-=dx*push; pj.y-=dy*push; pj.z-=dz*push;
+            dx=pi.x-pj.x; dy=pi.y-pj.y; dz=pi.z-pj.z;
+            d2=dx*dx+dy*dy+dz*dz;
+          }
+          if(e<MAXE && d2 < R2_COMM){
             edgePos[e*6]=pi.x; edgePos[e*6+1]=pi.y; edgePos[e*6+2]=pi.z;
             edgePos[e*6+3]=pj.x; edgePos[e*6+4]=pj.y; edgePos[e*6+5]=pj.z;
             e++;
           }
         }
       }
-      for(let k=e*6;k<MAXE*6;k++) edgePos[k]=0;
+      edgeGeo.setDrawRange(0, e*2);   // cheaper than zeroing the tail of the buffer
       edgeGeo.attributes.position.needsUpdate = true;
-      edgeMat.opacity = 0.22 + Math.sin(t*0.8)*0.06;
+      edgeMat.opacity = 0.22 + Math.sin(t*0.8)*0.06 + bind*0.10;
 
       /* arm choreography — slow pick cycle */
       shoulder.rotation.z = Math.sin(t*0.35)*0.45 - 0.15;
@@ -1385,13 +1885,30 @@
       dust.rotation.y = t*0.008;
     }
 
-    /* scroll-linked camera: orbit + descend toward the swarm */
-    smooth += (targetScroll - smooth)*0.05;
-    const d = smooth*0.0012;
-    camera.position.x = Math.sin(d)*15 + mx*2.0;
-    camera.position.z = Math.cos(d)*15;
-    camera.position.y = 2.2 - Math.min(d*2.2, 4.5) + (-my*1.2);
-    camera.lookAt(0, 0.6, 0);
+    /* ---- camera: sample the rig, then chase it with damping ----
+       The rig gives an instantaneous target for this scroll position;
+       the damping is what turns a flicked scrollwheel into a glide. */
+    sampleRig(scrollTarget);
+    const kc = damp(0.055, dt);
+    curPos .lerp(tgtPos,  kc);
+    curLook.lerp(tgtLook, kc);
+
+    const kp = damp(0.07, dt);
+    smNX += (ptrNX - smNX) * kp;
+    smNY += (ptrNY - smNY) * kp;
+
+    camera.position.copy(curPos);
+    // a breath of idle drift so the frame is never perfectly dead
+    camera.position.x += Math.sin(t*0.13)*0.35;
+    camera.position.y += Math.cos(t*0.09)*0.22;
+    camera.lookAt(curLook);
+    // parallax along the camera's own axes, then re-aim: the look target
+    // stays put, so the offset reads as parallax rather than a pan
+    camera.translateX( smNX * 2.4);
+    camera.translateY(-smNY * 1.5);
+    camera.lookAt(curLook);
+
+    updateFocus(dt);
     renderer.render(scene, camera);
   }
   animate();
