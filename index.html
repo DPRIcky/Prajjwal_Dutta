@@ -462,7 +462,7 @@
     </div>
     <div class="reveal d3">
       <button class="reel-cta" id="reelBtn" type="button">
-        <span class="tri"></span>Watch the demo reel <em>· 25 clips</em>
+        <span class="tri"></span>Watch the demo reel <em>· 27 clips</em>
       </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Scroll — swarm holds formation</div>
@@ -532,6 +532,34 @@
   <section id="work">
     <div class="sec-label reveal">03 / Featured Work</div>
     <h2 class="reveal">Deploy. Control. Guarantee.</h2>
+
+    <article class="project reveal">
+      <a class="pthumb" href="projects/wafer-cell.html" data-vkey="wafer-cell" aria-hidden="true" tabindex="-1"><img src="assets/wafer/run-poster.jpg" alt="" loading="lazy" decoding="async"></a>
+      <button class="vbadge" type="button" data-reel="wafer-cell"><span class="tri"></span>2 clips</button>
+      <div class="proj-meta"><span>Industrial Automation · Multi-Robot Cell · 2026</span><span>RAS 598 / RS4</span></div>
+      <h3><a href="projects/wafer-cell.html" class="proj-link">PLC-Coordinated Semiconductor Wafer Handling Cell<span class="arrow"> →</span></a></h3>
+      <p>
+        A four-axis SCARA, a six-DoF cobot, a stepper conveyor with Hough-circle inspection and
+        an Allen-Bradley Micro820 moving 100 mm wafers from a stacked cassette to a deposit
+        platform, one shelf lower each cycle. Re-hosted the extraction stage onto new arm
+        hardware whose API drops the arm-configuration selector, then solved the deposit fixture
+        sitting at 393.8 mm of a 400 mm reach — where exactly one IK elbow branch survives the
+        joint limits — with a hybrid Cartesian/joint-space formulation. Audited the as-built
+        seven-rung ladder against the manual's stale listing, and designed the two-wire
+        handshake so every signal fails in a stated direction.
+      </p>
+      <div class="metrics">
+        <div class="metric"><b>5</b><span>machines · 4 toolchains</span></div>
+        <div class="metric"><b>393.8 mm</b><span>fixture at 98.5% of reach</span></div>
+        <div class="metric"><b>7</b><span>as-built coordination rungs</span></div>
+        <div class="metric"><b>15</b><span>faults traced to root cause</span></div>
+      </div>
+      <div class="proj-stack">
+        <span class="tag">Micro820 · Ladder</span><span class="tag">IEC 61131-3</span>
+        <span class="tag">SCARA Kinematics</span><span class="tag">Collaborative Robots</span>
+        <span class="tag">OpenCV</span><span class="tag">Cell Integration</span>
+      </div>
+    </article>
 
     <article class="project reveal">
       <a class="pthumb" href="projects/clf-cbf-qp.html" data-vkey="clf-cbf-qp" aria-hidden="true" tabindex="-1"><img src="assets/ai/clf-cbf-qp.jpg" alt="" loading="lazy" decoding="async"></a>
@@ -850,6 +878,12 @@
 
   /* ---------- clip catalogue ---------- */
   const GROUPS = [
+    {k:'wafer-cell', page:'projects/wafer-cell.html', proj:'PLC-Coordinated Wafer Handling Cell', clips:[
+      {f:'wafer-cell-run', po:'assets/wafer/run-poster.jpg', t:'One full wafer cycle',
+       x:'The M1 Pro draws a wafer off the cassette shelf, the belt carries it past the inspection station, and the Pro600 lifts it onto the deposit platform. Recorded end to end, replayed at 5 fps.'},
+      {f:'wafer-trainer3d', po:'assets/wafer/trainer3d-poster.jpg', t:'three.js trainer model',
+       x:'The cell model with every terminal and conductor labelled — used for I/O familiarisation before anyone touches the real 24 V panel.'}]},
+
     {k:'clf-cbf-qp', page:'projects/clf-cbf-qp.html', proj:'CLF–CBF–QP Safety Filtering', clips:[
       {f:'clf-solver-comparison', po:'assets/clfcbf/solver-demo-poster.jpg', t:'Three solvers, one QP',
        x:'The same CLF–CBF–QP at every control step, solved three ways in parallel — quadprog, CVX, OSQP. Bottom row: per-iteration solve time, objective value, and max CBF slack.'}]},

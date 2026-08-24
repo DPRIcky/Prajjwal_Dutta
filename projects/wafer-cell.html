@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A laboratory semiconductor wafer handling cell re-hosted onto new robot hardware: a Dobot M1 Pro SCARA, an Elephant Robotics Pro600 cobot, a stepper conveyor with Hough-circle inspection, and an Allen-Bradley Micro820 acting as the coordination layer. Hybrid Cartesian/joint-space motion around a single valid IK elbow branch, an as-built seven-rung ladder audit, and a fail-direction handshake. By Prajjwal Dutta.">
+<title>Multi-Robot Wafer Handling Cell — Prajjwal Dutta</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #cellscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
+    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+  .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
+  .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
+    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+  .nav-mark:hover .mark-icon .mark-node{r:5;}
+  @media (prefers-reduced-motion:reduce){
+    .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
+    .nav-mark:hover .mark-icon{transform:none;}
+  }
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  h3.sh{font-family:var(--display);font-weight:500;font-size:1.05rem;color:var(--text);
+    margin:2rem 0 0.7rem;letter-spacing:-0.01em;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+  ul.plain{list-style:none;margin:0 0 1.2rem;padding:0;max-width:72ch;}
+  ul.plain li{color:var(--muted);font-size:0.93rem;padding-left:1.4rem;position:relative;margin-bottom:0.55rem;}
+  ul.plain li::before{content:'';position:absolute;left:0;top:0.72em;width:6px;height:6px;
+    border:1px solid var(--amber);transform:rotate(45deg);}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+  .law.st{line-height:1.75;font-size:0.79rem;white-space:pre;}
+  .law.st .k{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figure.pale img{background:#fff;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  tr.bad td{color:var(--amber);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;max-width:none;}
+  .scroll-x{overflow-x:auto;}
+
+  .finding{border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:0 10px 10px 0;
+    background:rgba(14,24,48,0.42);padding:1.2rem 1.4rem;margin:1.4rem 0;}
+  .finding h4{font-family:var(--display);font-weight:500;font-size:0.98rem;color:var(--text);margin-bottom:0.5rem;}
+  .finding h4 .fno{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;color:var(--amber);margin-right:0.7rem;}
+  .finding p{margin-bottom:0;font-size:0.9rem;}
+  .finding .law{margin:0.9rem 0 0;}
+
+  .credit{border:1px solid var(--line);border-left:2px solid var(--cyan);border-radius:0 10px 10px 0;
+    background:rgba(14,24,48,0.42);padding:1.1rem 1.4rem;margin:2rem 0 0;}
+  .credit p{font-size:0.88rem;margin-bottom:0;}
+  .credit a{color:var(--cyan);text-decoration:none;}
+  .credit a:hover{text-decoration:underline;}
+
+  /* ---------- interactive lab widgets ---------- */
+  .lab{border:1px solid var(--line);border-radius:12px;background:rgba(8,14,28,0.72);
+    margin:2rem 0;overflow:hidden;}
+  .lab-head{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--muted);padding:0.75rem 1.1rem;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
+  .lab-head b{color:var(--cyan);font-weight:500;}
+  .lab-body{display:grid;grid-template-columns:minmax(250px,1fr) 1.15fr;gap:0;}
+  .lab-viz{padding:1.2rem;border-right:1px solid var(--line);display:flex;flex-direction:column;
+    align-items:center;gap:0.9rem;}
+  .lab-viz svg{width:100%;max-width:320px;height:auto;display:block;touch-action:none;}
+  .lab-side{padding:1.2rem;display:flex;flex-direction:column;gap:0.95rem;min-width:0;}
+  @media(max-width:760px){
+    .lab-body{grid-template-columns:1fr;}
+    .lab-viz{border-right:none;border-bottom:1px solid var(--line);}
+  }
+  .lab-row{display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;}
+  .lab-lbl{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--muted);min-width:5.2rem;}
+  .pill{font-family:var(--mono);font-size:0.72rem;line-height:1;padding:0.42rem 0.6rem;min-width:1.9rem;
+    border:1px solid var(--line);border-radius:6px;background:rgba(6,10,20,0.6);color:var(--muted);
+    cursor:pointer;transition:color .18s,border-color .18s,background .18s;}
+  .pill:hover{color:var(--text);border-color:rgba(140,170,220,0.35);}
+  .pill.on{color:var(--abyss);background:var(--cyan);border-color:var(--cyan);font-weight:500;}
+  .pill.on.amb{background:var(--amber);border-color:var(--amber);}
+  .pill.wide{min-width:auto;padding:0.42rem 0.85rem;letter-spacing:0.08em;}
+  .pill[disabled]{opacity:0.35;cursor:default;}
+  .pill[disabled]:hover{color:var(--muted);border-color:var(--line);}
+
+  .readout{font-family:var(--mono);font-size:0.74rem;color:var(--muted);
+    border:1px solid var(--line);border-radius:8px;background:rgba(6,10,20,0.55);padding:0.8rem 0.9rem;}
+  .readout div{display:flex;justify-content:space-between;gap:1rem;padding:0.13rem 0;}
+  .readout .k{color:var(--muted);}
+  .readout .v{color:var(--cyan);}
+  .readout .v.amb{color:var(--amber);}
+  .readout .v.off{color:#48566e;}
+  .readout .hdr{color:var(--muted);letter-spacing:0.14em;font-size:0.6rem;text-transform:uppercase;
+    border-bottom:1px solid var(--line);padding-bottom:0.35rem;margin-bottom:0.3rem;display:block;}
+
+  .verdict{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;border-radius:8px;
+    padding:0.6rem 0.8rem;border:1px solid var(--line);background:rgba(6,10,20,0.55);color:var(--muted);}
+  .verdict.ok{color:var(--cyan);border-color:rgba(79,216,232,0.45);}
+  .verdict.no{color:var(--amber);border-color:rgba(245,163,92,0.45);}
+
+  .lamps{display:flex;gap:0.5rem;flex-wrap:wrap;}
+  .lamp{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;
+    border:1px solid var(--line);border-radius:6px;padding:0.35rem 0.55rem;color:#48566e;
+    background:rgba(6,10,20,0.5);transition:color .15s,border-color .15s,box-shadow .15s;}
+  .lamp.on{color:var(--cyan);border-color:rgba(79,216,232,0.5);box-shadow:0 0 12px rgba(79,216,232,0.18) inset;}
+  .lamp.on.amb{color:var(--amber);border-color:rgba(245,163,92,0.5);box-shadow:0 0 12px rgba(245,163,92,0.18) inset;}
+
+  .stblock{font-family:var(--mono);font-size:0.68rem;line-height:1.85;color:#6c7c96;
+    border:1px solid var(--line);border-radius:8px;background:rgba(6,10,20,0.55);
+    padding:0.75rem 0.85rem;overflow-x:auto;white-space:pre;}
+  .stblock span{display:block;min-height:1.2em;transition:color .18s,background .18s;}
+  .stblock .k{color:#8a7a5e;}
+  .stblock .live{color:var(--cyan);background:rgba(79,216,232,0.1);}
+  .stblock .live .k{color:var(--amber);}
+
+  .log{font-family:var(--mono);font-size:0.65rem;line-height:1.85;color:var(--muted);
+    border-top:1px solid var(--line);padding:0.8rem 1.2rem;max-height:9.5rem;overflow-y:auto;
+    background:rgba(6,10,20,0.4);}
+  .log div{display:flex;gap:0.7rem;}
+  .log .s{color:#3f4c62;flex:none;min-width:3.4rem;}
+  .log .t{flex:none;min-width:5.4rem;color:var(--amber);letter-spacing:0.06em;}
+  .log .m{color:var(--muted);}
+  .log .t-run{color:var(--cyan);}
+  @media(max-width:560px){
+    .log{padding:0.8rem 0.9rem;}
+    .log div{flex-wrap:wrap;gap:0.5rem;}
+    .log .s{min-width:2.6rem;}
+    .log .t{min-width:0;}
+    .log .m{flex:1 1 100%;padding-left:2.6rem;}
+  }
+
+  .hint{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.06em;color:#5d6d88;
+    padding:0 1.2rem 1.1rem;}
+  .hint b{color:var(--muted);font-weight:400;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="cellscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
+  <a class="back" href="../index.html#work">← Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Industrial Automation · Multi-Robot Integration · 2026</span><span>ASU · RAS 598 / RS4 Industry 4.0</span></div>
+    <h1 class="reveal">Five Machines, Four Languages, One Wafer</h1>
+    <p class="sub reveal">
+      A laboratory semiconductor handling cell — a four-axis SCARA, a six-DoF collaborative
+      robot, a stepper conveyor with camera inspection, and an Allen-Bradley Micro820 —
+      moving 100 mm silicon wafers from a stacked cassette, past an inspection station, onto
+      a deposit platform, one shelf lower each cycle. The cell was originally commissioned on
+      different hardware. This is the re-host, and the coordination work the re-host made
+      necessary: a fixture sitting at <strong>393.8 mm of a 400 mm reach</strong> where only
+      one inverse-kinematic elbow branch survives the joint limits, an as-built ladder that
+      turns out to differ materially from the one in the manual, and a two-wire handshake
+      designed so that every signal fails in a stated direction.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/plc-wafer-cell" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="../assets/wafer/wafer_cell_report.pdf" target="_blank" rel="noopener" aria-label="IEEE-style technical report PDF" title="Technical Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>5</b><span>machines · 4 programming environments</span></div>
+      <div class="metric"><b>393.8 mm</b><span>fixture radius of a 400 mm reach</span></div>
+      <div class="metric"><b>7</b><span>as-built coordination rungs</span></div>
+      <div class="metric"><b>15</b><span>faults traced to root cause</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <a href="../assets/wafer/cell.jpg" target="_blank" rel="noopener">
+      <img src="../assets/wafer/cell.jpg" alt="The assembled wafer cell on a wooden bench: at left the base of the Dobot M1 Pro SCARA with a yellow-and-red emergency stop and a blue 3D-printed wafer cassette; centre, the black conveyor belt with its stepper motor and a yellow-barrel infrared sensor; right, the white Elephant Robotics Pro600 cobot and a laptop.">
+    </a>
+    <figcaption><span class="n">FIG 01</span>The cell as built. Left: the M1 Pro and the blue wafer cassette. Centre: the conveyor, its printed wafer cradle and the end-of-travel infrared sensor. Right: the Pro600 and the deposit platform.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">01 / The Cell</div>
+    <h2 class="reveal">Simple to state. The re-host is the work.</h2>
+    <p class="reveal">
+      The material flow takes one sentence: a SCARA draws a wafer from a vertical cassette and
+      lays it in a cradle on a conveyor; the belt carries the cradle past a camera that confirms
+      the wafer is there; a collaborative robot lifts it off the cradle and sets it on a deposit
+      platform; the belt returns and the cycle repeats one shelf lower. Every stage is triggered
+      by, and reports back to, a Micro820 PLC. Watch it run end to end:
+    </p>
+
+    <figure class="reveal">
+      <video muted loop playsinline preload="none" poster="../assets/wafer/run-poster.jpg"
+        aria-label="One full wafer cycle recorded on the bench: the SCARA fork slides a silicon wafer off the cassette shelf, the conveyor carries the loaded cradle down the belt, and the collaborative robot lifts the wafer onto the deposit platform." controls>
+        <source src="../media/wafer-cell-run.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 01</span>One full cycle, start to finish — the M1 Pro draws a wafer off the cassette shelf, the belt carries it past the inspection station, and the Pro600 lifts it onto the deposit platform. Recorded end to end, replayed at 5 fps. This recording has no audio track.</figcaption>
+    </figure>
+
+    <p class="reveal">
+      Reproducing that flow on the hardware actually available turned out to be the substance
+      of the project. Three of the five subsystems are not the ones the original commissioning
+      targeted, and none of the three is a like-for-like substitution.
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Subsystem</th><th>Originally</th><th>Here</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td>SCARA</td><td>Dobot M1, Python <code>dType</code></td><td>Dobot M1 Pro, Lua in DobotStudio Pro 2.8.3</td><td>No <code>SetArmOrientation</code> equivalent</td></tr>
+        <tr><td>Cobot tool</td><td>DH PGE 8 parallel gripper</td><td>Vacuum cup on a 24 V solenoid manifold</td><td>Grip becomes a sensed quantity</td></tr>
+        <tr><td>Fixtures</td><td>as originally taught</td><td>Re-taught after the rack was moved</td><td>Insertion axis is now X, not Y</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="reveal">
+      Every absolute coordinate in the original program is therefore invalid on this cell, and
+      the API change removed the one call the original program used to disambiguate the arm's
+      configuration. That second point turned out to matter a great deal.
+    </p>
+
+    <figure class="reveal pale">
+      <a href="../assets/wafer/arch.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/arch.jpg" alt="Signal architecture diagram titled PLC-Controlled Wafer Cell: Wiring Overview. A central PLC sends a SCARA trigger and a cobot trigger out through opto-isolated relay blocks to the SCARA robot and the cobot, and receives SCARA Done and Cobot Done back through further relay blocks. Two command lines run from the PLC through resistors to a Magic Box, which drives the conveyor motor. Two infrared sensors at each end of the conveyor report back to the PLC.">
+      </a>
+      <figcaption><span class="n">FIG 02</span>Signal architecture. The Micro820 is a coordination layer only — it issues trigger pulses and receives done pulses, and drives neither the belt motor nor either arm directly. Every crossing between the PLC and a robot passes through an opto-isolated interface board, so the 24 V control ground and the 48 V arm ground never meet.</figcaption>
+    </figure>
+
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Element</th><th>Device</th><th>Programmed through</th></tr></thead>
+      <tbody>
+        <tr><td>SCARA</td><td>Dobot M1 Pro, 4 axes, 400 mm reach</td><td>Lua in DobotStudio Pro 2.8.3</td></tr>
+        <tr><td>Cobot</td><td>Elephant Robotics Pro600, 6 DoF, 600 mm, 3 kg</td><td>RoboFlow over VNC · <code>pymycobot</code></td></tr>
+        <tr><td>Conveyor</td><td>Dobot Magic Box extended I/O, stepper on port 0</td><td>Python <code>DobotDllType</code> over COM3</td></tr>
+        <tr><td>Inspection</td><td>USB camera, index 0</td><td>OpenCV <code>HoughCircles</code></td></tr>
+        <tr class="hl"><td>Coordination</td><td>Allen-Bradley Micro820 2080-LC20-20QBB</td><td>Connected Components Workbench</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="tnote reveal">Four programming environments, no two of them sharing a language. That is characteristic of small-cell integration, and it is exactly why the PLC's role is kept deliberately narrow: it is the only element that sees the whole cell, so it is given signalling and nothing else.</p>
+
+    <h3 class="sh reveal">Why a PLC here at all</h3>
+    <p class="reveal">
+      The justification is determinism of scan, not computing power. A Python script on a PC is
+      subject to the operating system's scheduler, to garbage collection, and to whatever else
+      the machine is doing. A PLC executes its program on a bounded, repeatable scan. The
+      Micro820 is therefore given exactly the jobs that need that property — watching sensor
+      zones, emitting timed trigger pulses, latching done reports, hosting the operator
+      interface — and none of the jobs that do not.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">02 / The SCARA</div>
+    <h2 class="reveal">A Cartesian pose does not determine a configuration.</h2>
+    <p class="reveal">
+      The M1 Pro is a SCARA: two revolute links in the horizontal plane, a vertical lead screw
+      and a wrist. Because the third axis is linear, <code>J3</code> <em>is</em> Z in
+      millimetres — a convenience with real consequences, since a change in <code>J3</code>
+      alone is a pure vertical translation that cannot sweep the tool into anything. With
+      <code>L1 = L2 = 200 mm</code> from the dimension drawing, forward kinematics are:
+    </p>
+    <div class="law reveal">
+      X = L1·cos J1 + L2·cos(J1+J2)<br>
+      Y = L1·sin J1 + L2·sin(J1+J2)<br>
+      Z = J3<span class="c">,</span>&nbsp; R = J1 + J2 + J4 <span class="c">(mod 360°)</span>
+    </div>
+    <p class="reveal">
+      The model was validated against live panel data before it was trusted for anything:
+      joint readings J1 = 19.02°, J2 = 29.37°, J4 = −159.79° substituted into those equations
+      return (321.9, 214.7) at R = −111.40°, reproducing the taught rack approach point to the
+      decimal.
+    </p>
+    <p class="reveal">
+      Inverting them is where the trouble starts. For a two-link planar arm, a reachable point
+      at radius ρ admits <strong>two</strong> solutions, distinguished by the sign of J2 — the
+      left and the right elbow. Both are legitimate. The controller's solver picks one, and it
+      does not tell you which.
+    </p>
+    <div class="law reveal">
+      cos J2 = (ρ² − L1² − L2²) / (2·L1·L2)<span class="c">,</span>&nbsp;&nbsp;
+      J2 = <span class="a">±</span>arccos(·)
+    </div>
+    <p class="reveal">
+      The deposit fixture sits at ρ = 393.8 mm of the arm's 400 mm reach — within 1.5% of full
+      extension. Two things happen there. The Jacobian becomes ill-conditioned, so small
+      Cartesian increments demand large joint excursions and the arm moves in ways that look
+      disproportionate to the command. And, decisively, <strong>only one branch stays inside
+      the joint limits</strong>. The controller was solving for the other one, so every
+      Cartesian command to the fixture came back <code>"Incorrect motion point for MovJ
+      instruction"</code>.
+    </p>
+
+    <div class="lab reveal">
+      <div class="lab-head"><span>Elbow-branch explorer — <b>both IK solutions, live, against the real limits</b></span><span>L1 = L2 = 200 mm</span></div>
+      <div class="lab-body">
+        <div class="lab-viz">
+          <svg id="ikSvg" viewBox="0 0 320 340" role="img" aria-label="Top view of the SCARA workspace showing the 400 millimetre reach circle, the 153 millimetre inner dead zone, and both inverse-kinematic arm solutions drawn to a target point.">
+            <g id="ikBg"></g>
+            <g id="ikArms"></g>
+            <g id="ikFg"></g>
+          </svg>
+          <div class="lab-row" style="justify-content:center;">
+            <span class="lab-lbl" style="min-width:auto;">Show</span>
+            <button class="pill wide on" id="ikShowA" type="button">Branch A</button>
+            <button class="pill wide on amb" id="ikShowB" type="button">Branch B</button>
+          </div>
+        </div>
+        <div class="lab-side">
+          <div class="lab-row">
+            <span class="lab-lbl">Target</span>
+            <button class="pill wide" data-ik="113.3,214.7,-111.4">Traverse pt</button>
+            <button class="pill wide" data-ik="109.6,352.7,-161.3">Rack approach</button>
+            <button class="pill wide" data-ik="134.4,363.4,20.4">Deposit</button>
+            <button class="pill wide" data-ik="4.2,363.4,20.4">Withdrawn</button>
+          </div>
+          <div class="readout" id="ikRead"></div>
+          <div class="verdict" id="ikVerdict"></div>
+          <div class="hint" style="padding:0;">
+            <b>Drag the amber target inside the workspace ring</b>, or pick a taught pose. Branch A
+            is the elbow-positive solution, branch B the elbow-negative one. Both reach the same
+            (X, Y); only the verdict differs.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="reveal">
+      Worked on the traverse point that hardware actually rejected, (113.3, 214.7) at
+      R = −111.4°, the two branches come out like this:
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Branch</th><th>J1</th><th>J2</th><th>J4</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>A (elbow +)</td><td>+9.54°</td><td>+105.27°</td><td>+133.79°</td><td>within all limits</td></tr>
+        <tr class="bad"><td>B (elbow −)</td><td>+114.81°</td><td>−105.27°</td><td>−120.94°</td><td>J1 past ±85°</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="tnote reveal">Limits used for pre-flight checking: J1 ±85° (the binding one in practice), J2 ±130°, J3 5–245 mm, J4 ±360°, outer reach 400 mm, inner dead zone 153 mm.</p>
+
+    <div class="finding reveal">
+      <h4><span class="fno">CORRECTION</span>An earlier analysis rejected <em>both</em> branches — and was wrong</h4>
+      <p>
+        It treated J4 = −226.3° as beyond the wrist limit. But J4 on the M1 Pro spans ±360°,
+        and −226.3° is the same wrist orientation as +133.7°, because R is defined only modulo
+        360°. Correcting the limit changes the diagnosis in a way that matters: the point is
+        not unreachable, it is <strong>reachable on exactly one branch</strong>, and the
+        controller was solving for the other. That also explains an observation the
+        "unreachable" theory could not — the operator can reach the fixture by hand-guiding
+        but not by Cartesian jogging, because hand-guiding moves joints directly and never
+        asks the solver to choose.
+      </p>
+    </div>
+
+    <h3 class="sh reveal">Three remedies, one adopted</h3>
+    <ul class="plain reveal">
+      <li><strong>Linear interpolation</strong> — rejected. A straight-line move requires
+        <em>every</em> intermediate point to solve, which is strictly more constrained than a
+        joint-interpolated move. It fails harder, not more gracefully.</li>
+      <li><strong>Selecting the configuration explicitly</strong>, as the original M1 program
+        did with <code>SetArmOrientation</code> — unavailable. The Lua API exposes no
+        equivalent.</li>
+      <li><strong>Commanding the fixture side in joint coordinates</strong> — adopted. A taught
+        joint tuple <em>is</em> a configuration: there is no solve, so there is no ambiguity.
+        The rack side stays Cartesian, because a new Z must be computed for every shelf and
+        parametric Cartesian is the natural way to say that.</li>
+    </ul>
+
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>#</th><th>Step</th><th>Frame</th><th>Pose</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Home</td><td>joints</td><td>J_HOME</td></tr>
+        <tr><td>2</td><td>Cassette approach</td><td>Cartesian</td><td>x0, y0, z(n), r0</td></tr>
+        <tr><td>3</td><td>Fork inserted, three steps</td><td>Cartesian</td><td>−X</td></tr>
+        <tr><td>4</td><td>Lift and withdraw</td><td>Cartesian</td><td>+Z, then +X</td></tr>
+        <tr><td>5</td><td>Traverse to fixture</td><td>joints</td><td>J_TRAVERSE → J_ABOVE</td></tr>
+        <tr class="hl"><td>6</td><td>Deposit, then clear the prongs</td><td>joints</td><td>J_DEPOSIT → J_WITHDRAWN</td></tr>
+        <tr><td>7</td><td>Return home</td><td>joints</td><td>J_TRAVERSE → J_HOME</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="reveal">
+      Step 6 needs <strong>two</strong> moves, and this is not a stylistic choice. Lowering the
+      wafer leaves the fork underneath it; the prongs have to slide out along their own axis or
+      the wafer comes with them. The wafer counter increments after <code>J_WITHDRAWN</code>,
+      never after <code>J_DEPOSIT</code>, so an aborted cycle cannot inflate the count.
+    </p>
+
+    <h3 class="sh reveal">The taught poses, and what they check</h3>
+    <p class="reveal">
+      Five poses were taught by hand-guiding and read back from the controller with a probe
+      script rather than transcribed from the pendant, which removes an entire class of digit
+      errors. Each is carried alongside its forward-kinematic Cartesian equivalent, computed by
+      the program at startup — redundancy that costs a few lines and caught two badly-taught
+      poses before they reached the hardware.
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Pose</th><th>J1</th><th>J2</th><th>J3</th><th>J4</th><th>X</th><th>Y</th><th>Z</th><th>R</th></tr></thead>
+      <tbody>
+        <tr><td>J_HOME</td><td>50.16</td><td>45.17</td><td>187.82</td><td>103.37</td><td>109.6</td><td>352.7</td><td>187.8</td><td>−161.3</td></tr>
+        <tr><td>J_TRAVERSE</td><td>63.65</td><td>49.28</td><td>166.69</td><td>267.51</td><td>10.8</td><td>363.4</td><td>166.7</td><td>20.4</td></tr>
+        <tr><td>J_ABOVE</td><td>55.33</td><td>28.74</td><td>166.69</td><td>296.37</td><td>134.4</td><td>363.4</td><td>166.7</td><td>20.4</td></tr>
+        <tr><td>J_DEPOSIT</td><td>55.33</td><td>28.74</td><td>89.19</td><td>296.37</td><td>134.4</td><td>363.4</td><td>89.2</td><td>20.4</td></tr>
+        <tr><td>J_WITHDRAWN</td><td>64.64</td><td>49.38</td><td>76.53</td><td>266.42</td><td>4.2</td><td>363.4</td><td>76.5</td><td>20.4</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <ul class="plain reveal">
+      <li><strong>Every pose has J2 &gt; 0.</strong> All five are on branch A, the same branch as
+        the rack side, so the arm never reconfigures anywhere in the cycle. A pose returning
+        branch B was grounds for re-teaching, not for running.</li>
+      <li><strong>Four poses share Y = 363.4 mm.</strong> Traverse, approach, deposit and
+        withdrawal lie on one line — which is what a straight fork withdrawal along X should
+        produce. <code>J_WITHDRAWN</code> retracts from X = 134.4 to X = 4.2 mm at unchanged Y,
+        a 130.2 mm translation along the prong axis.</li>
+      <li><strong>Home sits directly above the rack approach point</strong>, at (109.6, 352.7),
+        which is why the descent into the cassette is a pure Z move. The factory home was
+        explicitly not used: all-joints-zero puts the arm straight out at X = 400, Y = 0 with
+        the screw below its 5 mm software limit and the fork extended across the bench.</li>
+    </ul>
+
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/wafer/scara.jpg" target="_blank" rel="noopener">
+          <img src="../assets/wafer/scara.jpg" alt="The Dobot M1 Pro SCARA on the bench with a white 3D-printed two-prong fork bolted to its J4 tool flange; a deposit platform and a spare printed cradle sit in the foreground.">
+        </a>
+        <figcaption><span class="n">FIG 03</span>The M1 Pro with the printed two-prong fork on the J4 flange. No clamping and no vacuum on this side — the wafer simply rests on the prongs, which is the gentlest available strategy and why the SCARA half tolerates coarse positioning.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/wafer/fixtures.jpg" target="_blank" rel="noopener">
+          <img src="../assets/wafer/fixtures.jpg" alt="Two photographs side by side: at left the blue printed wafer cassette holding a 100 millimetre silicon wafer on its top shelf with the cobot's twin vacuum cups visible at the right edge; at right the magenta printed wafer cradle mounted on the conveyor belt, two curved arms locating the wafer by its edge.">
+        </a>
+        <figcaption><span class="n">FIG 04</span>Fixtures as built. (a) The cassette — 20 mm shelf pitch, floor at Z = 30 mm. (b) The belt cradle: two curved arms that locate the wafer edge without touching its face.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The cassette is the manual's rack, so its internal geometry is a specification rather than
+      a measurement — but the program still refuses to run more than one cycle until the shelf
+      pitch has been confirmed physically, because every cycle after the first depends on it.
+      The measured lift of 13.0 mm is consistent with a 20 mm pitch: it clears the wafer's own
+      shelf lip while staying comfortably below the shelf above.
+    </p>
+
+    <h3 class="sh reveal">Guards: refuse, rather than try</h3>
+    <ul class="plain reveal">
+      <li><strong>Untaught poses abort.</strong> <code>{0,0,0,0}</code> is not an inert
+        placeholder — it is a real pose, arm straight out at the bottom of the Z screw. Any
+        joint move to an untaught tuple stops the run.</li>
+      <li><strong>Every target is range-checked</strong> against the joint limits and the
+        reach/dead-zone envelope before it is issued, so a bad point is reported by name
+        instead of being rejected mid-path by the controller.</li>
+      <li><strong>The run plan is printed and validated before anything moves.</strong> A wafer
+        count that would walk past the cassette floor aborts.</li>
+      <li><strong>Staged homing.</strong> If the arm is not near home it backs straight out of
+        the cassette corridor first, then rises, then joint-moves home. Rising first would hit
+        the shelf above.</li>
+      <li><strong>On a fault the arm stays put.</strong> After an abort it may be somewhere a
+        joint move cannot leave safely, and moving is how a small problem becomes a crash.</li>
+    </ul>
+
+    <figure class="reveal">
+      <a href="../assets/wafer/cad.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/cad.jpg" alt="CAD render of the SCARA fork: two thin prongs on a tapered yoke with a central mounting boss for the J4 flange.">
+      </a>
+      <figcaption><span class="n">FIG 05</span>The fork as prepared for manufacture — two thin prongs on a tapered yoke, central boss for the J4 flange. The prongs must fit a cassette slot without touching its walls; the tapered tips ease entry when the fork is a little off-centre. This is the one printed part carried over unchanged: the cassette and the belt cradle were both redesigned afterwards, so FIG 04 is the current geometry, not this model.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">03 / Coordination</div>
+    <h2 class="reveal">The ladder in the manual is not the ladder that runs.</h2>
+    <p class="reveal">
+      The controller is a 2080-LC20-20QBB: twelve digital inputs, seven transistor outputs, four
+      analog inputs, one analog output. Note the two isolated output groups — <code>O-00</code>
+      through <code>O-03</code> share <code>CM0</code> while <code>O-04</code> through
+      <code>O-06</code> share <code>CM1</code> — which is what lets the conveyor-side outputs
+      and the robot-trigger outputs sit in separate reference domains.
+    </p>
+
+    <figure class="reveal">
+      <a href="../assets/wafer/plchw.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/plchw.jpg" alt="Three photographs of the Micro820 as wired: the input terminal block with labelled leads landing on I-06 and I-07, the 2080-LC20-20QBB module with its Ethernet lead and status LEDs, and the output terminal block showing two isolated groups.">
+      </a>
+      <figcaption><span class="n">FIG 06</span>Micro820 hardware as wired. (a) Input block — Vref/−DC24, I-00…I-03, then COM0 and I-04…I-09; the two labelled leads land on I-06 and I-07. (b) The module with its Ethernet lead and status LEDs. (c) Output block: +CM0, O-00…O-03, −CM0, then the second isolated group +CM1, O-04…O-06, −CM1.</figcaption>
+    </figure>
+
+    <p class="reveal">
+      The as-built I/O map was recovered from the project's own global variable table and
+      cross-checked against the ladder source. Aliases, not raw addresses, appear on the rungs,
+      and getting them right is most of what makes the ladder readable.
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Point</th><th>Alias</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>DI_06</td><td>Start_Switch</td><td>start pushbutton</td></tr>
+        <tr class="bad"><td>DI_07</td><td>Stop_Switch</td><td>stop — <em>measured</em> normally closed</td></tr>
+        <tr><td>DI_04</td><td>SCARA_DO</td><td>SCARA done, read <em>inverted</em> (NPN, active LOW)</td></tr>
+        <tr><td>DI_05</td><td>Cobot_DO</td><td>cobot done, read direct (active HIGH)</td></tr>
+        <tr><td>AI_00</td><td>IR_SCARA_End</td><td>IR sensor, cassette end — WORD, thresholded</td></tr>
+        <tr><td>AI_01</td><td>IR_Cobot_End</td><td>IR sensor, cobot end — WORD, thresholded</td></tr>
+        <tr><td>DO_04</td><td>DI_to_SCARA</td><td>2 s trigger pulse to the SCARA</td></tr>
+        <tr><td>DO_05</td><td>DI_to_Cobot</td><td>2 s trigger pulse to the cobot</td></tr>
+        <tr><td>DO_00</td><td>Conv_SCARA_Side</td><td>conveyor — <em>negated</em> coil, idles HIGH</td></tr>
+        <tr><td>DO_01</td><td>Conv_Cobot_Side</td><td>conveyor — <em>negated</em> coil, idles HIGH</td></tr>
+        <tr><td>AO_00</td><td>Conveyor</td><td>provisioned, not referenced by any rung</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <figure class="reveal">
+      <a href="../assets/wafer/globals.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/globals.jpg" alt="Connected Components Workbench global variable table for the Micro820, showing aliased I/O names against their physical points, with AI_00 and AI_01 typed as WORD and no variable marked retained.">
+      </a>
+      <figcaption><span class="n">FIG 07</span>The global variable table — the alias column <em>is</em> the as-built I/O map. Three things it settles: the analog inputs are <code>WORD</code>, so the infrared sensors are read as raw counts and thresholded numerically rather than as booleans; only ten points are claimed, leaving the rest free for the handshake program; and nothing in the table is marked retained, which is why the detection threshold is lost on every download.</figcaption>
+    </figure>
+
+    <figure class="reveal">
+      <a href="../assets/wafer/ladder.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/ladder.jpg" alt="Connected Components Workbench showing the seven-rung Prog1 ladder: rung 1 a start/stop seal-in, rungs 2 and 5 comparing an analog input against a threshold into two-second TP pulse timers, rungs 3 and 6 latching the robots' done reports through further TP timers, and rungs 4 and 7 driving the two conveyor outputs.">
+      </a>
+      <figcaption><span class="n">FIG 08</span>The as-built seven-rung ladder. Rung 1 is the start/stop seal-in. Rungs 2 and 5 threshold the analog infrared sensors and fire 2 s pulse timers at the two robot triggers. Rungs 3 and 6 latch the robots' done reports. Rungs 4 and 7 drive the conveyor outputs through <em>negated</em> coils, so those points idle high and drop low to act.</figcaption>
+    </figure>
+
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>#</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Stop ∧ (Start ∨ Start_latch) → Start. Seal-in latch.</td></tr>
+        <tr><td>2</td><td>Start ∧ (AI_00 ≤ threshold) → TP 2 s → DI_to_SCARA</td></tr>
+        <tr><td>3</td><td>Start ∧ ¬SCARA_DO → TP 2 s → SCARA_TaskVar</td></tr>
+        <tr><td>4</td><td>Start ∧ (DI_to_SCARA ∨ SCARA_TaskVar) → <em>negated</em> Conv_SCARA_Side</td></tr>
+        <tr><td>5</td><td>Start ∧ (AI_01 ≤ threshold) → TP 2 s → DI_to_Cobot</td></tr>
+        <tr><td>6</td><td>Start ∧ Cobot_DO → TP 2 s → Cobot_TaskVar</td></tr>
+        <tr><td>7</td><td>Start ∧ (DI_to_Cobot ∨ Cobot_TaskVar) → <em>negated</em> Conv_Cobot_Side</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="finding reveal">
+      <h4><span class="fno">AUDIT</span>Retyping the published listing would have removed the stop button</h4>
+      <p>
+        The ladder printed in the course manual — and the <code>PROG1.txt</code> that ships
+        beside it — is a stale artefact, not the program that runs. The live source is the
+        project's own <code>Prog1.stf</code>. Reproducing the manual's listing would delete the
+        stop input entirely and leave two robot-trigger rungs conducting whether or not the
+        operator had pressed start.
+      </p>
+    </div>
+
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Aspect</th><th>Published</th><th>As built</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Stop input</td><td>absent</td><td>DI_07, seal-in latch</td></tr>
+        <tr class="hl"><td>Rung gating</td><td>two rungs ungated</td><td>every rung gated on Start</td></tr>
+        <tr><td>Timers</td><td>TON, six instances</td><td>TP pulse, four instances</td></tr>
+        <tr><td>Naming</td><td>TRIGERA…D</td><td>functional aliases</td></tr>
+        <tr><td>Conveyor coils</td><td>"normally high"</td><td>negated coils</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 class="sh reveal">Three choices in this ladder worth naming</h3>
+    <ul class="plain reveal">
+      <li><strong>Pulse timers, not on-delay timers.</strong> A <code>TP</code> produces a
+        fixed-width output pulse on a rising input and is immune to what the input does for the
+        rest of that pulse; a <code>TON</code> would track its input and release as soon as the
+        input fell. Since the whole point of these rungs is to emit a trigger of guaranteed
+        width to a robot that samples its input periodically, <code>TP</code> is the correct
+        primitive.</li>
+      <li><strong>Two-second pulses are a deliberate margin.</strong> A Micro820 scan is on the
+        order of milliseconds, so a two-second assertion is three orders of magnitude wider
+        than the receiver's sampling uncertainty. No element of this cell needs edge detection.
+        The cost is throughput, and on a laboratory cell that cost is worth paying.</li>
+      <li><strong>Negated conveyor coils</strong> mean those outputs idle high and drop low to
+        act, so a loss of power stops the belt rather than running it.</li>
+    </ul>
+
+    <div class="finding reveal">
+      <h4><span class="fno">FAULT</span>The start button did nothing at all, with every other element correct</h4>
+      <p>
+        The panel stop button is <strong>NC-wired</strong>: its input reads TRUE at rest and
+        FALSE when pressed. That is the fail-safe convention — a cut wire reads as a press — but
+        it means the stop appears as a normally-<em>open</em> <code>] [</code> contact on every
+        rung, which looks wrong until you say it aloud: <em>conduct while the stop button is
+        not pressed</em>. Getting it backwards cost one download; rung 1 could not conduct at
+        all, and pressing start did nothing whatever.
+      </p>
+    </div>
+
+    <div class="finding reveal">
+      <h4><span class="fno">GOTCHA</span>The detection threshold does not survive a download</h4>
+      <p>
+        <code>conveyoron</code>, the comparison value the two analog rungs threshold against,
+        reverts to its default on every project download and must be re-entered by hand.
+        Nothing in the global table is marked retained. The failure is silent: the cell simply
+        never triggers, or triggers continuously. Related, and equally undiagnosable from the
+        symptom: the controller lives at the link-local address
+        <code>169.254.19.93</code>, so the programming PC's adapter must be on
+        <code>169.254.x.x / 255.255.0.0</code> or the Micro820 never appears in the browse tree
+        — presenting as a dead controller rather than as a network misconfiguration.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">04 / The Handshake</div>
+    <h2 class="reveal">Two wires carry the entire conversation.</h2>
+    <div class="law reveal">
+      Micro820 <span class="a">O-03</span> ──▶ opto board ──▶ M1 Pro <span class="a">DI10</span>&nbsp;&nbsp;<span class="c">"take a wafer"</span><br>
+      M1 Pro <span class="a">DO10</span> ──▶ opto board ──▶ Micro820 <span class="a">I-04</span>&nbsp;&nbsp;<span class="c">"wafer placed"</span>
+    </div>
+    <p class="reveal">
+      Both robot points are on the M1 Pro's <strong>second</strong> terminal block — the first
+      block's silkscreen only runs to channel 8, which is its own small trap. Expressed as
+      structured text, the rung set is three lines:
+    </p>
+    <div class="law st reveal"><span class="c">(* R1: ask for a wafer *)</span>
+Scara_in   := (Start <span class="k">OR</span> Scara_in) <span class="k">AND</span> Stop <span class="k">AND NOT</span> cycle_done ;
+<span class="c">(* R2: latch the arm's done report *)</span>
+cycle_done := (Robot_Done <span class="k">OR</span> cycle_done) <span class="k">AND</span> (Start <span class="k">OR</span> Scara_in) <span class="k">AND</span> Stop ;
+<span class="c">(* R3: cycle-running indicator *)</span>
+Light      := Scara_in ;</div>
+
+    <p class="reveal">
+      Three properties are load-bearing, and the simulator below runs the real logic so you can
+      break each one:
+    </p>
+    <ul class="plain reveal">
+      <li><strong>The PLC must drop its request on seeing the done pulse.</strong> The arm waits
+        for its start input to <em>fall</em> before considering another wafer, so one long
+        assertion cannot be read as several requests. Hold the request high and the arm finishes
+        moving, then waits forever — indistinguishable, from the outside, from a completed run.</li>
+      <li><strong>The start signal is active HIGH by choice.</strong> A dead or disconnected PLC
+        output then reads as <em>no request</em>. Active LOW would read a broken wire as "take
+        another wafer, indefinitely", which is the wrong direction to fail in.</li>
+      <li><strong>The request is not a run permit.</strong> The arm samples its start input once,
+        at the top of a wafer. Dropping the request mid-cycle means "do not begin another", and
+        nothing more. Use the E-stop to stop a moving arm.</li>
+    </ul>
+
+    <div class="lab reveal">
+      <div class="lab-head"><span>Handshake simulator — <b>the three rungs, on a 60 ms scan</b></span><span id="hsScan">SCAN 0</span></div>
+      <div class="lab-body">
+        <div class="lab-viz">
+          <svg id="hsTrace" viewBox="0 0 330 236" role="img" aria-label="Rolling logic-analyzer trace of the five handshake signals: the start button, the normally-closed stop input, the PLC request to the SCARA, the arm's done report, and the latched cycle-done bit."></svg>
+          <div class="lamps" style="justify-content:center;">
+            <span class="lamp" id="lampReq">DO_03 request</span>
+            <span class="lamp amb" id="lampDone">I-04 done</span>
+            <span class="lamp" id="lampLight">R3 lamp</span>
+          </div>
+        </div>
+        <div class="lab-side">
+          <div class="lab-row">
+            <span class="lab-lbl">Panel</span>
+            <button class="pill wide" id="hsStart" type="button">Press START</button>
+            <button class="pill wide" id="hsHold" type="button">Hold START</button>
+            <button class="pill wide" id="hsStop" type="button">STOP</button>
+          </div>
+          <div class="lab-row">
+            <span class="lab-lbl">R2 reset</span>
+            <button class="pill wide on" id="hsTermA" type="button">(Start ∨ Scara_in)</button>
+            <button class="pill wide" id="hsTermB" type="button">Scara_in only</button>
+          </div>
+          <div class="readout" id="hsRead"></div>
+          <div class="verdict" id="hsVerdict"></div>
+        </div>
+      </div>
+      <div class="log" id="hsLog"></div>
+      <div class="hint">
+        <b>Press START once</b> — one wafer. <b>Hold START</b> — still one wafer, because rung 2's
+        reset term is <code>(Start ∨ Scara_in)</code> and not <code>Scara_in</code> alone. Switch
+        the reset term and hold START again to watch the same cell run away.
+      </div>
+    </div>
+
+    <figure class="reveal">
+      <a href="../assets/wafer/scara_io.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/scara_io.jpg" alt="The Dobot M1 Pro controller I/O face, showing an upper terminal block labelled DO1 to DO8 and DI1 to DI8 and a lower, wider block carrying DO9 to DO16 and DI9 to DI16, with wires landed on the lower block.">
+      </a>
+      <figcaption><span class="n">FIG 09</span>The M1 Pro controller I/O face. The upper block carries DO1–DO8 and DI1–DI8; the lower, wider block carries DO9–DO16 and DI9–DI16. The handshake uses DI10 and DO10 — on the second block, which is not where the silkscreen leads you to look.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">05 / Transport &amp; Inspection</div>
+    <h2 class="reveal">The same sensor has to mean two different things.</h2>
+    <p class="reveal">
+      The belt is driven by a stepper through the Dobot Magic Box extended I/O module, which
+      exposes both a motor port and general-purpose digital I/O through the same Python API
+      that drives the arm: one connection, one library, two subsystems. Direction is the sign of
+      the commanded speed and stopping is a commanded speed of zero, so no mechanical changeover
+      is involved. Two infrared photoelectric sensors detect the cradle at each end of travel —
+      both NPN devices with active-low outputs.
+    </p>
+    <p class="reveal">
+      Belt motion is governed by the pairing of sensor state with <em>current belt state</em>,
+      not by the sensor alone. That is what lets the same sensor mean "depart" on one pass and
+      "stop" on the return:
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Trigger</th><th>Belt state</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>Load-end sensor low</td><td>stopped</td><td>run forward; arm the camera</td></tr>
+        <tr><td>Load-end sensor low</td><td>reversing</td><td>stop; ready for next wafer</td></tr>
+        <tr><td>Pick-end sensor low</td><td>forward</td><td>stop; cobot picks here</td></tr>
+        <tr><td>Pick-end sensor low</td><td>stopped</td><td>run reverse; return belt</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <figure class="reveal">
+      <a href="../assets/wafer/conveyor.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/conveyor.jpg" alt="The conveyor: a stepper motor at the left end, an infrared photoelectric sensor in a yellow barrel housing, and the magenta 3D-printed wafer cradle taped to the belt, with the wafer cassette at the rear left and a wafer at the far end of the belt.">
+      </a>
+      <figcaption><span class="n">FIG 10</span>The conveyor — stepper at left, infrared photoelectric sensor in the yellow barrel housing, printed cradle taped to the belt.</figcaption>
+    </figure>
+
+    <h3 class="sh reveal">Vision as a presence check, stated as one</h3>
+    <p class="reveal">
+      Each frame is converted to greyscale, median-blurred to suppress speckle from the belt
+      texture, and run through a circular Hough transform tuned to the wafer's apparent radius.
+      On the first confirmed detection of a cycle the belt stops, a settling delay is allowed, a
+      frame is captured to a sequentially numbered file, and the belt restarts. Two latches make
+      that behave in a continuous loop: a <em>first-run</em> flag suppresses detection until a
+      wafer has actually been loaded, so the transform cannot trigger on circular background
+      objects; an <em>already-photographed</em> flag limits capture to one image per wafer and
+      clears when the load-end sensor fires again. Without them the same wafer is photographed
+      repeatedly while it sits in view, and the belt stops each time.
+    </p>
+    <p class="reveal">
+      The transform is used as a presence and gross-geometry check, <strong>not</strong> as a
+      defect classifier. A genuine inspection function would need controlled illumination and a
+      calibrated scale, and the bench provides neither.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">06 / The Cobot</div>
+    <h2 class="reveal">A gripper is a state. A vacuum tool is a circuit.</h2>
+    <p class="reveal">
+      The Pro600 lifts the wafer off the cradle and sets it on the deposit platform. It is
+      programmed in RoboFlow, a block-structured environment hosted on the controller's own
+      Linux system and reached over remote desktop. The cell program alternates absolute joint
+      moves with tool actuations and <strong>two I/O blocks that constitute its entire
+      integration surface</strong>: a <code>Wait</code> on digital input 1, and a
+      <code>Set</code> that pulses digital output 1.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/wafer/cobot.jpg" target="_blank" rel="noopener">
+          <img src="../assets/wafer/cobot.jpg" alt="The white Elephant Robotics Pro600 collaborative robot at its taught home pose with a vacuum tool fitted, the pneumatic manifold on the bench in front of its base and a laptop running RoboFlow at right.">
+        </a>
+        <figcaption><span class="n">FIG 11</span>The Pro600 at its taught home pose with the vacuum tool fitted. The pneumatic manifold sits in front of the base; RoboFlow runs over the controller's remote desktop.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/wafer/roboflow.jpg" target="_blank" rel="noopener">
+          <img src="../assets/wafer/roboflow.jpg" alt="The RoboFlow program tree for the transfer cycle, its step list interleaving absolute joint moves with tool actuations, a wait on digital input 1 and a pulse on digital output 1.">
+        </a>
+        <figcaption><span class="n">FIG 12</span>The RoboFlow program tree. The step list interleaves absolute joint moves with tool actuations, a wait on DI 1, and a pulse on DO 1 — the arm's whole interface to the rest of the cell.</figcaption>
+      </figure>
+    </div>
+    <p class="reveal">
+      The original build used a DH PGE 8 electric parallel gripper with printed finger
+      extensions. This one uses a vacuum tool, and the change is not merely a swap of hardware.
+      A parallel gripper is a two-state device the controller commands directly; the vacuum tool
+      is a pneumatic circuit — filter-regulator, two 24 V solenoid valves for vacuum and
+      blow-off, and a digital vacuum switch whose output is <em>the only evidence that a wafer
+      is actually held</em>. Grip confirmation becomes a sensed quantity rather than an assumed
+      one, which is a strict improvement for a fragile part, at the cost of a compressed-air
+      dependency the gripper did not have.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/wafer/eoat.jpg" target="_blank" rel="noopener">
+          <img src="../assets/wafer/eoat.jpg" alt="Two photographs: the vacuum circuit for the cobot tool with its filter-regulator, two 24 volt solenoid valves, digital vacuum switch and pressure control board; and the Pro600 base I/O terminal block with labelled IN1 to IN6 points.">
+        </a>
+        <figcaption><span class="n">FIG 13</span>(a) The vacuum circuit — filter-regulator, two 24 V solenoid valves, digital vacuum switch, pressure control board. (b) The Pro600 base I/O block, showing the IN1–IN6 points used for the handshake.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/wafer/place.jpg" target="_blank" rel="noopener">
+          <img src="../assets/wafer/place.jpg" alt="The Pro600 lowering a silicon wafer onto the rotating deposit platform at the end of a transfer, with the loaded cradle visible on the belt behind it.">
+        </a>
+        <figcaption><span class="n">FIG 14</span>The Pro600 depositing a wafer on the rotating platform at the end of a transfer, the loaded cradle still visible on the belt.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">07 / The Operator Layer</div>
+    <h2 class="reveal">A panel, a supervisory screen, and a count that crosses as edges.</h2>
+    <p class="reveal">
+      The Micro820 hosts the operator interface as well as the coordination logic: a physical
+      panel with a run switch, four inputs, four output lamps and a 0–10 V analog meter, and a
+      supervisory screen adding start and stop controls, a wafer counter, and live lamps for the
+      start input, both analog sensors, both robot triggers and both conveyor outputs.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/wafer/hmi.jpg" target="_blank" rel="noopener">
+        <img src="../assets/wafer/hmi.jpg" alt="Two photographs: at left the physical operator panel wired to the Micro820 with a run switch, four input buttons, four coloured output lamps and an analog voltmeter; at right a monitor showing the supervisory HMI during a run, with the start input lit green, the wafer counter reading 1, and the remaining I/O points idle.">
+      </a>
+      <figcaption><span class="n">FIG 15</span>(a) The physical operator panel wired to the Micro820. (b) The supervisory HMI during a run — start asserted, wafer counter at one, remaining points idle.</figcaption>
+    </figure>
+    <p class="reveal">
+      The counter deserves a note about representation. On the arm side the wafer count exists
+      as an integer, but the only channel to the PLC is a single discrete output pulsed once per
+      wafer — so what actually crosses the cell boundary is <strong>a sequence of edges that the
+      PLC re-integrates</strong>. Transferring the count as a number requires a Modbus holding
+      register. The point at which that belongs is marked in the arm program and left as future
+      work.
+    </p>
+
+    <h3 class="sh reveal">Familiarisation before anyone touches the panel</h3>
+    <p class="reveal">
+      Before the cell was patched for real, the trainer panel was modelled in three.js with every
+      terminal and conductor labelled, so the I/O map could be walked through — and argued about
+      — without a live 24 V rail in the room.
+    </p>
+    <figure class="reveal">
+      <video autoplay muted loop playsinline preload="none" poster="../assets/wafer/trainer3d-poster.jpg"
+        aria-label="A three.js model of the trainer panel orbiting slowly, with every terminal and conductor labelled and colour-coded.">
+        <source src="../media/wafer-trainer3d.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 02</span>The three.js cell model — every terminal and conductor labelled, used for I/O familiarisation before anyone touches the real panel. The standalone page in the repository orbits, zooms and pans, and exports the geometry as OBJ or GLB. Silent clip.</figcaption>
+    </figure>
+
+    <h3 class="sh reveal">Nominal timing</h3>
+    <p class="reveal">
+      These are configured constants, not measured cycle times. They bound the coordination
+      overhead at roughly <strong>seven seconds per wafer</strong>, on top of whatever the motion
+      itself takes.
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Constant</th><th>Where</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Trigger pulse width</td><td>PLC TP timers</td><td>2.0 s</td></tr>
+        <tr><td>Cycle-done pulse width</td><td>SCARA program</td><td>2.0 s</td></tr>
+        <tr><td>Cobot done pulse</td><td>RoboFlow Set block</td><td>0.2 s</td></tr>
+        <tr><td>Belt run / settle dwell</td><td>conveyor script</td><td>2.5 s</td></tr>
+        <tr><td>Camera settling delay</td><td>conveyor script</td><td>2.0 s</td></tr>
+        <tr><td>Standalone pacing dwell</td><td>SCARA program</td><td>3.0 s</td></tr>
+        <tr><td>Cobot pick allowance</td><td>sequencer</td><td>5.0 s</td></tr>
+        <tr><td>Belt travel watchdog</td><td>sequencer</td><td>20.0 s</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">08 / Failure Log</div>
+    <h2 class="reveal">In integration work, the failure log is the result.</h2>
+    <p class="reveal">
+      Fifteen substantive faults were recorded with their root cause and resolution. Several
+      share a shape: <strong>a signal was assumed rather than measured</strong>, and the
+      resulting symptom pointed somewhere other than the cause.
+    </p>
+    <div class="scroll-x reveal">
+    <table>
+      <thead><tr><th>Symptom</th><th>Root cause</th><th>Resolution</th></tr></thead>
+      <tbody>
+        <tr><td>Motion calls raise "nil value"</td><td>Robot API binds only in the main thread's script</td><td>Keep all motion in that file</td></tr>
+        <tr class="hl"><td>"Incorrect motion point" at the fixture</td><td>Only one IK branch is valid at 393.8 mm; solver chose the other</td><td>Command the fixture side in joint space</td></tr>
+        <tr><td>Same, intermittently elsewhere</td><td>An edited parameter left a coordinate undefined</td><td>Check for nil before suspecting reach</td></tr>
+        <tr><td>Cartesian jog cannot reach the fixture</td><td>Jogging will not cross a configuration boundary</td><td>Expected; hand-guide, then teach joints</td></tr>
+        <tr><td>Four cycles run for three wafers</td><td>Loop bounded by height, not by count</td><td>Derive the shelf height from the count</td></tr>
+        <tr><td>Traverse waypoint descends to shelf height mid-path</td><td>Pose taught at the wrong height</td><td>Raise J3 only — pure screw move, branch unchanged</td></tr>
+        <tr><td>Fork dips 2.7 mm entering the slot</td><td>Approach and inserted poses taught at different heights</td><td>Adopt the lower height for both</td></tr>
+        <tr><td>Wafer drags off the cradle</td><td>Deposit pose leaves prongs under the wafer</td><td>Add an explicit withdrawal pose</td></tr>
+        <tr class="hl"><td>Start button does nothing at all</td><td>Stop wired normally closed but read as a normally-closed contact</td><td>Invert the contact form</td></tr>
+        <tr><td>cycle_done latches at the press, not at the report</td><td>Wrong contact form on the done input</td><td>Normally-open contact</td></tr>
+        <tr><td>Latch never releases</td><td>Seal-in rung with no break condition</td><td>Series break in the seal</td></tr>
+        <tr><td>Latch computed but unused</td><td>Nothing referenced the bit</td><td>Consume it in both rungs</td></tr>
+        <tr><td>Robot-done input never true</td><td>The point had no alias; a local of the same name was read</td><td>Alias the physical point</td></tr>
+        <tr><td>PLC absent from the browse tree</td><td>Link-local controller address</td><td>Put the adapter on 169.254.x.x</td></tr>
+        <tr><td>Detection stops working after a download</td><td>Analog threshold is not retained</td><td>Re-enter after every download</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 class="sh reveal">Three things that generalise past this bench</h3>
+    <ul class="plain reveal">
+      <li><strong>Redundant representations catch errors that neither catches alone.</strong>
+        Every taught joint pose is carried alongside its forward-kinematic Cartesian equivalent,
+        computed at startup rather than transcribed. That caught the traverse pose taught at
+        shelf height, and the mismatch between approach and inserted heights, before either
+        reached hardware. The redundancy costs a few lines.</li>
+      <li><strong>The direction a signal fails in is a design parameter.</strong> The start
+        signal is active high so a dead wire means no request; the conveyor outputs idle high so
+        loss of power stops the belt; the stop button is normally closed so a cut wire reads as
+        a press. None of these follows from the sensor convention. Each is a decision about
+        which failure the cell should default to, and each was made explicitly.</li>
+      <li><strong>Signal width should exceed the receiver's sampling uncertainty by a
+        comfortable margin.</strong> Two-second pulses against a millisecond scan mean no element
+        of this cell needs edge detection. The cost is throughput; on a production cell the same
+        argument would be made with edge capture and a handshake acknowledgement instead.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">09 / What It Does Not Do Yet</div>
+    <h2 class="reveal">Four limitations, stated rather than buried.</h2>
+    <ul class="plain reveal">
+      <li><strong>The deposit fixture is at 393.8 mm of a 400 mm reach.</strong> Joint-space
+        commanding makes the configuration deterministic, but it does not improve the
+        conditioning of the workspace at that radius. Moving the fixture 30–40 mm toward the
+        robot is the single change that would most reduce the cell's fragility, and it costs one
+        re-teaching session.</li>
+      <li><strong>Conveyor positioning is open loop.</strong> The belt runs until a sensor sees
+        the cradle, and position within the detection window is uncontrolled — which bounds how
+        tightly the cobot's pick pose can be specified. An encoder on the drive, or a second
+        sensor for two-point edge timing, would tighten it.</li>
+      <li><strong>The wafer count crosses the cell boundary as edges, not as a value.</strong> A
+        Modbus holding register would carry it as an integer and let the HMI display the arm's
+        own count rather than the PLC's reconstruction of it.</li>
+      <li><strong>Interlocking is procedural rather than enforced.</strong> The busy output that
+        would keep the rest of the cell out of the arm's workspace is implemented and wired
+        through the same guarded output helper as everything else, but it is disabled by default
+        because its pin assignment is <em>assumed</em> rather than measured. Enabling it against
+        a confirmed terminal is the first safety improvement worth making.</li>
+    </ul>
+    <p class="reveal">
+      Beyond those: vision-based wafer alignment, using the inspection camera to correct the
+      cradle pose before the cobot picks, would remove the cell's dependence on the cradle being
+      taped in exactly the taught place. That is the natural next stage.
+    </p>
+
+    <div class="proj-stack reveal">
+      <span class="tag">Allen-Bradley Micro820</span><span class="tag">Ladder / IEC 61131-3</span>
+      <span class="tag">SCARA Kinematics</span><span class="tag">Lua · DobotStudio Pro</span>
+      <span class="tag">Collaborative Robots</span><span class="tag">OpenCV</span>
+      <span class="tag">Python</span><span class="tag">SolidWorks · DfAM</span>
+      <span class="tag">Machine Safety</span><span class="tag">Cell Integration</span>
+    </div>
+
+    <div class="credit reveal">
+      <p>
+        <strong>Credit where it is owed.</strong> The wafer automation cell, its original
+        commissioning and the accompanying laboratory manual are the work of
+        <strong>Sameerjeet Singh Chhabra</strong>, under the guidance of
+        <strong>Dr. Sangram Redkar</strong>, in the RAS 598 Advanced Robotic Systems program at
+        Arizona State University; the original team was Sameerjeet Singh Chhabra, Vishavjit
+        Singh Khinda and Shao-Chi Cheng
+        (<a href="https://github.com/Sjschhabra/wafer-automation-cell" target="_blank" rel="noopener">upstream repository ↗</a>).
+        The M1 Pro Lua port, the elbow-branch analysis, the ladder audit, the handshake design
+        and the report on this page are Prajjwal Dutta's, with
+        <a href="https://github.com/saidagit84" target="_blank" rel="noopener">@saidagit84 ↗</a>
+        contributing to the build and bring-up of the cell.
+      </p>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#work">← All work</a>
+    <a href="micro820-plc.html">Micro820 CNC tool magazine →</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ==========================================================================
+   Shared: the planar 2-link inverse kinematics of the M1 Pro, with the real
+   limits from the report. Used by the elbow-branch widget AND by the
+   background scene's SCARA, so the page and the picture agree by construction.
+   ========================================================================== */
+var L1=200, L2=200, REACH=400, DEAD=153, J1LIM=85, J2LIM=130;
+
+function ikBranches(x,y){
+  var rho=Math.hypot(x,y);
+  if(rho>REACH||rho<DEAD) return {rho:rho,ok:false,sol:[]};
+  var c=(rho*rho-L1*L1-L2*L2)/(2*L1*L2);
+  c=Math.max(-1,Math.min(1,c));
+  var j2=Math.acos(c)*180/Math.PI;              // the positive (branch A) elbow
+  var base=Math.atan2(y,x)*180/Math.PI;
+  function j1for(j2d){
+    var r=j2d*Math.PI/180;
+    return base-Math.atan2(L2*Math.sin(r),L1+L2*Math.cos(r))*180/Math.PI;
+  }
+  return {rho:rho,ok:true,sol:[
+    {tag:'A',j2:j2,   j1:j1for(j2)},
+    {tag:'B',j2:-j2,  j1:j1for(-j2)}
+  ]};
+}
+function wrap180(a){ a=((a+180)%360+360)%360-180; return a===-180?180:a; }
+function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
+
+(function(){
+  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(function(v){v.removeAttribute('autoplay');v.pause();});}
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  var SVGNS='http://www.w3.org/2000/svg';
+  function mk(tag,attrs){var e=document.createElementNS(SVGNS,tag);
+    for(var k in attrs) e.setAttribute(k,attrs[k]); return e;}
+  function row(k,v,cls){
+    return '<div><span class="k">'+k+'</span><span class="v '+(cls||'')+'">'+v+'</span></div>';
+  }
+
+  /* ======================================================================
+     WIDGET A — the elbow-branch explorer
+     ====================================================================== */
+  (function(){
+    var svg=document.getElementById('ikSvg');
+    if(!svg) return;
+    var bg=document.getElementById('ikBg'), arms=document.getElementById('ikArms'), fg=document.getElementById('ikFg');
+    var CX=160, CY=178, S=0.345;                    // px per mm
+    function px(x,y){ return [CX+x*S, CY-y*S]; }    // +Y is up on screen
+
+    /* ---- static furniture ---- */
+    bg.appendChild(mk('circle',{cx:CX,cy:CY,r:REACH*S,fill:'rgba(79,216,232,0.03)',
+      stroke:'rgba(140,170,220,0.28)','stroke-width':1}));
+    bg.appendChild(mk('circle',{cx:CX,cy:CY,r:393.8*S,fill:'none',
+      stroke:'rgba(245,163,92,0.45)','stroke-width':1,'stroke-dasharray':'2 4'}));
+    bg.appendChild(mk('circle',{cx:CX,cy:CY,r:DEAD*S,fill:'rgba(6,10,20,0.55)',
+      stroke:'rgba(140,170,220,0.25)','stroke-width':1,'stroke-dasharray':'3 4'}));
+    [J1LIM,-J1LIM].forEach(function(a){
+      var p=px(REACH*Math.cos(a*Math.PI/180),REACH*Math.sin(a*Math.PI/180));
+      bg.appendChild(mk('line',{x1:CX,y1:CY,x2:p[0],y2:p[1],
+        stroke:'rgba(245,163,92,0.3)','stroke-width':1,'stroke-dasharray':'4 4'}));
+    });
+    function lbl(x,y,t,fill,anchor){
+      var e=mk('text',{x:x,y:y,'text-anchor':anchor||'middle','font-family':'IBM Plex Mono, monospace',
+        'font-size':'8.5',fill:fill||'#8a9ab5','letter-spacing':'0.06em'});
+      e.textContent=t; return e;
+    }
+    bg.appendChild(lbl(CX,CY-REACH*S-6,'REACH 400','#8a9ab5'));
+    bg.appendChild(lbl(CX,CY+DEAD*S+12,'DEAD 153','#5d6d88'));
+    bg.appendChild(lbl(CX+REACH*S-4,CY+16,'J1 ±85°','#f5a35c','end'));
+    bg.appendChild(lbl(CX,CY+REACH*S+15,'FIXTURE ρ = 393.8 — 98.5% OF REACH','#f5a35c'));
+
+    /* ---- arms ---- */
+    function armGroup(color,dash){
+      var g=mk('g',{});
+      var l1=mk('line',{stroke:color,'stroke-width':3,'stroke-linecap':'round',opacity:0.9});
+      var l2=mk('line',{stroke:color,'stroke-width':3,'stroke-linecap':'round',opacity:0.9});
+      if(dash){l1.setAttribute('stroke-dasharray','5 3');l2.setAttribute('stroke-dasharray','5 3');}
+      var el=mk('circle',{r:4,fill:'#060a14',stroke:color,'stroke-width':1.6});
+      g.appendChild(l1);g.appendChild(l2);g.appendChild(el);
+      arms.appendChild(g);
+      return {g:g,l1:l1,l2:l2,el:el};
+    }
+    var armA=armGroup('#4fd8e8',false), armB=armGroup('#f5a35c',true);
+    fg.appendChild(mk('circle',{cx:CX,cy:CY,r:5.5,fill:'#0a1226',stroke:'rgba(140,170,220,0.6)','stroke-width':1.5}));
+    var tgt=mk('circle',{r:6,fill:'#f5a35c',opacity:0.95,cursor:'grab'});
+    var tgtHalo=mk('circle',{r:11,fill:'none',stroke:'rgba(245,163,92,0.45)','stroke-width':1});
+    fg.appendChild(tgtHalo); fg.appendChild(tgt);
+
+    var st={x:113.3,y:214.7,r:-111.4,showA:true,showB:true};
+
+    function drawArm(a,sol,visible){
+      if(!visible||!sol){ a.g.setAttribute('opacity',0); return; }
+      a.g.setAttribute('opacity',1);
+      var r1=sol.j1*Math.PI/180, r12=(sol.j1+sol.j2)*Math.PI/180;
+      var ex=L1*Math.cos(r1), ey=L1*Math.sin(r1);
+      var e=px(ex,ey), t=px(ex+L2*Math.cos(r12), ey+L2*Math.sin(r12));
+      a.l1.setAttribute('x1',CX);a.l1.setAttribute('y1',CY);a.l1.setAttribute('x2',e[0]);a.l1.setAttribute('y2',e[1]);
+      a.l2.setAttribute('x1',e[0]);a.l2.setAttribute('y1',e[1]);a.l2.setAttribute('x2',t[0]);a.l2.setAttribute('y2',t[1]);
+      a.el.setAttribute('cx',e[0]);a.el.setAttribute('cy',e[1]);
+      var bad=!limitsOk(sol);
+      a.l1.setAttribute('opacity',bad?0.35:0.95);
+      a.l2.setAttribute('opacity',bad?0.35:0.95);
+    }
+
+    function draw(){
+      var p=px(st.x,st.y);
+      tgt.setAttribute('cx',p[0]);tgt.setAttribute('cy',p[1]);
+      tgtHalo.setAttribute('cx',p[0]);tgtHalo.setAttribute('cy',p[1]);
+      var k=ikBranches(st.x,st.y);
+      var A=k.ok?k.sol[0]:null, B=k.ok?k.sol[1]:null;
+      drawArm(armA,A,st.showA); drawArm(armB,B,st.showB);
+
+      function block(tag,s){
+        if(!s) return row(tag,'no solution','off');
+        var j4=wrap180(st.r-s.j1-s.j2);
+        var ok=limitsOk(s);
+        return '<span class="hdr">Branch '+tag+(tag==='A'?' — elbow +':' — elbow −')+'</span>'+
+          row('J1',s.j1.toFixed(2)+'°',Math.abs(s.j1)>J1LIM?'amb':'')+
+          row('J2',s.j2.toFixed(2)+'°',Math.abs(s.j2)>J2LIM?'amb':'')+
+          row('J4',j4.toFixed(2)+'°','')+
+          row('verdict',ok?'within all limits':'J'+(Math.abs(s.j1)>J1LIM?'1':'2')+' out of range',ok?'':'amb');
+      }
+      document.getElementById('ikRead').innerHTML=
+        row('ρ',k.rho.toFixed(1)+' mm  ('+(k.rho/REACH*100).toFixed(1)+'% of reach)',
+            k.ok?(k.rho>380?'amb':''):'amb')+
+        row('R (tool)',st.r.toFixed(1)+'°','')+
+        block('A',A)+block('B',B);
+
+      var v=document.getElementById('ikVerdict');
+      if(!k.ok){
+        v.className='verdict no';
+        v.textContent=k.rho>REACH?'Outside the 400 mm envelope — no branch exists.'
+                                 :'Inside the 153 mm dead zone — the arm cannot fold in this far.';
+      }else{
+        var okA=limitsOk(A), okB=limitsOk(B);
+        if(okA&&okB){ v.className='verdict'; v.textContent='Both branches legal — the solver may pick either, and will not say which.'; }
+        else if(okA||okB){ v.className='verdict ok';
+          v.textContent='Exactly one legal branch ('+(okA?'A':'B')+'). Cartesian commands are a coin flip; joint-space commanding is not.'; }
+        else { v.className='verdict no'; v.textContent='No branch inside the joint limits — unreachable in practice.'; }
+      }
+    }
+
+    /* ---- drag ---- */
+    function fromEvent(ev){
+      var r=svg.getBoundingClientRect();
+      var vx=(ev.clientX-r.left)/r.width*320, vy=(ev.clientY-r.top)/r.height*340;
+      var mx=(vx-CX)/S, my=(CY-vy)/S;
+      var rho=Math.hypot(mx,my);
+      if(rho>REACH){ mx*=REACH/rho; my*=REACH/rho; }
+      if(rho<DEAD&&rho>0){ mx*=DEAD/rho; my*=DEAD/rho; }
+      st.x=mx; st.y=my; draw();
+    }
+    var dragging=false;
+    svg.addEventListener('pointerdown',function(ev){
+      dragging=true; svg.setPointerCapture(ev.pointerId); fromEvent(ev); ev.preventDefault();
+    });
+    svg.addEventListener('pointermove',function(ev){ if(dragging) fromEvent(ev); });
+    svg.addEventListener('pointerup',function(ev){ dragging=false; try{svg.releasePointerCapture(ev.pointerId);}catch(e){} });
+    svg.addEventListener('pointercancel',function(){ dragging=false; });
+
+    document.querySelectorAll('[data-ik]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var v=b.dataset.ik.split(',').map(Number);
+        st.x=v[0]; st.y=v[1]; st.r=v[2];
+        document.querySelectorAll('[data-ik]').forEach(function(o){o.classList.remove('on');});
+        b.classList.add('on');
+        draw();
+      });
+    });
+    document.querySelector('[data-ik]').classList.add('on');
+
+    var bA=document.getElementById('ikShowA'), bB=document.getElementById('ikShowB');
+    bA.addEventListener('click',function(){ st.showA=!st.showA; bA.classList.toggle('on',st.showA); draw(); });
+    bB.addEventListener('click',function(){ st.showB=!st.showB; bB.classList.toggle('on',st.showB); draw(); });
+    draw();
+  })();
+
+  /* ======================================================================
+     WIDGET B — the three handshake rungs on a 60 ms scan
+     ====================================================================== */
+  (function(){
+    var svg=document.getElementById('hsTrace');
+    if(!svg) return;
+
+    var SCAN=60, N=112, MOVE=1500, DONE_MS=2000;
+    var SIG=[
+      {k:'start', n:'START'},
+      {k:'stop',  n:'STOP (NC)'},
+      {k:'req',   n:'DO_03 REQ'},
+      {k:'done',  n:'I-04 DONE'},
+      {k:'cyc',   n:'cycle_done'}
+    ];
+    var buf=SIG.map(function(){var a=new Array(N);for(var i=0;i<N;i++)a[i]=0;return a;});
+    var X0=86, X1=326, TOP=16, ROW=44, AMP=17;
+
+    /* static furniture */
+    SIG.forEach(function(s,i){
+      var y=TOP+i*ROW;
+      var t=mk('text',{x:4,y:y+AMP-3,'font-family':'IBM Plex Mono, monospace','font-size':'8.5',
+        fill:'#8a9ab5','letter-spacing':'0.06em'});
+      t.textContent=s.n; svg.appendChild(t);
+      svg.appendChild(mk('line',{x1:X0,y1:y+AMP,x2:X1,y2:y+AMP,stroke:'rgba(140,170,220,0.12)','stroke-width':1}));
+      s.path=mk('path',{fill:'none','stroke-width':1.7,'stroke-linejoin':'round',
+        stroke:(s.k==='done'||s.k==='cyc')?'#f5a35c':'#4fd8e8',opacity:0.9});
+      svg.appendChild(s.path);
+      s.y=y;
+    });
+
+    var st={start:false,hold:false,stopPressed:false,req:false,cyc:false,done:false,
+            termA:true,scan:0,armPhase:'idle',armT:0,armReady:true,doneT:0,
+            wafers:0,pressWafers:0,pulseT:0,lastPress:0};
+    var logEl=document.getElementById('hsLog'), logN=0;
+    function log(tag,msg,run){
+      var d=document.createElement('div');
+      d.innerHTML='<span class="s">'+(++logN)+'</span><span class="t'+(run?' t-run':'')+'">'+tag+
+        '</span><span class="m">'+msg+'</span>';
+      logEl.insertBefore(d,logEl.firstChild);
+      while(logEl.children.length>40) logEl.removeChild(logEl.lastChild);
+    }
+
+    function tick(){
+      st.scan++;
+      /* ---- physical inputs ---- */
+      var Start = st.hold || st.pulseT>0;
+      if(st.pulseT>0) st.pulseT-=SCAN;
+      var Stop  = !st.stopPressed;            // NC: TRUE at rest, FALSE when pressed
+      var Robot_Done = st.doneT>0;
+      if(st.doneT>0) st.doneT-=SCAN;
+
+      /* ---- the three rungs, in ladder order: R2 reads the coil R1 just wrote ---- */
+      var prevReq=st.req;
+      st.req = (Start || st.req) && Stop && !st.cyc;
+      st.cyc = (Robot_Done || st.cyc) && (st.termA ? (Start || st.req) : st.req) && Stop;
+      var req=st.req;
+      st.start=Start; st.done=Robot_Done;
+
+      /* ---- the arm on the other end of the two wires ---- */
+      if(!req && prevReq) st.armReady=true;                  // it waits for the fall
+      if(st.armPhase==='idle' && req && st.armReady){
+        st.armPhase='moving'; st.armT=MOVE; st.armReady=false;
+        log('ARM','Request sampled at the top of a wafer — cycle begins.',true);
+      }else if(st.armPhase==='moving'){
+        st.armT-=SCAN;
+        if(st.armT<=0){
+          st.armPhase='idle'; st.doneT=DONE_MS; st.wafers++; st.pressWafers++;
+          log('ARM','Wafer '+st.wafers+' placed. DO10 pulses for 2 s.',true);
+        }
+      }
+
+      /* ---- trace ---- */
+      var v=[Start?1:0,Stop?1:0,req?1:0,Robot_Done?1:0,cyc?1:0];
+      buf.forEach(function(a,i){ a.shift(); a.push(v[i]); });
+      render();
+    }
+
+    function render(){
+      var dx=(X1-X0)/(N-1);
+      SIG.forEach(function(s,i){
+        var a=buf[i], d='', py=null;
+        for(var j=0;j<N;j++){
+          var x=X0+j*dx, y=s.y+AMP-a[j]*AMP;
+          if(j===0){ d='M'+x.toFixed(1)+' '+y.toFixed(1); }
+          else { if(y!==py) d+='L'+x.toFixed(1)+' '+py.toFixed(1)+'L'+x.toFixed(1)+' '+y.toFixed(1);
+                 else d+='L'+x.toFixed(1)+' '+y.toFixed(1); }
+          py=y;
+        }
+        s.path.setAttribute('d',d);
+      });
+      document.getElementById('hsScan').textContent='SCAN '+st.scan;
+      document.getElementById('lampReq').classList.toggle('on',st.req);
+      document.getElementById('lampDone').classList.toggle('on',st.done);
+      document.getElementById('lampLight').classList.toggle('on',st.req);
+      document.getElementById('hsRead').innerHTML=
+        row('Start',st.start?'TRUE':'FALSE',st.start?'':'off')+
+        row('Stop (NC input)',st.stopPressed?'FALSE — pressed':'TRUE — at rest',st.stopPressed?'amb':'')+
+        row('Scara_in',st.req?'TRUE':'FALSE',st.req?'':'off')+
+        row('Robot_Done',st.done?'▮ pulse':'—',st.done?'amb':'off')+
+        row('cycle_done',st.cyc?'TRUE — latched':'FALSE',st.cyc?'amb':'off')+
+        row('wafers this press',st.pressWafers,'')+
+        row('wafers total',st.wafers,'');
+      var v=document.getElementById('hsVerdict');
+      if(!st.termA && st.pressWafers>1){
+        v.className='verdict no';
+        v.textContent='Runaway: with the reset term on Scara_in alone, cycle_done clears the moment the request drops, so a held button asks again — and again.';
+      }else if(st.hold && st.pressWafers===1){
+        v.className='verdict ok';
+        v.textContent='One wafer, button still held. cycle_done stays latched while Start is high, so the request cannot re-assert.';
+      }else if(st.stopPressed){
+        v.className='verdict no';
+        v.textContent='Stop pressed — its input reads FALSE, so every rung is broken at the series contact. The arm already moving is not stopped by this; that is what the E-stop is for.';
+      }else{
+        v.className='verdict';
+        v.textContent='Press START for one wafer. Then try holding it, and try the other reset term.';
+      }
+    }
+
+    var bStart=document.getElementById('hsStart'), bHold=document.getElementById('hsHold'),
+        bStop=document.getElementById('hsStop'),
+        bTermA=document.getElementById('hsTermA'), bTermB=document.getElementById('hsTermB');
+    bStart.addEventListener('click',function(){
+      st.pulseT=180; st.pressWafers=0;
+      if(st.hold){ st.hold=false; bHold.classList.remove('on'); }
+      log('PANEL','START pressed and released.');
+    });
+    bHold.addEventListener('click',function(){
+      st.hold=!st.hold; bHold.classList.toggle('on',st.hold);
+      if(st.hold){ st.pressWafers=0; log('PANEL','START held down.'); }
+      else log('PANEL','START released.');
+    });
+    bStop.addEventListener('click',function(){
+      st.stopPressed=!st.stopPressed;
+      bStop.classList.toggle('on',st.stopPressed); bStop.classList.toggle('amb',st.stopPressed);
+      log('PANEL',st.stopPressed?'STOP pressed — NC input goes FALSE.':'STOP released.');
+    });
+    function setTerm(a){
+      st.termA=a; st.pressWafers=0;
+      bTermA.classList.toggle('on',a); bTermB.classList.toggle('on',!a);
+      bTermB.classList.toggle('amb',!a);
+      log('EDIT','Rung 2 reset term set to '+(a?'(Start OR Scara_in) — as built.':'Scara_in alone — the bug.'));
+    }
+    bTermA.addEventListener('click',function(){setTerm(true);});
+    bTermB.addEventListener('click',function(){setTerm(false);});
+
+    log('SYSTEM','Idle. Stop is at rest, so its input reads TRUE and rung 1 can conduct.');
+    render();
+    setInterval(tick,SCAN);
+  })();
+
+  /* ======================================================================
+     Background — the cell itself, in wireframe: cassette, SCARA on the same
+     branch-A IK the widget above solves, conveyor with a travelling cradle,
+     inspection camera, cobot, deposit platform, and a PLC whose trigger
+     lines pulse when it actually asks for something.
+     ====================================================================== */
+  var canvas=document.getElementById('cellscene');
+  if(!canvas||typeof THREE==='undefined') return;
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  var scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.026);
+  var camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,0.1,180);
+  var CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  var mobile=innerWidth<700;
+  function wire(c,o){return new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o===undefined?0.55:o});}
+  function lineMat(c,o){return new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o===undefined?0.35:o});}
+  function box(w,h,d,c,o){return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wire(c,o));}
+
+  var rig=new THREE.Group();
+  rig.scale.setScalar(mobile?0.58:0.85);
+  rig.position.y=mobile?-0.8:-1.4;
+  scene.add(rig);
+
+  /* ---------- bench ---------- */
+  (function(){
+    var g=new THREE.BufferGeometry(), v=[];
+    for(var x=-15;x<=15;x+=1.5){ v.push(x,0,-7, x,0,7); }
+    for(var z=-7;z<=7;z+=1.5){ v.push(-15,0,z, 15,0,z); }
+    g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));
+    rig.add(new THREE.LineSegments(g,lineMat(DEEPBLUE,0.16)));
+  })();
+
+  /* ---------- geometry constants (world units) ---------- */
+  var SH={x:-10.5,y:3.6,z:0};             // SCARA shoulder
+  var LA=3.3, LB=3.3;                      // link lengths
+  var CAS={x:-7.2,z:3.0};                  // cassette
+  var BELT_Y=1.35, BELT_L0=-4.5, BELT_L1=4.5, BELT_Z=-0.5;
+  var COB={x:8,y:1.9,z:1.5}, C1=2.4, C2=2.2;
+  var DEP={x:10.5,y:1.85,z:2.6};
+  var SHELVES=6;
+
+  /* ---------- cassette ---------- */
+  var cassette=new THREE.Group();
+  cassette.position.set(CAS.x,0,CAS.z);
+  rig.add(cassette);
+  cassette.add(box(1.8,0.12,1.8,DEEPBLUE,0.3));
+  var shelfMeshes=[];
+  for(var s=0;s<SHELVES;s++){
+    var sh=box(1.7,0.05,1.6,CYAN,0.22);
+    sh.position.y=1.35+s*0.30;
+    cassette.add(sh); shelfMeshes.push(sh);
+  }
+  [[-0.85,-0.8],[-0.85,0.8],[0.85,-0.8],[0.85,0.8]].forEach(function(p){
+    var c=box(0.09,3.0,0.09,DEEPBLUE,0.32); c.position.set(p[0],1.5,p[1]); cassette.add(c);
+  });
+  function shelfY(n){ return 1.35+Math.max(0,SHELVES-1-n)*0.30; }
+
+  /* ---------- SCARA ---------- */
+  var scaraCol=box(1.5,3.6,1.5,DEEPBLUE,0.3);
+  scaraCol.position.set(SH.x,1.8,SH.z); rig.add(scaraCol);
+  var shoulder=new THREE.Group(); shoulder.position.set(SH.x,SH.y,SH.z); rig.add(shoulder);
+  var link1=box(LA,0.42,0.55,CYAN,0.6); link1.position.x=LA/2; shoulder.add(link1);
+  var elbow=new THREE.Group(); elbow.position.x=LA; shoulder.add(elbow);
+  var link2=box(LB,0.34,0.46,CYAN,0.6); link2.position.x=LB/2; elbow.add(link2);
+  var wrist=new THREE.Group(); wrist.position.x=LB; elbow.add(wrist);
+  var screw=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,1.6,7,1,true),wire(AMBER,0.5));
+  screw.position.y=-0.3; wrist.add(screw);
+  var fork=new THREE.Group(); wrist.add(fork);
+  [-0.22,0.22].forEach(function(o){
+    var p=box(0.9,0.05,0.09,AMBER,0.75); p.position.set(0.45,0,o); fork.add(p);
+  });
+  fork.add(box(0.14,0.06,0.55,AMBER,0.6));
+
+  /* ---------- conveyor ---------- */
+  var belt=new THREE.Group(); belt.position.set(0,BELT_Y,BELT_Z); rig.add(belt);
+  belt.add(box(10,0.14,1.7,DEEPBLUE,0.34));
+  (function(){
+    var g=new THREE.BufferGeometry(), v=[];
+    for(var x=-5;x<=5;x+=0.42){ v.push(x,0.09,-0.8, x,0.09,0.8); }
+    g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));
+    belt.add(new THREE.LineSegments(g,lineMat(CYAN,0.2)));
+  })();
+  [-5,5].forEach(function(x){
+    var r=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,1.7,10,1,true),wire(DEEPBLUE,0.4));
+    r.rotation.x=Math.PI/2; r.rotation.z=Math.PI/2; r.position.set(x,0,0); belt.add(r);
+  });
+  var irA=box(0.22,0.5,0.22,AMBER,0.55), irB=box(0.22,0.5,0.22,AMBER,0.55);
+  irA.position.set(-5.1,0.42,0.95); irB.position.set(5.1,0.42,0.95);
+  belt.add(irA); belt.add(irB);
+
+  var cradle=new THREE.Group(); belt.add(cradle);
+  cradle.add(box(0.9,0.28,0.9,AMBER,0.55));
+  var wafer=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.52,0.035,18,1,true),wire(CYAN,0.9));
+  rig.add(wafer); wafer.visible=false;
+
+  /* ---------- inspection camera ---------- */
+  var camPost=new THREE.Group(); camPost.position.set(0,0,BELT_Z+1.4); rig.add(camPost);
+  camPost.add((function(){var m=box(0.12,3.4,0.12,DEEPBLUE,0.3);m.position.y=1.7;return m;})());
+  var camHead=box(0.5,0.4,0.7,AMBER,0.5); camHead.position.set(0,3.3,-0.55); camPost.add(camHead);
+  var camCone=new THREE.Mesh(new THREE.ConeGeometry(0.75,1.7,10,1,true),wire(AMBER,0.0));
+  camCone.position.set(0,2.4,-1.0); camCone.rotation.x=Math.PI; camPost.add(camCone);
+
+  /* ---------- cobot ---------- */
+  var cobBase=box(1.2,0.9,1.2,DEEPBLUE,0.32); cobBase.position.set(COB.x,0.45,COB.z); rig.add(cobBase);
+  var cYaw=new THREE.Group(); cYaw.position.set(COB.x,COB.y,COB.z); rig.add(cYaw);
+  var cPitch=new THREE.Group(); cYaw.add(cPitch);
+  var cUpper=box(C1,0.34,0.34,CYAN,0.55); cUpper.position.x=C1/2; cPitch.add(cUpper);
+  var cElbow=new THREE.Group(); cElbow.position.x=C1; cPitch.add(cElbow);
+  var cFore=box(C2,0.26,0.26,CYAN,0.55); cFore.position.x=C2/2; cElbow.add(cFore);
+  var cTool=new THREE.Group(); cTool.position.x=C2; cElbow.add(cTool);
+  var cup=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,0.3,10,1,true),wire(AMBER,0.7));
+  cup.position.y=-0.2; cTool.add(cup);
+
+  /* ---------- deposit platform ---------- */
+  var depot=new THREE.Group(); depot.position.set(DEP.x,0,DEP.z); rig.add(depot);
+  depot.add((function(){var m=box(0.5,1.6,0.5,DEEPBLUE,0.3);m.position.y=0.8;return m;})());
+  var depPlate=new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.85,0.1,16,1,true),wire(AMBER,0.45));
+  depPlate.position.y=1.6; depot.add(depPlate);
+  var depStack=[];
+
+  /* ---------- PLC and its trigger lines ---------- */
+  var plc=new THREE.Group(); plc.position.set(0,4.8,-5.2); rig.add(plc);
+  plc.add(box(2.4,1.3,0.7,DEEPBLUE,0.4));
+  for(var i2=0;i2<5;i2++){
+    var t=box(0.12,0.12,0.12,CYAN,0.5); t.position.set(-0.9+i2*0.45,0.5,0.36); plc.add(t);
+  }
+  function trigLine(to){
+    var g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(
+      [0,4.8,-5.2, to[0]*0.55,5.6,-3.2, to[0],to[1],to[2]],3));
+    var m=lineMat(AMBER,0.12);
+    var l=new THREE.Line(g,m); rig.add(l); return m;
+  }
+  var trigScara=trigLine([SH.x,SH.y+0.6,SH.z]);
+  var trigCobot=trigLine([COB.x,COB.y+0.6,COB.z]);
+  var flashS=0, flashC=0;
+
+  /* ---------- the cycle ---------- */
+  var PH=[
+    {n:'dwell',    d:0.7},
+    {n:'toCass',   d:1.7},
+    {n:'insert',   d:0.9},
+    {n:'lift',     d:0.7},
+    {n:'toBelt',   d:1.9},
+    {n:'drop',     d:0.7},
+    {n:'scaraHome',d:1.3},
+    {n:'beltFwd',  d:2.8},
+    {n:'cobPick',  d:1.7},
+    {n:'cobPlace', d:1.9},
+    {n:'cobHome',  d:1.2},
+    {n:'beltRev',  d:2.3}
+  ];
+  var ph=0, pt=0, shelf=0, carriedBy='none';
+  var HOME={x:CAS.x,z:CAS.z};      // taught home IS the rack approach lifted to clear height
+
+  function ease(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+
+  /* branch-A planar IK, in the bench plane, exactly as the widget solves it */
+  function scaraTo(tx,tz,ty){
+    var a=tx-SH.x, b=-(tz-SH.z);
+    var rho=Math.hypot(a,b);
+    rho=Math.min(rho,LA+LB-0.02);
+    var c=(rho*rho-LA*LA-LB*LB)/(2*LA*LB);
+    c=Math.max(-1,Math.min(1,c));
+    var j2=Math.acos(c);                                   // branch A: elbow positive
+    var j1=Math.atan2(b,a)-Math.atan2(LB*Math.sin(j2),LA+LB*Math.cos(j2));
+    shoulder.rotation.y=j1; elbow.rotation.y=j2;
+    wrist.position.y=ty-SH.y;
+  }
+  function cobotTo(tx,ty,tz){
+    var dx=tx-COB.x, dz=tz-COB.z;
+    var r=Math.hypot(dx,dz), h=ty-COB.y;
+    cYaw.rotation.y=Math.atan2(-dz,dx);
+    var d=Math.min(Math.hypot(r,h),C1+C2-0.02);
+    var c=(d*d-C1*C1-C2*C2)/(2*C1*C2);
+    c=Math.max(-1,Math.min(1,c));
+    var e=Math.acos(c);
+    var s2=Math.atan2(h,r)+Math.atan2(C2*Math.sin(e),C1+C2*Math.cos(e));
+    cPitch.rotation.z=s2; cElbow.rotation.z=-e;
+  }
+
+  var beltFrac=0, wp=new THREE.Vector3();
+  function step(dt,t){
+    pt+=dt;
+    var P=PH[ph], k=Math.min(1,pt/P.d), e=ease(k);
+    var casY=shelfY(shelf), aboveY=casY+1.5;
+
+    switch(P.n){
+      case 'dwell':
+        scaraTo(HOME.x,HOME.z,aboveY); break;
+      case 'toCass':
+        scaraTo(CAS.x,CAS.z,aboveY); break;                // holding at clear height
+      case 'insert':
+        scaraTo(CAS.x,CAS.z,lerp(aboveY,casY+0.14,e));   // a pure Z move, as taught
+        if(k>0.9&&carriedBy==='none'){ carriedBy='fork'; wafer.visible=true; }
+        break;
+      case 'lift':
+        scaraTo(CAS.x,CAS.z,lerp(casY+0.14,aboveY,e)); break;
+      case 'toBelt':
+        scaraTo(lerp(CAS.x,BELT_L0,e),lerp(CAS.z,BELT_Z,e),lerp(aboveY,BELT_Y+1.0,e)); break;
+      case 'drop':
+        scaraTo(BELT_L0,BELT_Z,lerp(BELT_Y+1.0,BELT_Y+0.42,e));
+        if(k>0.85&&carriedBy==='fork') carriedBy='cradle';
+        break;
+      case 'scaraHome':
+        scaraTo(lerp(BELT_L0,HOME.x,e),lerp(BELT_Z,HOME.z,e),lerp(BELT_Y+0.42,aboveY,e)); break;
+      case 'beltFwd':
+        beltFrac=e;
+        scaraTo(HOME.x,HOME.z,aboveY); break;
+      case 'cobPick':
+        beltFrac=1;
+        cobotTo(lerp(DEP.x,BELT_L1,e),lerp(DEP.y+0.9,BELT_Y+0.78,e),lerp(DEP.z,BELT_Z,e));
+        if(k>0.9&&carriedBy==='cradle') carriedBy='cup';
+        break;
+      case 'cobPlace':
+        cobotTo(lerp(BELT_L1,DEP.x,e),lerp(BELT_Y+0.78,DEP.y+0.3,e),lerp(BELT_Z,DEP.z,e));
+        if(k>0.92&&carriedBy==='cup'){ carriedBy='depot'; }
+        break;
+      case 'cobHome':
+        cobotTo(DEP.x,lerp(DEP.y+0.3,DEP.y+0.9,e),DEP.z); break;
+      case 'beltRev':
+        beltFrac=1-e; break;
+    }
+
+    /* cradle and wafer placement */
+    cradle.position.set(lerp(BELT_L0,BELT_L1,beltFrac),0.28,0);
+    if(carriedBy==='fork'){ fork.getWorldPosition(wp); wp.y+=0.06; wp.x+=0.0; }
+    else if(carriedBy==='cradle'){ cradle.getWorldPosition(wp); wp.y+=0.2; }
+    else if(carriedBy==='cup'){ cTool.getWorldPosition(wp); wp.y-=0.3; }
+    else if(carriedBy==='depot'){ wp.set(DEP.x,DEP.y+depStack.length*0.05,DEP.z); }
+    else wafer.visible=false;
+    if(carriedBy!=='none'){ wafer.visible=true; wafer.position.copy(wp); }
+
+    /* shelves the arm has already emptied stop reading as loaded */
+    shelfMeshes.forEach(function(m,i){ m.material.opacity=((SHELVES-1-i)<shelf)?0.09:0.24; });
+
+    /* camera cone flashes as the wafer passes the inspection station */
+    var cx=lerp(BELT_L0,BELT_L1,beltFrac);
+    var seen=(PH[ph].n==='beltFwd')&&Math.abs(cx)<0.9;
+    camCone.material.opacity+=((seen?0.4:0.05)-camCone.material.opacity)*Math.min(1,dt*6);
+
+    /* trigger lines fade after each pulse */
+    flashS=Math.max(0,flashS-dt*1.1); flashC=Math.max(0,flashC-dt*1.1);
+    trigScara.opacity=0.1+flashS*0.75;
+    trigCobot.opacity=0.1+flashC*0.75;
+
+    if(pt>=P.d){
+      pt=0; ph=(ph+1)%PH.length;
+      if(PH[ph].n==='toCass') flashS=1;                 // the PLC asks for a wafer
+      if(PH[ph].n==='cobPick') flashC=1;                // and later asks the cobot
+      if(PH[ph].n==='beltRev'){
+        depStack.push(1); if(depStack.length>4) depStack.length=0;
+        carriedBy='none'; wafer.visible=false;
+        shelf=(shelf+1)%SHELVES;
+      }
+    }
+  }
+
+  scaraTo(HOME.x,HOME.z,shelfY(0)+1.5);
+  cobotTo(DEP.x,DEP.y+0.9,DEP.z);
+  cradle.position.set(BELT_L0,0.28,0);
+
+  var sTarget=0,smooth=0,mx2=0;
+  addEventListener('scroll',function(){sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',function(e){mx2=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',function(){
+    camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+    var m=innerWidth<700; rig.scale.setScalar(m?0.58:0.85); rig.position.y=m?-0.8:-1.4;
+  });
+  renderer.setSize(innerWidth,innerHeight);
+
+  var clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    var dt=Math.min(clock.getDelta(),0.05), t=clock.getElapsedTime();
+    if(!reduced){
+      step(dt,t);
+      wafer.rotation.y+=dt*0.5;
+      depPlate.rotation.y+=dt*0.25;
+    }
+    smooth+=(sTarget-smooth)*0.05;
+    var d=smooth*0.0011;
+    camera.position.x=Math.sin(d*0.5)*23+mx2*2.6;
+    camera.position.z=Math.cos(d*0.5)*23;
+    camera.position.y=8.4-Math.min(d*1.8,3.6);
+    camera.lookAt(0,1.2,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
