@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="An eight-station CNC tool magazine controller built in six stages on an Allen-Bradley Micro820 PLC — ladder diagram, six IEC 61131-3 Structured Text function blocks, a modulo antipode shortest-path rotation decision, and verification by reading the ladder compiler's own output. By Prajjwal Dutta.">
-<title>Micro820 CNC Tool Magazine — Prajjwal Dutta</title>
+<meta name="description" content="An eight-station CNC tool magazine controller built in six stages on an Allen-Bradley Micro820 PLC: ladder diagram for the interlocking, six IEC 61131-3 Structured Text function blocks for the arithmetic, a shortest-arc rotation decision proven optimal over all 56 station pairs, and three defects caught by reading the ladder compiler's generated Structured Text.">
+<title>Micro820 CNC Tool Magazine · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,6 +111,13 @@
   .finding h4 .fno{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;color:var(--amber);margin-right:0.7rem;}
   .finding p{margin-bottom:0;font-size:0.9rem;}
   .finding .law{margin:0.9rem 0 0;}
+  .finding .status{font-family:var(--mono);font-size:0.68rem;line-height:1.7;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--muted);margin-top:1rem;padding-top:0.85rem;
+    border-top:1px solid var(--line);}
+  .finding .status b{color:var(--amber);font-weight:500;}
+  .finding.done{border-left-color:var(--cyan);}
+  .finding.done h4 .fno{color:var(--cyan);}
+  .finding.done .status b{color:var(--cyan);}
 
   /* ---------- interactive lab widgets ---------- */
   .lab{border:1px solid var(--line);border-radius:12px;background:rgba(8,14,28,0.72);
@@ -253,13 +260,7 @@
     <div class="eyebrow reveal"><span>Industrial Automation · PLC · 2026</span><span>ASU · Manufacturing Systems &amp; Networks</span></div>
     <h1 class="reveal">Six Builds, One Tool Changer: Teaching a Micro820 to Take the Short Way Round</h1>
     <p class="sub reveal">
-      An eight-station CNC tool magazine, driven by an Allen-Bradley Micro820 and grown in
-      six stages — from a single seal-in latch to a sixteen-rung program that lets an operator
-      type a tool sequence on a four-bit thumbwheel, picks each tool by the shorter of two
-      rotational arcs, dwells at the transfer point, counts parts, and finishes its lap before
-      it stops. Ladder handles the interlocking; six IEC 61131-3 Structured Text function
-      blocks handle the arithmetic. Verification came from reading the ladder compiler's own
-      output — which is where three defects were hiding that the diagram looked innocent of.
+      I spent a semester turning an eight-station CNC tool magazine into a working machine, one download at a time. It started as a single latching rung on an Allen-Bradley Micro820 and finished as a sixteen-rung program where an operator types a tool list on a four-bit thumbwheel, and the wheel takes the shorter way round to every tool, waits at the transfer point, counts what it has moved, and finishes its lap before it stops. Ladder handles the interlocking, and six IEC 61131-3 Structured Text function blocks handle the arithmetic. The part I did not expect to matter most: I reviewed the program by reading what the ladder compiler emitted rather than the ladder I had drawn, and that is where three defects were hiding.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/micro820-plc" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -270,7 +271,7 @@
       </a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>16</b><span>rungs · final program</span></div>
+      <div class="metric"><b>16</b><span>rungs · run on the trainer</span></div>
       <div class="metric"><b>6</b><span>Structured Text function blocks</span></div>
       <div class="metric"><b>56 / 56</b><span>direction decisions optimal</span></div>
       <div class="metric"><b>3</b><span>defects found in compiled ST</span></div>
@@ -281,32 +282,23 @@
     <a href="../assets/micro820/setup-full.jpg" target="_blank" rel="noopener">
       <img src="../assets/micro820/setup-full.jpg" alt="The complete bench: an Ethernet switch, a Micro820 PLC with a 2080-IQ4 plug-in and a 24 V power supply on DIN rail at left, patched with coloured test leads to the CNC Tool Magazine trainer panel at right, which carries an eight-position rotating tool wheel, a BCD thumbwheel, start and stop buttons, and two indicator lamps.">
     </a>
-    <figcaption><span class="n">FIG 01</span>The bench — Micro820 and 2080-IQ4 on DIN rail, patched to the Industrial Concepts tool magazine trainer. Eight sensors, four thumbwheel bits, two buttons in; two lamps and two motor relays out. Image: lab documentation v1.1, Dr. Sangram Redkar / plccable.com.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The bench I worked on. A Micro820 and a 2080-IQ4 on DIN rail, patched across to the Industrial Concepts tool magazine trainer. Eight sensors, four thumbwheel bits and two buttons in; two lamps and two motor relays out. Image: lab documentation v1.1, Dr. Sangram Redkar / plccable.com.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Machine</div>
     <h2 class="reveal">Not G-code. A carousel that has to choose a direction.</h2>
     <p class="reveal">
-      The trainer is an eight-station rotating tool wheel. A magnet on the platter passes over
-      eight discrete position sensors, so the controller sees position as a
-      <strong>one-hot code across eight wires</strong> — no encoder, no absolute count. A
-      four-bit BCD thumbwheel lets an operator name a station by number. Two digital outputs
-      drive the wheel forward and reverse. That is the entire interface.
+      The trainer is an eight-station rotating tool wheel. A magnet on the platter passes over eight discrete position sensors, so the controller never sees an encoder count, only a <strong>one-hot code spread across eight wires</strong>. A four-bit BCD thumbwheel lets an operator name a station by number, and two digital outputs drive the wheel forward and reverse. That is the entire interface I had to work with.
     </p>
     <p class="reveal">
-      Which makes the control problem sequential, not geometric. There is no toolpath to
-      interpolate. The question the program has to answer, over and over, is:
-      <strong>given where the wheel is parked and which tool is wanted next, which way do I
-      spin so the trip is shortest?</strong> Then detect arrival, carry the tool back to the
-      transfer station, and do it again for every entry in a list the operator typed in at
-      run time.
+      Which makes this sequential control, not geometry. There is no toolpath to interpolate. The question the program answers over and over is easy to say and awkward to implement: <strong>given where the wheel is parked and which tool is wanted next, which way do I spin so the trip is shortest?</strong> Then notice the arrival, carry the tool back to the transfer station, and do it again for every entry in a list the operator typed in while the machine was running.
     </p>
     <figure class="reveal pale">
       <a href="../assets/micro820/wiring-diagram.jpg" target="_blank" rel="noopener">
         <img src="../assets/micro820/wiring-diagram.jpg" alt="Wiring diagram: the Micro820-QBB with its 2080-IQ4 plug-in module at left, its Ethernet port going through a DIN-rail industrial switch to a PC running CCW, and its input and output terminals fanning out to the trainer panel's tool detect sensors, BCD switch bits, start/stop buttons, lamps, and forward/reverse motor terminals.">
       </a>
-      <figcaption><span class="n">FIG 02</span>The bench topology. Fourteen discrete inputs is two more than the Micro820's twelve embedded points — hence the 2080-IQ4 plug-in in slot 1, carrying position sensors 7 and 8. Image: lab documentation v1.1.</figcaption>
+      <figcaption><span class="n">FIG 02</span>The bench topology. Fourteen discrete inputs is two more than the Micro820's twelve embedded points, which is why the 2080-IQ4 sits in slot 1 carrying position sensors 7 and 8. Image: lab documentation v1.1.</figcaption>
     </figure>
     <div class="scroll-x reveal">
     <table>
@@ -315,26 +307,26 @@
         <tr><td>_IO_EM_DI_00</td><td>Stop</td><td>IN</td><td>Stop push button</td></tr>
         <tr><td>_IO_EM_DI_01</td><td>Start</td><td>IN</td><td>Start push button</td></tr>
         <tr><td>_IO_EM_DI_02…05</td><td>BCD1, 2, 4, 8</td><td>IN</td><td>Thumbwheel bits, binary weights</td></tr>
-        <tr><td>_IO_EM_DI_06…11</td><td>Position1…6</td><td>IN</td><td>Wheel position sensors 1–6</td></tr>
-        <tr class="hl"><td>_IO_P1_DI_00…01</td><td>Position7, 8</td><td>IN</td><td>Sensors 7–8, via the 2080-IQ4 plug-in</td></tr>
+        <tr><td>_IO_EM_DI_06…11</td><td>Position1…6</td><td>IN</td><td>Wheel position sensors 1 to 6</td></tr>
+        <tr class="hl"><td>_IO_P1_DI_00…01</td><td>Position7, 8</td><td>IN</td><td>Sensors 7 and 8, via the 2080-IQ4 plug-in</td></tr>
         <tr><td>_IO_EM_DO_00…01</td><td>Light1, Light2</td><td>OUT</td><td>Indicator lamps</td></tr>
         <tr><td>_IO_EM_DO_02…03</td><td>FWD_Motor, REV_Motor</td><td>OUT</td><td>Forward / reverse motor relays</td></tr>
       </tbody>
     </table>
     </div>
-    <p class="tnote reveal">Controller: Allen-Bradley Micro820 2080-LC20-20QBB — 12 DI, 7 DO, 4 AI, programmed over Ethernet from Connected Components Workbench.</p>
+    <p class="tnote reveal">Controller: Allen-Bradley Micro820 2080-LC20-20QBB. Twelve DI, seven DO, four AI, programmed over Ethernet from Connected Components Workbench.</p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/micro820/setup-iq4.jpg" target="_blank" rel="noopener">
           <img src="../assets/micro820/setup-iq4.jpg" alt="Close-up of the Micro820 2080-LC20-20QBB with its RUN and ENET status LEDs lit green, beside the 2080-IQ4 plug-in module with blue wires landed on its I-00 and I-01 terminals.">
         </a>
-        <figcaption><span class="n">FIG 03</span>The plug-in that makes fourteen inputs fit — sensors 7 and 8 land on the 2080-IQ4. Without it physically present, the download faults.</figcaption>
+        <figcaption><span class="n">FIG 03</span>The plug-in that makes fourteen inputs fit. Sensors 7 and 8 land on the 2080-IQ4, and if it is not physically present the download faults.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/micro820/setup-outputs.jpg" target="_blank" rel="noopener">
           <img src="../assets/micro820/setup-outputs.jpg" alt="Close-up of the Micro820's output terminal block, with green patch leads landed on the O-00 through O-03 source output terminals and the common terminals.">
         </a>
-        <figcaption><span class="n">FIG 04</span>Four of the seven source outputs in use: two lamps, two motor relays. Images FIG 03–04: lab documentation v1.1.</figcaption>
+        <figcaption><span class="n">FIG 04</span>Four of the seven source outputs in use: two lamps, two motor relays. Images FIG 03 and 04: lab documentation v1.1.</figcaption>
       </figure>
     </div>
   </section>
@@ -343,24 +335,16 @@
     <div class="sec-label reveal">Architecture</div>
     <h2 class="reveal">One rule for splitting the languages.</h2>
     <p class="reveal">
-      CCW offers Ladder Diagram, Structured Text and Function Block Diagram. The whole
-      application partitions on a single rule: <strong>ladder for interlocking and sequencing,
-      Structured Text for arithmetic and decisions.</strong> Ladder is the right notation for
-      seal-in latches, motor interlocks and one-shot pulse routing — and it is what a
-      maintenance technician expects to find at 3 a.m. But expressing a modulo, a weighted
-      binary decode or a nested conditional in ladder produces a diagram three screens wide
-      that nobody can read. Those go in ST.
+      CCW gives you Ladder Diagram, Structured Text and Function Block Diagram, and I partitioned the whole application on one rule: <strong>ladder for interlocking and sequencing, Structured Text for arithmetic and decisions.</strong> Ladder is the right notation for seal-in latches, motor interlocks and one-shot pulse routing, and it is what a maintenance technician expects to find at 3 a.m. Expressing a modulo, a weighted binary decode or a nested conditional in ladder gives you a diagram three screens wide that nobody can read. Those went into ST.
     </p>
     <p class="reveal">
-      The result is six user-defined function blocks called from a main ladder program that
-      never exceeds sixteen rungs. Fourteen physical input points get consumed by two of them
-      and leave as two integers, in a single rung.
+      What came out of that rule is six user-defined function blocks called from a main ladder program that never grew past sixteen rungs. Fourteen physical input points get consumed by two of the blocks and leave as two integers, in a single rung.
     </p>
     <div class="scroll-x reveal">
     <table>
       <thead><tr><th>Block</th><th>Takes</th><th>Returns</th><th>Responsibility</th></tr></thead>
       <tbody>
-        <tr><td>FB_Position_to_dec</td><td>8 sensor bits</td><td>PositionValue_out (UINT)</td><td>One-hot sensor bus → station number 1–8</td></tr>
+        <tr><td>FB_Position_to_dec</td><td>8 sensor bits</td><td>PositionValue_out (UINT)</td><td>One-hot sensor bus → station number 1 to 8</td></tr>
         <tr><td>FB_BCD_to_Dec</td><td>4 thumbwheel bits</td><td>PositionSelect_out, BCD_load_out</td><td>Debounce, decode BCD, flag switch position 0</td></tr>
         <tr class="hl"><td>FB_DeterminRotation</td><td>base, target, detected</td><td>DirectionState (1 fwd / 2 rev)</td><td>Shortest-arc decision, latched between base crossings</td></tr>
         <tr><td>FB_detectTool</td><td>as above + RotationState</td><td>DirectionState (BOOL)</td><td>Flip direction at the pickup, and again at the base</td></tr>
@@ -369,15 +353,9 @@
       </tbody>
     </table>
     </div>
-    <h3 class="sh reveal">Two hazards that shape every block</h3>
+    <h3 class="sh reveal">Two hazards I had to design around</h3>
     <p class="reveal">
-      A PLC re-runs its program every scan, so any input that stays true for more than one
-      scan — which is every mechanical input — will retrigger its action repeatedly. Every
-      event in this application is therefore converted to a single-scan pulse with the
-      delayed-copy idiom. And the thumbwheel is a rotary make-before-break switch that emits
-      transient garbage codes while turning, so <code>FB_BCD_to_Dec</code> runs a
-      self-resetting <strong>100 ms TON</strong> and requires <strong>two consecutive equal
-      samples</strong> before it will assert a decoded value.
+      A PLC re-runs its program every scan, so any input that stays true for more than one scan, which is every mechanical input there is, retriggers its action again and again. I converted every event in this application into a single-scan pulse with the delayed-copy idiom. The thumbwheel had its own version of the problem: it is a rotary make-before-break switch that emits transient garbage codes while it turns, so <code>FB_BCD_to_Dec</code> runs a self-resetting <strong>100 ms TON</strong> and refuses to assert a decoded value until it has seen <strong>two consecutive equal samples</strong>.
     </p>
     <div class="law reveal">
       Inc_EN&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:= BCD0_Load_in <span class="a">AND NOT</span> BCD0_delayed;<br>
@@ -389,24 +367,16 @@
     <div class="sec-label reveal">Stage 1 &amp; 2</div>
     <h2 class="reveal">First give it memory. Then give it motion.</h2>
     <p class="reveal">
-      Stage 1 is one rung: a normally-closed <code>Stop</code> in series with the parallel pair
-      of <code>Start</code> and the output's own feedback contact. That feedback branch
-      <em>is</em> the memory — and reading the compiled Structured Text makes it explicit, the
-      second disjunct being the seal that holds the output true until the series path opens.
+      Stage 1 is one rung: a normally-closed <code>Stop</code> in series with the parallel pair of <code>Start</code> and the output's own feedback contact. That feedback branch <em>is</em> the memory, and reading the compiled Structured Text is what made that obvious to me, the second disjunct being the seal that holds the output true until the series path opens.
     </p>
     <figure class="reveal pale">
       <a href="../assets/micro820/lab1_rung1.png" target="_blank" rel="noopener">
         <img src="../assets/micro820/lab1_rung1.png" alt="Ladder rung 1: a normally-closed Stop contact in series with a parallel branch containing the Start contact and a feedback contact, driving an output coil.">
       </a>
-      <figcaption><span class="n">FIG 05</span>Stage 1 as built — CCW Document Generator output from the downloaded project, not a redrawing.</figcaption>
+      <figcaption><span class="n">FIG 05</span>Stage 1 as built. This is CCW Document Generator output from the project I downloaded, not a redrawing of it.</figcaption>
     </figure>
     <p class="reveal">
-      Stage 2 replaces the operator's fingers with sensors: a second seal-in built from
-      <code>Position1</code> and <code>Position2</code> instead of the buttons, the whole rung
-      gated by <code>RunState</code>. The detail that matters is the third rung — reverse is
-      derived from the <em>inverse of forward</em>, not from an independent condition, so the
-      two contactors can never be commanded together. That is a program-level interlock sitting
-      on top of the electrical one in the panel.
+      Stage 2 replaces the operator's fingers with sensors: a second seal-in built from <code>Position1</code> and <code>Position2</code> instead of the buttons, the whole rung gated by <code>RunState</code>. The detail I care about is the third rung. Reverse is derived from the <em>inverse of forward</em> rather than from an independent condition, so the two contactors can never be commanded together. That is a program-level interlock sitting on top of the electrical one in the panel.
     </p>
     <div class="law reveal">
       RunState&nbsp;&nbsp;:= (<span class="a">NOT</span> Stop <span class="a">AND</span> Start) <span class="a">OR</span> (<span class="a">NOT</span> Stop <span class="a">AND</span> RunState);<br>
@@ -417,7 +387,7 @@
       <a href="../assets/micro820/lab2_rungs1to3.png" target="_blank" rel="noopener">
         <img src="../assets/micro820/lab2_rungs1to3.png" alt="Ladder rungs 1 to 3 of stage 2: the RunState seal-in from the push buttons, the same seal-in structure built from position sensors driving the forward motor, and a reverse motor rung driven by a normally-closed forward motor contact.">
       </a>
-      <figcaption><span class="n">FIG 06</span>Stage 2, rungs 1–3. Rungs 1 and 2 are the same circuit — one wired to fingers, one to sensors. That similarity is the whole lesson.</figcaption>
+      <figcaption><span class="n">FIG 06</span>Stage 2, rungs 1 to 3. Rungs 1 and 2 are the same circuit, one wired to fingers and one to sensors. That similarity is the whole lesson.</figcaption>
     </figure>
   </section>
 
@@ -425,19 +395,13 @@
     <div class="sec-label reveal">Stage 3</div>
     <h2 class="reveal">Fourteen wires in, two integers out.</h2>
     <p class="reveal">
-      Stage 3 is where the program stops being wiring and starts being software.
-      <code>FB_Position_to_dec</code> sums the eight one-hot sensor bits against their station
-      weights; <code>FB_BCD_to_Dec</code> debounces and decodes the thumbwheel. Both run in a
-      single rung. An <code>=</code> compare between the two results produces
-      <code>ToolDetected</code>, which takes over the stopping role from the hard-wired second
-      sensor — so the pickup station becomes selectable <strong>at run time, without
-      recompiling</strong>.
+      Stage 3 is where the program stopped being wiring and started being software. <code>FB_Position_to_dec</code> sums the eight one-hot sensor bits against their station weights, <code>FB_BCD_to_Dec</code> debounces and decodes the thumbwheel, and both run in a single rung. An <code>=</code> compare between the two results produces <code>ToolDetected</code>, which takes over the stopping role from the hard-wired second sensor, so the pickup station became selectable <strong>at run time, without recompiling</strong>.
     </p>
     <figure class="reveal pale">
       <a href="../assets/micro820/lab3_rung2_decoders.png" target="_blank" rel="noopener">
         <img src="../assets/micro820/lab3_rung2_decoders.png" alt="Ladder rung 2 of stage 3: the FB_Position_to_dec function block with eight sensor inputs producing PositionDetect, beside the FB_BCD_to_Dec block with four thumbwheel bit inputs producing PositionSelect and BCD_load.">
       </a>
-      <figcaption><span class="n">FIG 07</span>Stage 3, rung 2 — the entire physical layer lifted into two integers in one rung. This is what the language split buys.</figcaption>
+      <figcaption><span class="n">FIG 07</span>Stage 3, rung 2. The entire physical layer lifted into two integers in one rung, which is what the language split buys.</figcaption>
     </figure>
     <figure class="reveal">
       <video autoplay muted loop playsinline preload="metadata"
@@ -445,7 +409,7 @@
         aria-label="Connected Components Workbench in runtime monitoring mode, showing the five rungs of the stage 3 program on live hardware: the RunState seal-in energised, the two decoder function blocks with their sensor and thumbwheel input values updating, the equality compare, and the forward and reverse motor rungs.">
         <source src="../media/micro820-lab3-runtime.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 01</span>Stage 3 running on the trainer, monitored live in CCW. Watch the thumbwheel bits toggle, <code>PositionSelect</code> land on a value, and power flow through the compare into the motor rungs — green is energised, exactly as the controller sees it.</figcaption>
+      <figcaption><span class="n">VID 01</span>Stage 3 running on the trainer, monitored live in CCW. Watch the thumbwheel bits toggle, <code>PositionSelect</code> land on a value, and power flow through the compare into the motor rungs. Green is energised, exactly as the controller sees it.</figcaption>
     </figure>
   </section>
 
@@ -453,11 +417,7 @@
     <div class="sec-label reveal">Stage 4</div>
     <h2 class="reveal">The antipode trick: split the wheel, then just compare.</h2>
     <p class="reveal">
-      With a target selectable at run time, the wheel needs to decide which way to spin. Both
-      arcs between base <em>B</em> and target <em>T</em> sum to eight stations, so the decision
-      reduces to a single question: <strong>is the target in the forward half?</strong> The
-      implementation answers it by computing the station opposite the base and using it as a
-      boundary:
+      With a target selectable at run time, the wheel had to decide which way to spin. Both arcs between base <em>B</em> and target <em>T</em> sum to eight stations, so the decision collapses to one question: <strong>is the target in the forward half?</strong> I answer it by computing the station opposite the base and using it as a boundary:
     </p>
     <div class="law reveal">
       TempDint := <span class="a">ANY_TO_DINT</span>(PositionSelect_in);<br>
@@ -465,18 +425,10 @@
       PositionOpposite := <span class="a">ANY_TO_UINT</span>(TempDINT);
     </div>
     <p class="reveal">
-      When <code>PositionOpposite &gt; PositionSelect_in</code>, the forward half is the ordinary
-      open interval and the test is a direct comparison. When the wheel wraps past station 8 the
-      numbers stop being monotonic, so the code flips strategy and <em>excludes</em> the reverse
-      arc rather than testing the forward one. Two branches, no trigonometry, no lookup table.
+      When <code>PositionOpposite &gt; PositionSelect_in</code>, the forward half is an ordinary open interval and the test is a direct comparison. When the wheel wraps past station 8 the numbers stop being monotonic, so the code flips strategy and <em>excludes</em> the reverse arc instead of testing the forward one. Two branches, no trigonometry, no lookup table.
     </p>
     <p class="reveal">
-      The whole decision is also guarded: <code>FB_DeterminRotation</code> only evaluates while
-      the wheel is sitting over the base, and holds its previous value otherwise. The wheel is in
-      continuous motion, and the inputs to the decision are only meaningful at the reference
-      point. <code>FB_detectTool</code> then does the reversal — flipping direction on arrival at
-      the target so the tool is carried back, and flipping again at the base for the next
-      outbound leg. Together they are two interacting two-state machines.
+      The decision is guarded as well. <code>FB_DeterminRotation</code> only evaluates while the wheel is sitting over the base and holds its previous value the rest of the time, because the wheel is in continuous motion and the inputs to the decision only mean anything at the reference point. <code>FB_detectTool</code> then does the reversal, flipping direction on arrival at the target so the tool is carried back, and flipping again at the base for the next outbound leg. Together they behave as two interacting two-state machines.
     </p>
     <figure class="reveal pale">
       <a href="../assets/micro820/fig-state-diagrams.jpg" target="_blank" rel="noopener">
@@ -485,15 +437,13 @@
       <figcaption><span class="n">FIG 08</span>The two blocks as state machines: rotation decided at the base, direction toggled at both ends of every leg. Image: lab documentation v1.1.</figcaption>
     </figure>
 
-    <h3 class="sh reveal">Try it — the decision, exhaustively</h3>
+    <h3 class="sh reveal">Try it: the decision, exhaustively</h3>
     <p class="reveal">
-      Pick a base and a target. The wheel shades the two arcs the antipode carves out, the
-      Structured Text highlights the branch that actually executes, and the matrix underneath
-      runs the same function over all 56 ordered pairs at once.
+      Pick a base and a target. The wheel shades the two arcs the antipode carves out, the Structured Text highlights the branch that actually executes, and the matrix underneath runs the same function over all 56 ordered pairs at once.
     </p>
 
     <div class="lab reveal" id="dirlab">
-      <div class="lab-head"><span>Runtime · <b>FB_DeterminRotation</b></span><span id="dirVerdict">—</span></div>
+      <div class="lab-head"><span>Runtime · <b>FB_DeterminRotation</b></span><span id="dirVerdict">READY</span></div>
       <div class="lab-body">
         <div class="lab-viz">
           <svg id="dirWheel" viewBox="0 0 300 300" role="img" aria-label="Eight-station wheel diagram showing the base station, the target station, the computed opposite station, and the forward and reverse arcs between them."></svg>
@@ -508,34 +458,21 @@
       <div class="matrix">
         <div class="scroll-x"><table id="dirMatrix"></table></div>
         <div class="mx-key">
-          <i class="kf">F — forward (DirectionState := 1)</i>
-          <i class="kr">R — reverse (DirectionState := 2)</i>
-          <i>▢ — equidistant: both arcs are 4 stations</i>
+          <i class="kf">F = forward (DirectionState := 1)</i>
+          <i class="kr">R = reverse (DirectionState := 2)</i>
+          <i>▢ = equidistant, both arcs are 4 stations</i>
         </div>
       </div>
     </div>
 
     <p class="reveal">
-      Two things fall out of the exhaustive sweep. First, across all
-      <strong>56 ordered (base, target) pairs the block never picks the longer arc</strong> —
-      not once. Second, there is exactly <strong>one equidistant target per base</strong>, the
-      true antipode <em>B</em>+4, where both arcs are four stations long; the code resolves every
-      one of those ties <em>forward</em>. A demo that appears to "take the long way" at that one
-      station is behaving as specified, because there is no shorter way to take. The block's own
-      header comment flags this as a consequence of the wheel's even order: with an odd number of
-      stations every target would have a strictly shorter arc and the test would be exact.
+      Two things fell out of that exhaustive sweep. First, across all <strong>56 ordered (base, target) pairs the block never picks the longer arc</strong>, not once. Second, there is exactly <strong>one equidistant target per base</strong>, the true antipode <em>B</em>+4, where both arcs are four stations long, and the code resolves every one of those ties <em>forward</em>. So a demo that looks like it is taking the long way at that one station is behaving as specified, because there is no shorter way to take. The block's own header comment flags this as a consequence of the wheel's even order: with an odd number of stations every target would have a strictly shorter arc and the test would be exact.
     </p>
     <p class="reveal">
-      Worth noting what <code>PositionOpposite</code> actually is. For base 1 it evaluates to 6,
-      not the true antipode 5 — <em>B</em>+5, one station past. That is not a slip: it is being
-      used as the <strong>first station of the reverse arc</strong>, an exclusive upper bound, and
-      it is precisely that off-by-one that makes the strict <code>&lt;</code> comparison land the
-      tie on the forward side and every other target on the correct side.
+      It is worth being clear about what <code>PositionOpposite</code> actually is. For base 1 it evaluates to 6 rather than the true antipode 5, so it is <em>B</em>+5, one station past. That is not a slip. It is being used as the <strong>first station of the reverse arc</strong>, an exclusive upper bound, and it is precisely that off-by-one that makes the strict <code>&lt;</code> comparison land the tie on the forward side and every other target on the correct side.
     </p>
     <p class="reveal">
-      With the direction computed upstream, the motor rungs collapse. The branched structure of
-      Stage 3 disappears entirely and what is left is a complementary pair of two-contact rungs —
-      the single clearest illustration of what moving logic into function blocks buys you.
+      With direction computed upstream, the motor rungs collapsed. The branched structure of Stage 3 disappeared entirely and what was left is a complementary pair of two-contact rungs, which is the clearest single illustration I have of what moving logic into function blocks buys you.
     </p>
     <div class="law reveal">
       FWD_Motor := RunState <span class="a">AND</span> DirectionState;<br>
@@ -543,9 +480,9 @@
     </div>
     <figure class="reveal pale">
       <a href="../assets/micro820/lab4_rungs4and5_motors.png" target="_blank" rel="noopener">
-        <img src="../assets/micro820/lab4_rungs4and5_motors.png" alt="Ladder rungs 4 and 5 of stage 4: two short rungs, each with a RunState contact and a DirectionState contact — normally open on the forward rung, normally closed on the reverse rung — driving the forward and reverse motor coils.">
+        <img src="../assets/micro820/lab4_rungs4and5_motors.png" alt="Ladder rungs 4 and 5 of stage 4: two short rungs, each with a RunState contact and a DirectionState contact, normally open on the forward rung and normally closed on the reverse rung, driving the forward and reverse motor coils.">
       </a>
-      <figcaption><span class="n">FIG 09</span>Stage 4, rungs 4–5. Compare against FIG 07's branch structure: the sequencing logic moved, and the ladder kept only the interlock.</figcaption>
+      <figcaption><span class="n">FIG 09</span>Stage 4, rungs 4 and 5. Put them beside FIG 07's branch structure: the sequencing logic moved out, and the ladder kept only the interlock.</figcaption>
     </figure>
   </section>
 
@@ -553,21 +490,10 @@
     <div class="sec-label reveal">Stage 5</div>
     <h2 class="reveal">Typing a tool list on a switch with four bits and no keypad.</h2>
     <p class="reveal">
-      A tool changer that services one station is a demo. To make it a process it needs a
-      <em>list</em> — so Stage 5 introduces <code>PositionSequence[1..10]</code>, a program-scoped
-      array whose dimension bounds the sequence length. Exceeding it faults the controller
-      outright, which makes index containment a safety requirement rather than good manners.
+      A tool changer that services one station is a demo. To make it a process it needs a <em>list</em>, so Stage 5 introduced <code>PositionSequence[1..10]</code>, a program-scoped array whose dimension bounds the sequence length. Overrunning it faults the controller outright, which turns index containment into a safety requirement rather than good manners.
     </p>
     <p class="reveal">
-      The hard part isn't the array. It's data entry. The trainer has two push buttons and one
-      four-bit thumbwheel — no keypad, no display. So the operator interface becomes a
-      <strong>gesture</strong>: a "maximum seen" latch captures the highest value dialled since
-      the last store, and dialling <em>down through zero</em> is the store command. Switch
-      position 0 isn't a valid station, so it gets appropriated as a command key; position 9 is
-      reserved as the sequence reset. A four-bit switch ends up serving as both a data field and
-      a keyboard. This is representative, not contrived — minimising I/O point count is routine
-      commercial pressure, and it routinely pushes complexity out of the panel and into the
-      program.
+      The hard part was not the array. It was data entry. The trainer has two push buttons and one four-bit thumbwheel, no keypad and no display, so the operator interface had to become a <strong>gesture</strong>. A maximum-seen latch captures the highest value dialled since the last store, and dialling <em>down through zero</em> is the store command. Switch position 0 is not a valid station, so I appropriated it as a command key, and position 9 became the sequence reset. A four-bit switch ends up serving as both a data field and a keyboard. That is representative rather than contrived: minimising I/O point count is routine commercial pressure, and it routinely pushes complexity out of the panel and into the program.
     </p>
     <figure class="reveal pale">
       <a href="../assets/micro820/fig-sequence-index.jpg" target="_blank" rel="noopener">
@@ -582,35 +508,28 @@
     PositionMax_out := PositionMax_out + 1;
   <span class="k">END_IF</span>;
 <span class="k">ELSE</span>
-  <span class="k">IF</span> (PositionHold_in = 9) <span class="k">THEN</span>   <span class="c">// 9 is the sequence reset — hence excluded above</span>
+  <span class="k">IF</span> (PositionHold_in = 9) <span class="k">THEN</span>   <span class="c">// 9 is the sequence reset, so it is excluded above</span>
     SequenceIndex   := 1;
     PositionMax_out := 1;
   <span class="k">END_IF</span>;
 <span class="k">END_IF</span>;</div>
     <p class="reveal">
-      One subtlety hides in that listing. Reset sets <code>PositionMax</code> to 1, and every
-      store increments it, so after <em>n</em> entries the register reads <em>n</em>+1 — one more
-      than the number of tools stored. The sequencer compensates on the other side, wrapping the
-      index the moment it <em>reaches</em> the maximum rather than passing it:
+      One subtlety hides in that listing. Reset sets <code>PositionMax</code> to 1 and every store increments it, so after <em>n</em> entries the register reads <em>n</em>+1, one more than the number of tools stored. The sequencer compensates on the other side by wrapping the index the moment it <em>reaches</em> the maximum rather than passing it:
     </p>
     <div class="law st reveal">SequenceIndexDint := <span class="k">MOD</span>(SequenceIndexDint, SequenceMaxDint) + 1;
 <span class="k">IF</span> (SequenceIndexDint = 0) <span class="k">OR</span> (SequenceIndexDint &gt;= SequenceMaxDint) <span class="k">THEN</span>
-  Sequence_Index_out := 1;          <span class="c">// wrap early — this is what makes the cycle length come out to n</span>
+  Sequence_Index_out := 1;          <span class="c">// wrap early, which is what makes the cycle length come out to n</span>
 <span class="k">ELSE</span>
   Sequence_Index_out := SequenceIndexDint;
 <span class="k">END_IF</span>;</div>
     <p class="reveal">
-      <code>FB_SequenceArray</code> also carries a <code>DetectedFlag</code>, which guarantees
-      exactly one advance per arrival no matter how many scans the sensor stays true, and exports
-      <strong>PickUp_EN</strong> and <strong>Place_EN</strong> as one-scan event pulses. The
-      sequencer has no use for those pulses itself. They exist because Stage 6 needs exactly those
-      two events, and generating them here avoids duplicating arrival detection later.
+      <code>FB_SequenceArray</code> also carries a <code>DetectedFlag</code>, which guarantees exactly one advance per arrival no matter how many scans the sensor stays true, and it exports <strong>PickUp_EN</strong> and <strong>Place_EN</strong> as one-scan event pulses. The sequencer has no use for those pulses itself. They exist because Stage 6 needs exactly those two events, and generating them here saved me duplicating arrival detection later.
     </p>
     <figure class="reveal pale">
       <a href="../assets/micro820/lab5_rungs4and5_load.png" target="_blank" rel="noopener">
         <img src="../assets/micro820/lab5_rungs4and5_load.png" alt="Ladder rungs 4 and 5 of stage 5: rung 4 gates a greater-than comparison with the debounce enable and feeds a MOV into PositionHold; rung 5 calls FB_LoadArray on the load pulse and clears PositionHold with a second MOV of the constant zero.">
       </a>
-      <figcaption><span class="n">FIG 11</span>Stage 5, rungs 4–5 — capture the largest value dialled, store it on the load pulse, then clear the hold.</figcaption>
+      <figcaption><span class="n">FIG 11</span>Stage 5, rungs 4 and 5. Capture the largest value dialled, store it on the load pulse, then clear the hold.</figcaption>
     </figure>
   </section>
 
@@ -618,41 +537,24 @@
     <div class="sec-label reveal">Stage 6</div>
     <h2 class="reveal">Dwell at the transfer point. Count the parts. Finish the lap.</h2>
     <p class="reveal">
-      The final stage adds three independent capabilities across rungs 9–16, and each one is a
-      different answer to "what does a real process need that a demo doesn't?"
+      The last stage adds three independent capabilities across rungs 9 to 16, and each one answers the same question: what does a real process need that a demo does not?
     </p>
     <p class="reveal">
-      <strong>A transfer delay,</strong> because a real gripper needs dwell time.
-      <code>PlaceDetectPulse</code> sets a latch that enables a <strong>500 ms TON</strong>; the
-      timer's own <code>Q</code> resets that latch. The intermediate signal
-      <code>Partwait_Timing</code> — true only while the timer is running — goes onto both motor
-      rungs as a normally-closed contact, holding the wheel still for the duration.
+      <strong>A transfer delay,</strong> because a real gripper needs dwell time. <code>PlaceDetectPulse</code> sets a latch that enables a <strong>500 ms TON</strong>, and the timer's own <code>Q</code> resets that latch. The intermediate signal <code>Partwait_Timing</code>, true only while the timer is running, goes onto both motor rungs as a normally-closed contact and holds the wheel still for the duration.
     </p>
     <p class="reveal">
-      <strong>A parts counter,</strong> a <code>CTU</code> clocked by <code>PickDetectPulse</code>.
-      Its reset is tied to the constant <code>FALSE</code> deliberately, so the total survives stop
-      and restart — it's an inventory figure, not a control variable.
+      <strong>A parts counter,</strong> a <code>CTU</code> clocked by <code>PickDetectPulse</code>. I tied its reset to the constant <code>FALSE</code> on purpose, so the total survives stop and restart. It is an inventory figure, not a control variable.
     </p>
     <p class="reveal">
-      <strong>A cycle stop,</strong> which is the interesting one. A conventional stop halts the
-      wheel wherever it happens to be, potentially stranding a tool mid-transfer. The cycle-stop
-      circuit <em>inverts</em> the seal-in of rung 1: it latches on <em>Stop</em> and unlatches on
-      <em>Start</em>, and sits in parallel with <code>RunState</code> on every rung that
-      <code>RunState</code> gates. The process then keeps running after the stop request until two
-      conditions coincide — at least one place event has occurred, <em>and</em>
-      <code>SequenceIndex</code> has wrapped back to 1. Then the latch breaks and the wheel halts
-      at the base with the sequence complete. That counter guard exists to handle Stop pressed
-      immediately after Start, which would otherwise satisfy the index condition trivially and
-      terminate before any work was done.
+      <strong>A cycle stop,</strong> which is the one I enjoyed building. A conventional stop halts the wheel wherever it happens to be and can strand a tool mid-transfer. The cycle-stop circuit <em>inverts</em> the seal-in of rung 1: it latches on <em>Stop</em>, unlatches on <em>Start</em>, and sits in parallel with <code>RunState</code> on every rung that <code>RunState</code> gates. The process then keeps running after the stop request until two conditions coincide, at least one place event having occurred <em>and</em> <code>SequenceIndex</code> having wrapped back to 1. Then the latch breaks and the wheel halts at the base with the sequence complete. The counter guard is there for Stop pressed immediately after Start, which would otherwise satisfy the index condition trivially and terminate before any work was done.
+    </p>
+    <p class="reveal">
+      <strong>All eight of those rungs are in the controller now.</strong> I transcribed rungs 9 to 16 into the CCW project, built it clean, downloaded it to the Micro820 and ran it on the trainer, taking the program from the eight rungs Stage 5 ended on to sixteen. Nine local variables came with them: <code>Wait_EN</code>, <code>Partwait_Timing</code>, <code>PartsCount</code>, <code>CycleStop</code>, <code>CycleStop_EN</code>, <code>CycleStopCount</code>, and the <code>TON_1</code>, <code>CTU_1</code> and <code>CTU_2</code> instances. On the bench the wheel held station for the full 500 ms dwell, the parts total carried across a stop and restart instead of clearing, and a stop request mid-sequence was honoured only once the index had wrapped back to 1. <code>media/Lab6.pdf</code> in the repository is the CCW printout of the program as tested.
     </p>
 
-    <h3 class="sh reveal">Try it — load a sequence and run the magazine</h3>
+    <h3 class="sh reveal">Try it: load a sequence and run the magazine</h3>
     <p class="reveal">
-      This is the finished machine: the thumbwheel gesture, the array, the shortest-path decision,
-      the dwell timer, both counters and the cycle-stop latch, all wired together exactly as the
-      rungs specify. Load a sequence the way an operator would — <b>dial 9 to reset, then for each
-      tool dial up to its number and back down through 0</b> — pick a base, and press Start.
-      Single-scan pulses are stretched so you can see them.
+      This is the finished machine: the thumbwheel gesture, the array, the shortest-path decision, the dwell timer, both counters and the cycle-stop latch, wired together exactly as the rungs specify. Load a sequence the way an operator would, dialling <b>9 to reset, then for each tool dialling up to its number and back down through 0</b>. Pick a base and press Start. Single-scan pulses are stretched so you can see them.
     </p>
 
     <div class="lab reveal" id="runlab">
@@ -704,35 +606,26 @@
     <div class="sec-label reveal">Verification</div>
     <h2 class="reveal">Don't review the diagram. Review what the compiler emitted.</h2>
     <p class="reveal">
-      CCW's QuickLD compiler writes an intermediate Structured Text file for every built ladder
-      program — the ladder flattened into sequential assignments, in scan order. It is a far more
-      reliable object to review than the drawing, because branch topology, evaluation order and
-      <em>write ordering</em> are all explicit rather than implied by geometry. Every committed
-      project was verified by reading that file against intended behaviour.
-    </p>
+        CCW's QuickLD compiler writes an intermediate Structured Text file for every ladder program it builds: the ladder flattened into sequential assignments, in scan order. I found it a far more reliable thing to review than the drawing, because branch topology, evaluation order and <em>write ordering</em> are all explicit instead of implied by geometry. I checked every committed project by reading that file against what I had meant the program to do.
+      </p>
     <p class="reveal">
-      The method costs nothing, needs no hardware, and turned up three things that inspection of
-      the rendered ladder did not.
-    </p>
+        It costs nothing, it needs no hardware, and it turned up three things that looking at the rendered ladder did not.
+      </p>
 
-    <div class="finding reveal">
-      <h4><span class="fno">FINDING 01</span>Stage 6 was never transcribed into the controller project.</h4>
+    <div class="finding done reveal">
+      <h4><span class="fno">FINDING 01</span>Stage 6 was missing from the controller, and is now built and running.</h4>
       <p>
-        The Stage 6 CCW solution is byte-identical to Stage 5 in both <code>Prog1.stf</code> and the
-        project variable list, and its generated ladder printout shows the same eight rungs. None of
-        the Stage 6 additions exist in the controller: the part-wait timer, the parts counter and the
-        cycle-stop circuit are all absent. The design is complete and validated in simulation — the
-        widget above <em>is</em> the working record — but the transcription into CCW is outstanding.
+        Reading the compiled text showed the Stage 6 solution to be byte-identical to Stage 5: the part-wait timer, the parts counter and the cycle-stop circuit existed in my design but not in the PLC. Side by side, the two stages' ladder printouts looked like different programs.
+      </p>
+      <p class="status">
+        <b>Closed, verified on hardware.</b> I wrote the eight missing rungs into the CCW project, taking the program from 8 to 16, then downloaded it and ran it on the trainer. Dwell, parts counter and cycle-stop all behaved as designed.
       </p>
     </div>
 
     <div class="finding reveal">
       <h4><span class="fno">FINDING 02</span>The rotation block's arguments are shifted by one slot.</h4>
       <p>
-        At Stage 5 the base should migrate from a compile-time constant to the thumbwheel, so the
-        operator can move the transfer station while the sequence runs. The generated code says
-        otherwise — the literal <code>7</code> left over from the Stage 4 pattern is still sitting in
-        the first input box, pushing every other argument down one:
+        At Stage 5 the base was meant to migrate from a compile-time constant to the thumbwheel, so the operator could move the transfer station while the sequence ran. The generated code said otherwise. The literal <code>7</code> left over from the Stage 4 pattern was still sitting in the first input box, pushing every other argument down one:
       </p>
       <div class="law st"><span class="k">// actual, from PROG1.txt</span>
 FB_DeterminRotation_1(<span class="k">TRUE</span>, <span class="k">7</span>, POSITIONSELECT, POSITIONSEQUENCE[SEQUENCEINDEX]);
@@ -740,12 +633,10 @@ FB_DeterminRotation_1(<span class="k">TRUE</span>, <span class="k">7</span>, POS
 <span class="k">// intended</span>
 FB_DeterminRotation_1(<span class="k">TRUE</span>, POSITIONSELECT, POSITIONSEQUENCE[SEQUENCEINDEX], POSITIONDETECT);</div>
       <p style="margin-top:0.9rem;">
-        Two consequences. The base is frozen at station 7 instead of tracking the thumbwheel. More
-        seriously, the block's evaluation guard — <code>IF (PositionDetectNumber_in =
-        PositionSelect_in)</code> — now compares the current <em>array element</em> against the
-        constant 7 rather than the wheel sensor against the operator's base, so the direction
-        decision re-evaluates on the wrong event entirely. <code>FB_detectTool_1</code> is bound the
-        same way and inherits the same defect. The fix is a three-field reassignment on one rung.
+        Two consequences. The base is frozen at station 7 instead of tracking the thumbwheel. More seriously, the block's evaluation guard, <code>IF (PositionDetectNumber_in = PositionSelect_in)</code>, now compares the current <em>array element</em> against the constant 7 rather than the wheel sensor against the operator's base, so the direction decision re-evaluates on the wrong event entirely. <code>FB_detectTool_1</code> is bound the same way and inherits the same defect. The fix is a three-field reassignment on one rung.
+      </p>
+      <p class="status">
+        <b>Corrected in the program, hardware pass outstanding.</b> Both blocks are rebound to <code>(PositionSelect, PositionSequence[SequenceIndex], PositionDetect)</code>, so the base follows the thumbwheel and the guard compares the wheel sensor against it. I have not exercised that on the trainer yet.
       </p>
     </div>
 
@@ -753,56 +644,35 @@ FB_DeterminRotation_1(<span class="k">TRUE</span>, POSITIONSELECT, POSITIONSEQUE
       <a href="../assets/micro820/lab5_rung6_rotation.png" target="_blank" rel="noopener">
         <img src="../assets/micro820/lab5_rung6_rotation.png" alt="Ladder rung 6 of stage 5: the FB_DeterminRotation and FB_detectTool function blocks side by side, each with the literal constant 7 wired to its first input, PositionSelect to the second, and the indexed PositionSequence array element to the third.">
       </a>
-      <figcaption><span class="n">FIG 12</span>The evidence for Finding 02 — the literal <code>7</code> on the first input of both blocks. Put this beside the Stage 4 rung and the cause is obvious: the two rungs are structurally identical and only the contents of six input boxes changed between stages. A constant in the first box <em>looked</em> right, because it had been right one stage earlier.</figcaption>
+      <figcaption><span class="n">FIG 12</span>The evidence for Finding 02: the literal <code>7</code> on the first input of both blocks. Put it beside the Stage 4 rung and the cause is obvious. The two rungs are structurally identical and only the contents of six input boxes changed between stages. A constant in the first box <em>looked</em> right to me, because it had been right one stage earlier.</figcaption>
     </figure>
 
     <div class="finding reveal">
       <h4><span class="fno">FINDING 03</span>An output coil overwrites the function block's own result.</h4>
       <p>
-        On the direction rung, <code>DirectionState</code> is assigned twice — once as the output pin
-        of <code>FB_detectTool</code>, and once as an OTE coil terminating the rung. The compiler
-        emits them in that order:
+        On the direction rung, <code>DirectionState</code> is assigned twice: once as the output pin of <code>FB_detectTool</code>, and once as an OTE coil terminating the rung. The compiler emits them in that order:
       </p>
       <div class="law st">DIRECTIONSTATE := FB_detectTool_1.DirectionState;   <span class="c">// the computed direction</span>
 DIRECTIONSTATE := FB_detectTool_1.DetT_out_EN;      <span class="c">// …replaced by rung power. This one wins.</span></div>
       <p style="margin-top:0.9rem;">
-        <code>DetT_out_EN</code> merely propagates rung power, so the second write replaces the
-        computed direction with the rung's power state, and it lands last — meaning the motor rungs
-        downstream consume the overwritten value for the rest of that scan. This pattern reproduces
-        the reference manual's own figures rather than originating here, and it is present from
-        Stage 4 onward. The remedy is to delete the terminating coil and let the output pin be the
-        sole writer. It needs confirming on hardware before the direction logic is trusted, because a
-        program whose direction Boolean is pinned true still <em>appears</em> to run — it would just
-        always rotate forward.
+        <code>DetT_out_EN</code> only propagates rung power, so the second write replaces the computed direction with the rung's power state, and it lands last, which means the motor rungs downstream consume the overwritten value for the rest of that scan. The pattern reproduces the reference manual's own figures rather than originating here, and it is present from Stage 4 onward. The remedy is to delete the terminating coil and let the output pin be the sole writer. It still needs confirming on hardware before I would trust the direction logic, because a program whose direction Boolean is pinned true still <em>appears</em> to run. It would just always rotate forward.
+      </p>
+      <p class="status">
+        <b>Corrected in the program, hardware pass outstanding.</b> The terminating coil is deleted and <code>FB_detectTool_1</code> is the sole writer of <code>DirectionState</code>. The rotation behaviour that restores is exactly what still owes a run on the trainer.
       </p>
     </div>
 
     <p class="reveal">
-      All three share a characteristic worth naming: each is invisible in the graphical ladder and
-      obvious in the generated text. Findings 02 and 03 in particular are <strong>aliasing
-      errors</strong> — a correctly drawn diagram whose bindings do not mean what they appear to
-      mean. Which is a decent argument for treating the compiler's intermediate output as a
-      first-class review artefact in PLC work, the same way a generated assembly listing gets read in
-      safety-critical embedded development.
-    </p>
+        All three share something worth naming: each is invisible in the graphical ladder and obvious in the generated text. Findings 02 and 03 are <strong>aliasing errors</strong>, correctly drawn diagrams whose bindings do not mean what they appear to mean. That is a decent argument for treating the compiler's intermediate output as a first-class review artefact in PLC work, the same way a generated assembly listing gets read in safety-critical embedded development.
+      </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Incremental beats monolithic when every stage is downloadable.</strong> Six programs
-      that each run on the trainer is a fundamentally different debugging experience from one program
-      that either works or doesn't — every regression has an obvious blast radius.
-      <strong>The ladder/ST boundary is a real design decision,</strong> and drawing it at
-      "interlocking versus arithmetic" kept a sixteen-rung program legible while it did genuinely
-      algorithmic work. <strong>An algorithm's known limitation should be characterised, not
-      apologised for:</strong> the antipode test's asymmetry turned out to be exactly one equidistant
-      target per base out of seven, with zero suboptimal choices in the remaining 48 pairs — a bound
-      worth more than a vague caveat. And <strong>the diagram is not the program.</strong> Two of the
-      three defects here were bindings that rendered perfectly and meant something else; both were
-      immediately visible the moment the compiler's own output was read instead.
-    </p>
+        <strong>Incremental beats monolithic when every stage is downloadable.</strong> Six programs that each run on the trainer is a completely different debugging experience from one program that either works or does not, because every regression has an obvious blast radius. <strong>The ladder and ST boundary is a real design decision,</strong> and drawing it at interlocking versus arithmetic is what kept a sixteen-rung program legible while it did genuinely algorithmic work. <strong>A known limitation is worth characterising rather than apologising for:</strong> the antipode test's asymmetry turned out to be exactly one equidistant target per base out of seven, with zero suboptimal choices in the remaining 48 pairs, and that bound is worth more than a vague caveat. And <strong>the diagram is not the program.</strong> Two of the three defects I found were bindings that rendered perfectly and meant something else, and both became visible the moment I read the compiler's own output instead.
+      </p>
     <div class="proj-stack reveal">
       <span class="tag">Allen-Bradley Micro820</span><span class="tag">Connected Components Workbench</span>
       <span class="tag">IEC 61131-3</span><span class="tag">Ladder Diagram</span><span class="tag">Structured Text</span>
@@ -860,7 +730,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   }
 
   /* ======================================================================
-     WIDGET A — FB_DeterminRotation explorer
+     WIDGET A: FB_DeterminRotation explorer
      ====================================================================== */
   (function(){
     var wheel=document.getElementById('dirWheel');
@@ -907,7 +777,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     var tgtBtns=buttons(document.getElementById('dirTgtBtns'),function(){return target;},
       function(s){ if(s!==base) target=s; });
 
-    /* the ST listing, line by line — the executed branch gets highlighted */
+    /* the ST listing, line by line; the executed branch gets highlighted */
     var ST=[
       {t:'PositionOpposite := MOD(B + 4, 8) + 1;',k:['MOD'],g:'always'},
       {t:'',k:[],g:null},
@@ -997,11 +867,11 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       var rd=document.getElementById('dirRead');
       rd.innerHTML=
         row('PositionOpposite','MOD('+base+'+4, 8)+1 = '+opp,'')+
-        row('branch taken',wrap?'wrap — exclude reverse arc':'direct — test forward arc','')+
+        row('branch taken',wrap?'wrap: exclude reverse arc':'direct: test forward arc','')+
         row('δ forward',dF+' station'+(dF===1?'':'s'),dir===1?'':'off')+
         row('δ reverse',dR+' station'+(dR===1?'':'s'),dir===-1?'':'off')+
         row('DirectionState',dir===1?'1  (forward)':'2  (reverse)',dir===1?'':'amb')+
-        (tie?row('note','equidistant — tie, resolved forward','amb'):'');
+        (tie?row('note','equidistant tie, resolved forward','amb'):'');
 
       /* light the structural lines, the branch that ran, and its taken leaf only */
       var live=wrap?'b':'a';
@@ -1014,7 +884,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       });
 
       document.getElementById('dirVerdict').textContent=
-        (tie?'equidistant — 4 vs 4':'shorter arc: '+(dir===1?'forward':'reverse')+' ('+Math.min(dF,dR)+' vs '+Math.max(dF,dR)+')');
+        (tie?'equidistant, 4 vs 4':'shorter arc: '+(dir===1?'forward':'reverse')+' ('+Math.min(dF,dR)+' vs '+Math.max(dF,dR)+')');
 
       for(var b2=1;b2<=8;b2++)for(var t3=1;t3<=8;t3++){
         var cell=mxCells[b2+'-'+t3];
@@ -1028,7 +898,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   })();
 
   /* ======================================================================
-     WIDGET B — the finished magazine: load, run, dwell, count, cycle-stop
+     WIDGET B: the finished magazine, load, run, dwell, count, cycle-stop
      ====================================================================== */
   (function(){
     var wheel=document.getElementById('runWheel');
@@ -1089,7 +959,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       var d=document.createElement('div'); d.className='slot';
       var tagi=document.createElement('i'); tagi.textContent=k+1;
       d.appendChild(tagi);
-      var v=document.createElement('span'); v.textContent='–'; d.appendChild(v);
+      var v=document.createElement('span'); v.textContent='·'; d.appendChild(v);
       arrHost.appendChild(d); slots.push({box:d,val:v});
     }
 
@@ -1107,7 +977,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     function loadPulse(){
       if(st.hold>0&&st.hold!==9){
         if(st.seq.length>=10){
-          log('LOAD','Array full — PositionSequence is dimensioned [1..10]. Dial 9 to start over.');
+          log('LOAD','Array full. PositionSequence is dimensioned [1..10], so dial 9 to start over.');
         }else{
           st.seq.push(st.hold);
           st.max=st.max+1;                              // PositionMax_out := PositionMax_out + 1
@@ -1115,12 +985,12 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
         }
       }else if(st.hold===9){
         st.seq=[]; st.max=1; st.idx=1;                  // ELSE branch: 9 resets index and maximum
-        log('LOAD','Thumbwheel 9 — SequenceIndex and PositionMax reset to 1. Sequence cleared.');
+        log('LOAD','Thumbwheel 9. SequenceIndex and PositionMax reset to 1, sequence cleared.');
       }
       st.hold=0;                                        // ResetHold_EN → MOV 0 into PositionHold
     }
 
-    /* motors are gated by (RunState OR CycleStop) on every rung — see Stage 6, rung 14 */
+    /* motors are gated by (RunState OR CycleStop) on every rung; see Stage 6, rung 14 */
     function active(){ return st.running||st.cycleStop; }
 
     function plural(n){ return n+" station"+(n===1?"":"s"); }
@@ -1149,15 +1019,15 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       st.target=currentTarget();
       st.legDir=computeDir(st.base,st.target); st.dir=st.legDir;
       st.phase='toPickup';
-      log('RUN','Rung 1 — RunState latched. Target '+st.target+' via '+(st.legDir===1?'FWD':'REV')+
+      log('RUN','Rung 1. RunState latched, target '+st.target+' via '+(st.legDir===1?'FWD':'REV')+
         ' ('+plural(arcLen(st.base,st.target,st.legDir))+').');
     }
     function stop(){
       if(!st.running&&!st.cycleStop) return;
       /* Rung 1 drops RunState on Stop; rung 14 latches CycleStop, which sits in parallel
-         with RunState on every rung RunState gates — so the process keeps going. */
+         with RunState on every rung RunState gates, so the process keeps going. */
       st.running=false; st.cycleStop=true;
-      log('CYCLESTOP','Rung 1 — RunState dropped. Rung 14 latched CycleStop, which parallels it: the lap continues.');
+      log('CYCLESTOP','Rung 1. RunState dropped, but rung 14 latched CycleStop which parallels it, so the lap continues.');
     }
     function resetAll(){
       st.running=false; st.cycleStop=false; st.waitEN=false; st.et=0;
@@ -1168,16 +1038,16 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     }
     function onPickup(){
       st.pickT=PULSE; st.parts++;
-      log('COUNTER','Rung 13 — PickDetectPulse at station '+st.target+'. CTU CV = '+st.parts+'.');
+      log('COUNTER','Rung 13. PickDetectPulse at station '+st.target+', CTU CV = '+st.parts+'.');
       advanceIndex();
       st.phase='toPlace'; st.dir=-st.legDir;             // FB_detectTool flips at the target
     }
     function onPlace(){
       st.placeT=PULSE; st.csCount++;
       st.waitEN=true; st.et=0;
-      log('TIMER','Rung 10 — PlaceDetectPulse (S) Wait_EN. Holding '+PT+' ms at the base.');
+      log('TIMER','Rung 10. PlaceDetectPulse (S) Wait_EN, holding '+PT+' ms at the base.');
       if(st.cycleStop&&st.csCount>0&&st.idx===1){
-        log('CYCLESTOP','Rung 16 — count &gt; 0 AND SequenceIndex = 1 → CycleStop_EN. Rung 14 breaks; motors off at the base.');
+        log('CYCLESTOP','Rung 16. count &gt; 0 AND SequenceIndex = 1 gives CycleStop_EN, rung 14 breaks, motors off at the base.');
         st.running=false; st.cycleStop=false; st.waitEN=false; st.et=0; st.csCount=0;
         render(); return;
       }
@@ -1198,7 +1068,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       if(st.waitEN){
         st.et+=TICK;
         if(st.et>=PT){ st.waitEN=false; st.et=0;
-          log('TIMER','Rung 11 — TON_1.Q (R) Wait_EN. Motors released.'); }
+          log('TIMER','Rung 11. TON_1.Q (R) Wait_EN, motors released.'); }
       }
       if(motorsOn&&st.micro%STEP===0){
         var p=Math.floor(st.micro/STEP)+1;
@@ -1230,7 +1100,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
         baseBtns[i-1].className='pill'+(i===st.base?' on amb':'');
       }
       midA.textContent=active()?('TARGET '+st.target+'  ·  '+(st.phase==='toPickup'?'OUTBOUND':'RETURN')):'IDLE';
-      midB.textContent='SENSOR '+(at||'—');
+      midB.textContent=at?('SENSOR '+at):'NO SENSOR';
 
       document.getElementById('runScan').textContent='SCAN '+st.scan;
       document.getElementById('dialFace').textContent=st.dial;
@@ -1238,7 +1108,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
 
       slots.forEach(function(s,i){
         var v=st.seq[i];
-        s.val.textContent=(v===undefined)?'–':v;
+        s.val.textContent=(v===undefined)?'·':v;
         s.box.className='slot'+(v===undefined?'':' set')+((active()&&st.idx===i+1)?' idx':'');
       });
 
@@ -1259,11 +1129,11 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       document.getElementById('runRead').innerHTML=
         row('RunState',st.running?'TRUE':'FALSE',st.running?'':'off')+
         row('CycleStop',st.cycleStop?'TRUE':'FALSE',st.cycleStop?'amb':'off')+
-        row('DirectionState',active()?(st.dir===1?'1  (FWD)':'0  (REV)'):'—',active()?(st.dir===1?'':'amb'):'off')+
+        row('DirectionState',active()?(st.dir===1?'1  (FWD)':'0  (REV)'):'idle',active()?(st.dir===1?'':'amb'):'off')+
         row('PartsCount (CTU)',st.parts,st.parts?'':'off')+
         row('CycleStopCount',st.csCount,st.csCount?'':'off')+
-        row('PickDetectPulse',st.pickT>0?'▮ pulse':'—',st.pickT>0?'':'off')+
-        row('PlaceDetectPulse',st.placeT>0?'▮ pulse':'—',st.placeT>0?'amb':'off');
+        row('PickDetectPulse',st.pickT>0?'▮ pulse':'idle',st.pickT>0?'':'off')+
+        row('PlaceDetectPulse',st.placeT>0?'▮ pulse':'idle',st.placeT>0?'amb':'off');
     }
 
     document.getElementById('dialUp').addEventListener('click',function(){dialTo(st.dial+1);});
@@ -1273,7 +1143,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     document.getElementById('btnReset').addEventListener('click',resetAll);
     document.getElementById('btnDemo').addEventListener('click',function(){
       st.seq=[4,7,2]; st.max=4; st.idx=1; st.hold=0; st.dial=0; st.bcdLoadPrev=true;
-      log('LOAD','Preset loaded — the same three stores the thumbwheel gesture would make.');
+      log('LOAD','Preset loaded, the same three stores the thumbwheel gesture would make.');
       render();
     });
 
@@ -1283,7 +1153,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   })();
 
   /* ======================================================================
-     Background — the tool magazine itself: a wireframe carousel whose
+     Background: the tool magazine itself, a wireframe carousel whose
      platter runs the real computeDir over a sequence, sensor posts that
      fire as the magnet passes, and ladder rails drifting behind it.
      ====================================================================== */
@@ -1313,7 +1183,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   var inner=new THREE.Mesh(new THREE.TorusGeometry(WR-1.5,0.04,6,48),wire(DEEPBLUE,0.25));
   inner.rotation.x=Math.PI/2; hub.add(inner);
 
-  /* sensor posts, fixed to the frame — station 1 at -Z, forward = clockwise seen from above */
+  /* sensor posts, fixed to the frame; station 1 at -Z, forward = clockwise seen from above */
   function stationAngle(p){return -Math.PI/2+(p-1)*Math.PI/4;}
   var posts=[];
   for(var s=1;s<=8;s++){
