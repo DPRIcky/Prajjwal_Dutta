@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Energy-aware ROS 2 motion planning — A* on a downsampled 80×80 grid, Bresenham line-of-sight pruning to 11 waypoints, diagonal corner checks, and a Turn-Go-Turn controller. 67× planning speedup, ~90% energy savings, 34 unit tests. By Prajjwal Dutta.">
-<title>Energy-Aware A* Motion Planning — Prajjwal Dutta</title>
+<meta name="description" content="How I made a ROS 2 robot plan 67× faster and use about 90% less energy: A* on a downsampled 80×80 grid, Bresenham line-of-sight pruning down to 11 waypoints, and a Turn-Go-Turn controller, backed by 34 unit tests.">
+<title>Energy-Aware A* Motion Planning · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -122,7 +122,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="ros2-autonomy.html">← ROS 2 autonomy stack</a>
+  <a class="back" href="ros2-autonomy.html">Back to the ROS 2 autonomy stack</a>
 </nav>
 
 <main>
@@ -130,14 +130,14 @@
     <div class="eyebrow reveal"><span>Planning · Spring 2026</span><span>ASU · RAS 598</span></div>
     <h1 class="reveal">Plan on a Coarser Map, Throw Away 90% of the Waypoints, Then Drive Slowly</h1>
     <p class="sub reveal">
-      A complete ROS 2 navigation stack built around a single question: what actually costs a
-      mobile robot energy? The answer drove every decision — plan on a
-      <strong>downsampled grid</strong> so search is cheap, prune the path with
-      <strong>Bresenham line-of-sight</strong> so the robot stops turning, and drive it with a
-      <strong>Turn-Go-Turn</strong> state machine at conservative velocity. Result: planning
-      <strong>67× faster</strong>, waypoints cut by <strong>89.8%</strong>, and roughly
-      <strong>90% energy savings</strong> against baseline — with 34 unit tests holding it in
-      place.
+      I built this ROS 2 navigation stack around one question: what actually uses up a mobile
+      robot's energy? Once I had the answer, most decisions made themselves. I plan on a
+      <strong>downsampled grid</strong> so the search is cheap, prune the path with
+      <strong>Bresenham line of sight</strong> so the robot stops turning all the time, and drive
+      it with a <strong>Turn-Go-Turn</strong> state machine at a gentle speed. Planning ended up
+      <strong>67× faster</strong>, the path lost <strong>89.8%</strong> of its waypoints, and the
+      robot used roughly <strong>90% less energy</strong> than the baseline. There are 34 unit
+      tests backing all of that up.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/ros2-energy-planner" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -146,8 +146,8 @@
     </div>
     <div class="metrics reveal">
       <div class="metric"><b>67×</b><span>faster planning</span></div>
-      <div class="metric"><b>108 → 11</b><span>waypoints after pruning</span></div>
-      <div class="metric"><b>~90%</b><span>total energy savings</span></div>
+      <div class="metric"><b>108 to 11</b><span>waypoints after pruning</span></div>
+      <div class="metric"><b>90%</b><span>energy saved, roughly</span></div>
       <div class="metric"><b>34/34</b><span>unit tests passing</span></div>
     </div>
   </header>
@@ -158,29 +158,29 @@
       aria-label="The planner running in Stage and RViz: the green raw A star path, the blue pruned path, and the robot driving the mission.">
       <source src="../media/energy-planner.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>The full system — Stage, RViz, energy-tracking scout, and planner launched together. Green is the raw A* path, blue is the pruned path, red is the active goal waypoint.</figcaption>
+    <figcaption><span class="n">FIG 01</span>Everything running together: Stage, RViz, the scout that tracks energy, and the planner. Green is the raw A* path, blue is the pruned path, and red is the waypoint the robot is heading for.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">Resolution</div>
-    <h2 class="reveal">The map you store and the map you search are different maps.</h2>
+    <h2 class="reveal">The map I keep and the map I search are not the same map.</h2>
     <p class="reveal">
-      The occupancy grid is a 500 × 500 PNG at 0.032 m/pixel over a 16 × 16 m world — good
-      detail, terrible for search: 250,000 cells, ~183,000 A* expansions, roughly
-      <strong>ten seconds</strong> to plan. Planning directly at the required 0.2 m resolution
-      would be fast but throws away obstacle detail. The resolution is instead treated as a
-      <strong>downsampling problem</strong>: keep the fine map, search a coarse one derived from
-      it via <code>cv2.resize</code> with <strong>INTER_NEAREST</strong>.
+      The occupancy grid is a 500 × 500 PNG at 0.032 m per pixel covering a 16 × 16 m world. That's
+      lovely detail and awful for searching: 250,000 cells, around 183,000 A* expansions and
+      about <strong>ten seconds</strong> for every plan. I could have built the map at the
+      required 0.2 m from the start, but that would throw away obstacle detail. So I treated it
+      as a <strong>downsampling problem</strong> instead. I keep the fine map and search a coarse
+      copy made from it with <code>cv2.resize</code> and <strong>INTER_NEAREST</strong>.
     </p>
     <p class="reveal">
-      The interpolation choice is the whole trick. Any averaging kernel would blur an obstacle
-      boundary into a half-occupied cell and invent passages that don't exist. Nearest-neighbor
-      preserves hard boundaries, so a wall stays a wall at 0.2 m.
+      That interpolation setting is really the whole trick. Anything that averages would smear
+      a wall into a half-occupied cell and open up gaps that aren't really there. Nearest
+      neighbor keeps the edges hard, so a wall is still a wall at 0.2 m.
     </p>
     <div class="law reveal">
-      500 × 500 @ 0.032 m <span class="c">// stored map — full detail</span><br>
-      &nbsp;&nbsp;↓ <span class="a">cv2.resize(INTER_NEAREST)</span> — 6.25× <span class="c">// no invented passages</span><br>
-      80 × 80 @ 0.2 m <span class="c">// planning grid — 6,400 cells</span>
+      500 × 500 @ 0.032 m <span class="c">the stored map, full detail</span><br>
+      &nbsp;&nbsp;<span class="a">cv2.resize(INTER_NEAREST)</span>, 6.25× coarser <span class="c">no made-up gaps</span><br>
+      80 × 80 @ 0.2 m <span class="c">the planning grid, 6,400 cells</span>
     </div>
     <table class="reveal">
       <thead><tr><th>Metric</th><th>0.032 m grid</th><th>0.2 m grid</th><th>Gain</th></tr></thead>
@@ -188,35 +188,35 @@
         <tr><td>Grid cells</td><td>250,000</td><td>6,400</td><td>39× smaller</td></tr>
         <tr><td>A* iterations</td><td>~183,456</td><td>~4,717</td><td>39× fewer</td></tr>
         <tr class="hl"><td>Planning time</td><td>~10 s</td><td>~0.15 s</td><td>67× faster</td></tr>
-        <tr><td>Raw waypoints</td><td>665</td><td>108</td><td>—</td></tr>
+        <tr><td>Raw waypoints</td><td>665</td><td>108</td><td></td></tr>
         <tr class="hl"><td>After pruning</td><td>29 (95.6%)</td><td>11 (89.8%)</td><td>3× better ratio</td></tr>
       </tbody>
     </table>
     <figure class="reveal">
       <a href="../assets/energy/cave-map.jpg" target="_blank" rel="noopener">
-        <img src="../assets/energy/cave-map.jpg" alt="The cave occupancy grid used for planning — black obstacle regions on a white free-space background.">
+        <img src="../assets/energy/cave-map.jpg" alt="The cave occupancy grid used for planning, with black obstacle regions on a white free-space background.">
       </a>
-      <figcaption><span class="n">FIG 02</span><code>cave_filled.png</code> — the stored occupancy grid the planner downsamples before searching.</figcaption>
+      <figcaption><span class="n">FIG 02</span><code>cave_filled.png</code>, the stored occupancy grid that the planner shrinks down before it searches.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Search &amp; Prune</div>
-    <h2 class="reveal">A* finds a path. Line-of-sight makes it worth driving.</h2>
+    <h2 class="reveal">A* finds a path, and line of sight makes it one worth driving.</h2>
     <p class="reveal">
-      The global planner is A* with <strong>8-directional</strong> movement, a Euclidean
-      heuristic (admissible and consistent, so the result is optimal on the grid), and a
-      priority queue for O(n log n) node selection. What it returns, though, is a
-      <em>staircase</em> — 108 waypoints that zigzag one cell at a time because that's how grid
-      neighbors work. Driving that literally means turning constantly, and turning is where a
-      differential robot burns its energy.
+      The global planner is A* moving in <strong>8 directions</strong>, with a Euclidean
+      heuristic that is admissible and consistent, so the answer is optimal on the grid, and a
+      priority queue for O(n log n) node selection. The catch is that what comes back is a
+      <em>staircase</em>. It's 108 waypoints zigzagging one cell at a time, because that's how
+      grid neighbors work. Driving that as-is means turning constantly, and turning is exactly
+      where a differential drive robot burns its energy.
     </p>
     <p class="reveal">
-      So the path is pruned greedily: from the current waypoint, find the
-      <strong>farthest one still visible</strong>, jump straight to it, repeat. Visibility is
-      tested with <strong>Bresenham's line algorithm</strong> rather than sampled interpolation
-      — Bresenham guarantees every grid cell the line touches gets checked, so a shortcut can't
-      slip diagonally through a wall between two samples. 108 waypoints become
+      So I prune it greedily. From wherever the robot is, I look for the <strong>farthest
+      waypoint it can still see</strong>, jump straight there, and repeat. I test visibility with
+      <strong>Bresenham's line algorithm</strong> instead of sampling points along the line.
+      Bresenham checks every single cell the line passes through, so a shortcut can never sneak
+      diagonally through a wall in the gap between two samples. The 108 waypoints come down to
       <strong>11</strong>.
     </p>
     <div class="law reveal">
@@ -225,41 +225,42 @@
       &nbsp;&nbsp;farthest = i+1<br>
       &nbsp;&nbsp;for j in range(i+2, len(path)):<br>
       &nbsp;&nbsp;&nbsp;&nbsp;if <span class="a">bresenham_line_of_sight</span>(path[i], path[j]): farthest = j<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;else: break <span class="c">// hit an obstacle — stop extending</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;else: break <span class="c">hit an obstacle, so stop reaching further</span><br>
       &nbsp;&nbsp;pruned.append(path[farthest]); i = farthest
     </div>
     <p class="reveal">
-      Three more collision layers back that up: cell-level occupancy during neighbor expansion,
-      a <strong>0.65 m inflation radius</strong> around obstacles (spec required &gt; 0.6 m), and
-      <strong>diagonal corner checking</strong> — a diagonal step from (x, y) to (x±1, y±1) is
-      only legal if both orthogonal neighbors are clear, which stops the planner from squeezing
-      through the zero-width gap where two walls meet at a corner.
+      Three more layers of collision checking sit behind that. Every neighbor is checked for
+      occupancy as it's expanded, obstacles get a <strong>0.65 m inflation radius</strong> (the
+      spec asked for more than 0.6 m), and <strong>diagonal moves check their corners</strong>. A
+      diagonal step from (x, y) to (x±1, y±1) is only allowed if both of the straight neighbors
+      are clear, which stops the planner squeezing through the zero-width gap where two walls
+      touch at a corner.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Control</div>
-    <h2 class="reveal">Turn, go, turn — decoupled on purpose.</h2>
+    <h2 class="reveal">Turn, then go, then turn, and never both at once.</h2>
     <p class="reveal">
-      The local controller is a three-state machine: <strong>IDLE</strong> waits for a task,
-      <strong>ROTATE</strong> turns in place until heading error is under
-      <strong>0.15 rad</strong>, and <strong>DRIVE</strong> moves toward the waypoint until it's
-      within <strong>0.2 m</strong>. Separating rotation from translation costs a little time and
-      buys precision — the robot never tries to correct heading and position simultaneously,
-      which is what produces the arcing overshoot that then needs correcting again.
+      The local controller has three states. <strong>IDLE</strong> waits for something to do,
+      <strong>ROTATE</strong> spins in place until the heading error drops below
+      <strong>0.15 rad</strong>, and <strong>DRIVE</strong> heads for the waypoint until it's
+      within <strong>0.2 m</strong>. Keeping turning and driving separate costs a bit of time and
+      pays back in precision. The robot never tries to fix its heading and its position at the
+      same moment, which is what causes the swooping overshoot you then have to correct again.
     </p>
     <div class="law reveal">
-      ω = clamp(<span class="a">1.5</span> · heading_error, −0.4, 0.4) rad/s <span class="c">// proportional, clamped for stable turns</span><br>
-      v = <span class="a">0.25</span> · (1 − min(dist, 1.0)) m/s <span class="c">// ramps down approaching the waypoint</span>
+      ω = clamp(<span class="a">1.5</span> · heading_error, −0.4, 0.4) rad/s <span class="c">proportional, clamped so turns stay stable</span><br>
+      v = <span class="a">0.25</span> · (1 − min(dist, 1.0)) m/s <span class="c">slows down as the waypoint gets close</span>
     </div>
     <p class="reveal">
-      Energy savings were budgeted, not hoped for. Pruning contributes the bulk at
-      <strong>~60%</strong> — every eliminated waypoint is an eliminated stop-and-turn. Smooth
-      state transitions add <strong>~25%</strong>, the conservative <strong>0.25 m/s</strong>
-      cap another <strong>~10%</strong>, and distance-based velocity scaling the last
-      <strong>~5%</strong>, for roughly <strong>90% total</strong> against the naive baseline.
-      Actual consumption is tracked live on <code>/energy_consumed</code> from the grading scout,
-      so the claim is measured rather than modeled.
+      I planned the energy savings rather than hoping for them. Pruning does most of the work at
+      about <strong>60%</strong>, since every waypoint removed is one less stop and turn. Smooth
+      switching between states adds about <strong>25%</strong>, the gentle <strong>0.25
+      m/s</strong> speed cap about <strong>10%</strong>, and slowing down near waypoints the last
+      <strong>5%</strong> or so. Together that's roughly <strong>90%</strong> less than the naive
+      baseline. The real consumption is read live from <code>/energy_consumed</code> on the grading
+      scout, so that figure is measured, not estimated.
     </p>
     <table class="reveal">
       <thead><tr><th>Parameter</th><th>Value</th><th>Why</th></tr></thead>
@@ -268,7 +269,7 @@
         <tr class="hl"><td>Inflation radius</td><td>0.65 m</td><td>spec &gt; 0.6 m</td></tr>
         <tr><td>Max linear velocity</td><td>0.25 m/s</td><td>conservative, energy-efficient</td></tr>
         <tr><td>Max angular velocity</td><td>0.4 rad/s</td><td>stable turns</td></tr>
-        <tr class="hl"><td>Heading threshold</td><td>0.15 rad</td><td>spec 3.3 — ROTATE → DRIVE</td></tr>
+        <tr class="hl"><td>Heading threshold</td><td>0.15 rad</td><td>spec 3.3, switches ROTATE to DRIVE</td></tr>
         <tr><td>Waypoint tolerance</td><td>0.2 m</td><td>arrival test</td></tr>
         <tr><td>A* max iterations</td><td>500,000</td><td>raised from 100k for complex maps</td></tr>
       </tbody>
@@ -277,20 +278,20 @@
 
   <section>
     <div class="sec-label reveal">Verification</div>
-    <h2 class="reveal">34 tests, because "it looked fine in RViz" isn't evidence.</h2>
+    <h2 class="reveal">34 tests, because "it looked fine in RViz" doesn't prove anything.</h2>
     <p class="reveal">
-      Each layer is tested where it can actually fail. Map loading covers the coordinate
-      transforms in both directions plus inflation. A* is tested for a basic path, a complex
-      path, an <strong>unreachable goal</strong>, and <strong>optimality</strong>. Pruning is
-      tested for straight-line reduction, obstacle avoidance, a single waypoint, and the case
-      where no improvement is possible. The controller gets 13 tests — angle wrapping, threshold
-      behavior, velocity scaling, goal arrival — and energy optimization gets 8, including
-      straight-versus-zigzag and a realistic full mission.
+      I tested each layer at the spot where it could actually go wrong. Map loading checks the
+      coordinate conversions both ways and the inflation. A* gets a simple path, a complicated
+      one, an <strong>unreachable goal</strong> and a check for <strong>optimality</strong>.
+      Pruning is tested on a straight line, around obstacles, with a single waypoint, and on a
+      path that can't be improved. The controller has 13 tests covering angle wrapping,
+      thresholds, speed scaling and arriving at the goal, and the energy side has 8, including
+      straight against zigzag and a realistic full mission.
     </p>
     <table class="reveal">
       <thead><tr><th>Module</th><th>Tests</th><th>Covers</th></tr></thead>
       <tbody>
-        <tr><td>test_map_loading</td><td>5</td><td>load, pixel↔world, inflation, obstacles</td></tr>
+        <tr><td>test_map_loading</td><td>5</td><td>load, pixel to world and back, inflation, obstacles</td></tr>
         <tr><td>test_astar</td><td>4</td><td>basic, complex, unreachable, optimality</td></tr>
         <tr><td>test_path_pruning</td><td>4</td><td>reduction, avoidance, edge cases</td></tr>
         <tr class="hl"><td>test_local_controller</td><td>13</td><td>turns, thresholds, wrapping, arrival</td></tr>
@@ -298,26 +299,25 @@
       </tbody>
     </table>
     <p class="reveal">
-      Executed in Stage on <code>cave.world</code>, the mission from <strong>(−7, −7) to
-      (7, 2.5)</strong> ran <strong>100% collision-free</strong> with a clean build — 0 errors,
-      0 warnings.
+      Running in Stage on <code>cave.world</code>, the robot drove from <strong>(−7, −7) to
+      (7, 2.5)</strong> without a single collision, on a clean build with 0 errors and 0
+      warnings.
     </p>
     <p class="tnote reveal">Metrics as reported in the repository README (April 2026).</p>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Optimal on the grid isn't optimal to drive.</strong> A* returns the shortest cell
-      path, but cell paths are staircases, and a staircase is a turn schedule — pruning is where
-      an optimal path becomes an efficient one.
-      <strong>Pick the algorithm whose guarantee matches the risk:</strong> interpolated
-      collision sampling usually works and occasionally clips a corner; Bresenham can't, because
-      covering every touched cell is exactly what it's defined to do.
-      <strong>And energy is a design budget, not a byproduct</strong> — decomposing the ~90%
-      into pruning, state transitions, velocity cap, and scaling is what turned "drive
-      efficiently" into four decisions that could each be tested.
+      The shortest path on a grid is not the best path to drive. A* gives you the fewest cells,
+      but a path made of cells is a staircase, and a staircase is really a list of turns. Pruning
+      is what turns an optimal path into an efficient one. I also learned to choose algorithms by
+      the guarantee they give. Sampling along a line for collisions works most of the time and
+      now and then clips a corner. Bresenham can't, because touching every cell is exactly what
+      it does. And energy works best as something you budget from the start. Splitting the
+      90% into pruning, state changes, the speed cap and slowing down turned "drive efficiently"
+      into four separate choices I could test one at a time.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">ROS 2</span><span class="tag">A* Search</span><span class="tag">Bresenham LOS</span>
@@ -328,8 +328,8 @@
   </section>
 
   <div class="pager">
-    <a href="bayes-localization.html">← Bayes filter localization</a>
-    <a href="ros2-autonomy.html">Autonomy stack →</a>
+    <a href="bayes-localization.html">Back to Bayes filter localization</a>
+    <a href="ros2-autonomy.html">Back to the autonomy stack</a>
   </div>
 </main>
 
@@ -354,7 +354,7 @@
   const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,GREEN=0x63d97a,RED=0xe8544f;
   const mobile=innerWidth<700;
 
-  /* ---- world: a 16 x 16 m cave-ish map on a 0.5 m planning grid ---- */
+  /*  world: a 16 x 16 m cave-ish map on a 0.5 m planning grid  */
   const CELL=0.5, DIM=32, HALF=DIM*CELL/2;           // 16 m across
   const gx=i=>-HALF+CELL*(i+0.5);
   const BLOCKS=[                                      // obstacle rectangles [i0,j0,i1,j1]
@@ -366,7 +366,7 @@
   BLOCKS.forEach(([i0,j0,i1,j1])=>{
     for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++) if(i<DIM&&j<DIM) blocked[IDX(i,j)]=1;
   });
-  /* obstacle inflation — the 0.65 m buffer, in cells */
+  /* obstacle inflation, the 0.65 m buffer, in cells */
   const INFL=1;
   const infl=blocked.slice();
   for(let i=0;i<DIM;i++)for(let j=0;j<DIM;j++){
@@ -386,7 +386,7 @@
   const grid=new THREE.GridHelper(DIM*CELL,DIM,0x1c3a66,0x11223f);
   grid.material.transparent=true; grid.material.opacity=0.22; scene.add(grid);
 
-  /* ---- expansion cloud: one point per free cell, lit in A* expansion order ---- */
+  /*  expansion cloud: one point per free cell, lit in A* expansion order  */
   const freeCells=[];
   for(let i=0;i<DIM;i++)for(let j=0;j<DIM;j++) if(!infl[IDX(i,j)]) freeCells.push([i,j]);
   const cellOf=new Map(); freeCells.forEach((c,n)=>cellOf.set(IDX(c[0],c[1]),n));
@@ -398,7 +398,7 @@
   scene.add(new THREE.Points(exGeo,new THREE.PointsMaterial({size:0.16,vertexColors:true,transparent:true,opacity:0.85})));
   const C_OFF=new THREE.Color(0x14243c), C_ON=new THREE.Color(CYAN), tmpC=new THREE.Color();
 
-  /* ---- A* with 8-connectivity, Euclidean heuristic, diagonal corner checks ---- */
+  /*  A* with 8-connectivity, Euclidean heuristic, diagonal corner checks  */
   const free=(i,j)=>i>=0&&i<DIM&&j>=0&&j<DIM&&!infl[IDX(i,j)];
   function astar(s,g){
     const open=[{i:s[0],j:s[1],f:0}], gS=new Float64Array(DIM*DIM).fill(Infinity), came=new Int32Array(DIM*DIM).fill(-1);
@@ -429,7 +429,7 @@
     }
     return {path:[],order};
   }
-  /* ---- Bresenham line of sight + greedy pruning ---- */
+  /*  Bresenham line of sight + greedy pruning  */
   function los(a,b){
     let x0=a[0],y0=a[1];const x1=b[0],y1=b[1];
     const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
@@ -453,7 +453,7 @@
     return out;
   }
 
-  /* ---- missions: plan between opposite corners of the map ---- */
+  /*  missions: plan between opposite corners of the map  */
   const MISSIONS=[[[1,1],[30,30]],[[30,1],[2,29]],[[1,16],[29,17]]];
   let mi=0, plan=null, pruned=null;
   const rawLine=new THREE.Line(new THREE.BufferGeometry(),
@@ -487,7 +487,7 @@
   }
   replan();
 
-  /* ---- phases: search → raw path → prune → drive (Turn-Go-Turn) ---- */
+  /*  phases: search to raw path to prune to drive (Turn-Go-Turn)  */
   const SEARCH=3.0, SHOW_RAW=1.0, SHOW_PRU=1.2, DRIVE=9.0;
   const CYCLE=SEARCH+SHOW_RAW+SHOW_PRU+DRIVE;
   let phaseT=0, wpI=0, state='ROTATE', heading=0;
@@ -508,7 +508,7 @@
       phaseT+=dt;
       if(phaseT>CYCLE){ phaseT=0; wpI=0; state='ROTATE'; replan(); }
       const p=phaseT;
-      /* 1 — search expansion */
+      /* 1, search expansion */
       const searchK=Math.min(1,p/SEARCH);
       const shown=Math.floor(plan.order.length*searchK);
       for(let n=0;n<freeCells.length;n++){ exCol[n*3]=C_OFF.r;exCol[n*3+1]=C_OFF.g;exCol[n*3+2]=C_OFF.b; }
@@ -518,7 +518,7 @@
         exCol[n*3]=tmpC.r;exCol[n*3+1]=tmpC.g;exCol[n*3+2]=tmpC.b;
       }
       exGeo.attributes.color.needsUpdate=true;
-      /* 2 — raw path, 3 — pruned path, 4 — drive */
+      /* 2, raw path, 3, pruned path, 4, drive */
       rawLine.material.opacity=p>SEARCH?Math.min(0.75,(p-SEARCH)*3)*(p>SEARCH+SHOW_RAW+SHOW_PRU?0.45:1):0;
       pruLine.material.opacity=p>SEARCH+SHOW_RAW?Math.min(0.95,(p-SEARCH-SHOW_RAW)*3):0;
       goalDot.material.opacity=p>SEARCH?0.5+0.4*Math.sin(t*5):0;

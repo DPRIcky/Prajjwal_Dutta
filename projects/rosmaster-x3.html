@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="ROSMASTER X3 warehouse navigation — a Gazebo digital twin in the AWS RoboMaker warehouse with a custom A* global planner, AMCL localization, DWA local planning, layered costmaps, SLAM, and marker-conditioned behavior. ASU EGR-530. By Prajjwal Dutta.">
-<title>ROSMASTER X3 Warehouse Navigation — Prajjwal Dutta</title>
+<meta name="description" content="How our EGR 530 team drove a ROSMASTER X3 through a Gazebo copy of the AWS RoboMaker warehouse with a custom A* planner, AMCL, DWA, layered costmaps, SLAM and colored floor markers.">
+<title>ROSMASTER X3 Warehouse Navigation · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,7 +125,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -133,19 +133,20 @@
     <div class="eyebrow reveal"><span>Digital Twin · Spring 2026</span><span>ASU · EGR-530 Team 5</span></div>
     <h1 class="reveal">A Warehouse That Only Exists in Gazebo, Driven by a Robot That Doesn't Know the Difference</h1>
     <p class="sub reveal">
-      A complete autonomous navigation stack for the ROSMASTER X3 mecanum rover, built inside a
-      digital twin of the AWS RoboMaker small warehouse. URDF robot model with simulated 2D LiDAR
-      and RGB camera, AMCL particle-filter localization, a <strong>custom A* global planner</strong>
-      feeding <strong>move_base</strong>, DWA local obstacle avoidance over layered costmaps, and
-      SLAM via gmapping or Cartographer to build the map in the first place — plus marker-based
-      sign recognition that makes the robot stop for red and slow down for yellow.
+      Our team built a full autonomous navigation stack for the ROSMASTER X3, a rover on mecanum
+      wheels, inside a digital copy of the AWS RoboMaker small warehouse. It has a URDF model of
+      the robot with a simulated 2D LiDAR and RGB camera, AMCL particle filter localization, a
+      <strong>custom A* global planner</strong> we wrote to feed <strong>move_base</strong>, DWA for
+      dodging obstacles over layered costmaps, and SLAM through gmapping or Cartographer to build
+      the map to begin with. On top of that, it reads colored markers, stopping for red and slowing
+      down for yellow.
     </p>
     <div class="actions reveal">
-      <a class="btn" href="https://asu-egr530-project.github.io/ROSMASTER-PROJECT-WEBSITE/" target="_blank" rel="noopener">Team project site ↗</a>
-      <a class="btn" href="../assets/rosmaster/project-poster.pdf" target="_blank" rel="noopener">Expo poster ↓</a>
+      <a class="btn" href="https://asu-egr530-project.github.io/ROSMASTER-PROJECT-WEBSITE/" target="_blank" rel="noopener">Team project site</a>
+      <a class="btn" href="../assets/rosmaster/project-poster.pdf" target="_blank" rel="noopener">Expo poster (PDF)</a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>±15 cm</b><span>goal accuracy · ±15°</span></div>
+      <div class="metric"><b>±15 cm</b><span>goal accuracy, and ±15°</span></div>
       <div class="metric"><b>95%+</b><span>goal success rate in sim</span></div>
       <div class="metric"><b>10 Hz</b><span>AMCL localization rate</span></div>
       <div class="metric"><b>5 Hz</b><span>path planning frequency</span></div>
@@ -158,26 +159,25 @@
       aria-label="The ROSMASTER X3 replanning its path around an obstacle that appears in the warehouse aisle.">
       <source src="../media/rosmaster-obstacle.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>Dynamic obstacle avoidance — the DWA local planner rolls out a new trajectory the moment the LiDAR sees something the static map doesn't have.</figcaption>
+    <figcaption><span class="n">FIG 01</span>Dodging an obstacle on the fly. The DWA local planner rolls out a new trajectory the moment the LiDAR sees something the static map doesn't have.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Twin</div>
-    <h2 class="reveal">Model the robot, then model the building around it.</h2>
+    <h2 class="reveal">First model the robot, then the building around it.</h2>
     <p class="reveal">
-      The project ships as two ROS packages that drop into an existing
-      <strong>yahboomcar</strong> workspace. <strong>aws-robomaker-small-warehouse-world</strong>
-      supplies the environment — a Gazebo world with shelving, walls, and 20+ 3D warehouse
-      object models, giving a repeatable testbed where the same navigation run can be
-      re-executed until the numbers mean something.
-      <strong>digital_twin_description</strong> holds the other half: the ROSMASTER X3
-      <strong>URDF</strong> with its 360° planar LiDAR and RGB camera, the navigation launch
-      files, the custom A* planner, and the pre-built warehouse map.
+      The project comes as two ROS packages that slot into an existing <strong>yahboomcar</strong>
+      workspace. <strong>aws-robomaker-small-warehouse-world</strong> is the environment, a Gazebo
+      world with shelves, walls and more than 20 3D warehouse objects. It gave us a testbed we could
+      rerun the same navigation in again and again until the numbers actually meant something.
+      <strong>digital_twin_description</strong> is the other half: the ROSMASTER X3
+      <strong>URDF</strong> with its 360° planar LiDAR and RGB camera, the navigation launch files,
+      our A* planner and the prebuilt warehouse map.
     </p>
     <p class="reveal">
-      The X3 is a <strong>mecanum-wheeled</strong> platform, which matters more than it sounds:
-      the drivetrain can translate laterally without rotating, so the planner isn't restricted
-      to differential-drive arc motion when threading a 24 cm footprint between shelf legs.
+      The X3 rolls on <strong>mecanum wheels</strong>, and that matters more than it sounds. It can
+      slide sideways without turning, so the planner isn't stuck with the curved paths of a
+      differential drive when it squeezes a 24 cm robot between shelf legs.
     </p>
     <table class="reveal">
       <thead><tr><th>Platform</th><th>Value</th></tr></thead>
@@ -193,44 +193,44 @@
       <thead><tr><th>Sensor</th><th>Spec</th></tr></thead>
       <tbody>
         <tr><td>LiDAR type</td><td>2D planar scanner, 360° FOV</td></tr>
-        <tr class="hl"><td>LiDAR range</td><td>0.35 – 12 m @ 10 Hz</td></tr>
+        <tr class="hl"><td>LiDAR range</td><td>0.35 to 12 m @ 10 Hz</td></tr>
         <tr><td>Camera</td><td>640 × 480 · 30 FPS · 62° FOV</td></tr>
       </tbody>
     </table>
     <p class="reveal">
-      The twin models real hardware, part for part: an <strong>RPLIDAR A1</strong> 2D 360°
-      scanner, an <strong>Astra Pro Plus</strong> depth camera (0.6–8 m range, 640×480 @ 30 FPS),
-      a <strong>Jetson Nano 4GB</strong> running the ROS controller on a robot expansion board,
-      and an optional 7-inch LCD — which is what makes the "validate on the physical X3" next
-      step a port rather than a rewrite.
+      The twin copies the real hardware part for part: an <strong>RPLIDAR A1</strong> 2D 360°
+      scanner, an <strong>Astra Pro Plus</strong> depth camera (0.6 to 8 m range, 640×480 @ 30 FPS),
+      a <strong>Jetson Nano 4GB</strong> running the ROS controller on a robot expansion board, and
+      an optional 7-inch LCD. That's why testing on the physical X3 next will be a port and not a
+      rewrite.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Architecture</div>
-    <h2 class="reveal">move_base in the middle, everything else feeding it.</h2>
+    <h2 class="reveal">move_base sits in the middle and everything else feeds it.</h2>
     <p class="reveal">
-      The stack is the classic ROS navigation pipeline with one part swapped out for
-      hand-written code. <strong>AMCL</strong> fuses <code>/scan</code> against wheel
-      <code>/odom</code> with a particle filter to keep the robot localized on the static
-      <code>/map</code>. <strong>move_base</strong> takes a goal — a 2D Nav Goal click in
-      RViz — and orchestrates the two planning layers. The <strong>custom A* global
-      planner</strong> searches the whole warehouse for a route; <strong>DWA</strong> samples
-      local velocity commands each cycle to follow it while dodging whatever the map never
-      knew about. Out the bottom: <code>/cmd_vel</code>.
+      It's the classic ROS navigation pipeline with one piece replaced by code we wrote ourselves.
+      <strong>AMCL</strong> uses a particle filter to combine <code>/scan</code> with the wheel
+      <code>/odom</code> and keep the robot located on the static <code>/map</code>.
+      <strong>move_base</strong> takes a goal, a 2D Nav Goal click in RViz, and runs the two
+      planning layers. Our <strong>custom A* global planner</strong> searches the whole warehouse
+      for a route, and <strong>DWA</strong> tries out local velocity commands every cycle to follow
+      it while avoiding anything the map didn't know about. What comes out the bottom is
+      <code>/cmd_vel</code>.
     </p>
     <div class="law reveal">
-      /scan <span class="c">→</span> AMCL <span class="c">→</span> /amcl_pose &nbsp;<span class="c">// 10 Hz particle filter, LiDAR + odom</span><br>
-      goal <span class="c">→</span> move_base <span class="c">→</span> <span class="a">A* global</span> <span class="c">→</span> plan <span class="c">→</span> <span class="a">DWA local</span> <span class="c">→</span> /cmd_vel<br>
+      /scan <span class="c">into</span> AMCL <span class="c">gives</span> /amcl_pose &nbsp;<span class="c">10 Hz particle filter on LiDAR and odom</span><br>
+      goal <span class="c">into</span> move_base, <span class="c">then</span> <span class="a">A* global</span> <span class="c">makes the</span> plan, <span class="c">then</span> <span class="a">DWA local</span> <span class="c">sends</span> /cmd_vel<br>
       costmaps: <span class="c">global</span> <span class="a">1 Hz</span> <span class="c">full map</span> · <span class="c">local</span> <span class="a">5 Hz</span> <span class="c">6 × 6 m rolling window</span>
     </div>
     <p class="reveal">
-      The two costmaps run at deliberately different rates because they answer different
-      questions. The global one is asked "is there a route at all?" once a second across the
-      entire map with obstacle inflation baked in. The local one is asked "what is about to hit
-      me?" five times a second inside a 6 × 6 m window centered on the robot. An inflation
-      radius of <strong>25 cm</strong> around every obstacle is what keeps a 24 cm robot from
-      clipping a shelf corner it technically had room for.
+      The two costmaps update at different rates on purpose, because they answer different
+      questions. The global one asks "is there a way through at all?" once a second across the
+      whole map, with the obstacle padding already included. The local one asks "what's about to
+      hit me?" five times a second inside a 6 × 6 m window around the robot. Padding every obstacle
+      by <strong>25 cm</strong> is what stops a 24 cm robot from clipping a shelf corner it
+      technically had room to pass.
     </p>
     <table class="reveal">
       <thead><tr><th>Navigation parameter</th><th>Value</th></tr></thead>
@@ -243,27 +243,27 @@
         <tr><td>Local costmap update</td><td>5 Hz · 6 m × 6 m</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">Tuning levers: raise inflation_radius in costmap_common_params.yaml (0.25 → 0.35) for wider clearance; cut max velocities in dwa_local_planner_params.yaml for a more cautious robot.</p>
+    <p class="tnote reveal">To tune it, raise inflation_radius in costmap_common_params.yaml from 0.25 to 0.35 for more clearance, or lower the max velocities in dwa_local_planner_params.yaml for a more careful robot.</p>
   </section>
 
   <section>
     <div class="sec-label reveal">Mapping</div>
     <h2 class="reveal">Two ways to learn a building you've never seen.</h2>
     <p class="reveal">
-      Pre-mapped navigation is the deployed mode, but the map has to come from somewhere. The
-      stack supports both <strong>gmapping</strong> (particle-filter SLAM) and
-      <strong>Google Cartographer</strong> — the recommended path — launched against the same
-      warehouse world. Coverage is driven manually with
-      <strong>teleop_twist_keyboard</strong> until the occupancy grid closes up, then the map
-      is written out to <code>.pgm</code> + <code>.yaml</code> with <code>map_saver</code>.
-      Cartographer has one non-obvious step: the trajectory must be finished
-      (<code>/finish_trajectory 0</code>) before saving, or the final optimization never runs.
+      The robot normally navigates on a map it already has, but that map has to come from
+      somewhere. The stack supports <strong>gmapping</strong>, which is particle filter SLAM, and
+      <strong>Google Cartographer</strong>, which is the one we recommend, both running in the
+      same warehouse world. You drive the robot around by hand with
+      <strong>teleop_twist_keyboard</strong> until the occupancy grid fills in, then save the map
+      as <code>.pgm</code> and <code>.yaml</code> with <code>map_saver</code>. Cartographer has one
+      step that isn't obvious. You have to finish the trajectory (<code>/finish_trajectory 0</code>)
+      before saving, or the final optimization never runs.
     </p>
     <div class="law reveal">
       <span class="c">$</span> roslaunch digital_twin_description cartographer_aws_warehouse.launch<br>
-      <span class="c">$</span> rosservice call /finish_trajectory 0 &nbsp;<span class="c">// let the loop closures settle first</span><br>
+      <span class="c">$</span> rosservice call /finish_trajectory 0 &nbsp;<span class="c">let the loop closures settle first</span><br>
       <span class="c">$</span> rosrun map_server map_saver -f my_custom_map<br>
-      <span class="c">$</span> roslaunch digital_twin_description navigation_aws_warehouse.launch &nbsp;<span class="a">// RViz, pre-mapped, ready for goals</span>
+      <span class="c">$</span> roslaunch digital_twin_description navigation_aws_warehouse.launch &nbsp;<span class="a">RViz opens on the saved map, ready for goals</span>
     </div>
   </section>
 
@@ -271,12 +271,12 @@
     <div class="sec-label reveal">Behavior</div>
     <h2 class="reveal">A warehouse robot that reads the signs.</h2>
     <p class="reveal">
-      Navigation gets you to a pose. Operating inside a shared warehouse needs more than that,
-      so the camera stream drives <strong>marker-based sign recognition</strong> layered on top
-      of move_base: a <strong>red stop marker</strong> halts navigation until the path clears,
-      and a <strong>yellow warning marker</strong> drops the robot into a cautious,
-      reduced-speed mode while it scans for hazards. The rule the site demonstrated is the one
-      that matters operationally — perception can veto the planner, never the other way around.
+      Navigation gets a robot to a spot. Working in a warehouse full of other people and machines
+      takes more than that, so the camera feed drives <strong>sign recognition from colored
+      markers</strong> on top of move_base. A <strong>red stop marker</strong> halts navigation until
+      the way is clear, and a <strong>yellow warning marker</strong> puts the robot into a careful,
+      slower mode while it looks for hazards. The rule we showed is the one that matters in real
+      operation: what the robot sees can overrule the planner, never the other way round.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
@@ -285,7 +285,7 @@
           aria-label="The ROSMASTER X3 detecting a red stop marker and halting.">
           <source src="../media/rosmaster-red-stop.mp4" type="video/mp4">
         </video>
-        <figcaption><span class="n">FIG 02</span>Red stop marker — navigation halts and holds until the path is clear again.</figcaption>
+        <figcaption><span class="n">FIG 02</span>A red stop marker. Navigation stops and waits until the path is clear again.</figcaption>
       </figure>
       <figure class="reveal">
         <video autoplay muted loop playsinline preload="metadata"
@@ -293,74 +293,73 @@
           aria-label="The ROSMASTER X3 slowing to a cautious speed after detecting a yellow warning marker.">
           <source src="../media/rosmaster-yellow-warning.mp4" type="video/mp4">
         </video>
-        <figcaption><span class="n">FIG 03</span>Yellow warning marker — the robot keeps going, but slower and scanning.</figcaption>
+        <figcaption><span class="n">FIG 03</span>A yellow warning marker. The robot keeps going, but slower and watching carefully.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-label reveal">Results</div>
-    <h2 class="reveal">What the twin actually delivered.</h2>
+    <h2 class="reveal">What the twin actually achieved.</h2>
     <p class="reveal">
-      Goal-directed navigation succeeded in <strong>95%+ of simulated runs</strong>, arriving
-      within <strong>±15 cm and ±15°</strong> of the commanded pose — tight enough for
-      shelf-adjacent warehouse tasks, and exactly the tolerance the costmap goal checker was
-      configured to enforce. Localization held at 10 Hz, planning cycled at 5 Hz, and the DWA
-      layer recovered from injected obstacles without ever needing an operator.
+      The robot reached its goal in <strong>more than 95% of simulated runs</strong>, stopping within
+      <strong>±15 cm and ±15°</strong> of where it was sent. That's close enough for work right next
+      to shelves, and it's exactly the tolerance we set the goal checker to enforce. Localization
+      held at 10 Hz, planning ran at 5 Hz, and DWA got around the obstacles we threw in without
+      anyone having to step in.
     </p>
     <table class="reveal">
       <thead><tr><th>Metric</th><th>Result</th></tr></thead>
       <tbody>
         <tr class="hl"><td>Navigation accuracy</td><td>±15 cm, ±15°</td></tr>
         <tr class="hl"><td>Goal success rate</td><td>95%+ in simulation</td></tr>
-        <tr><td>Obstacle detection range</td><td>0.35 – 12 m (LiDAR)</td></tr>
+        <tr><td>Obstacle detection range</td><td>0.35 to 12 m (LiDAR)</td></tr>
         <tr><td>Maximum speed</td><td>0.3 m/s linear · 0.2 m/s lateral</td></tr>
         <tr><td>Localization update rate</td><td>10 Hz</td></tr>
         <tr><td>Path planning frequency</td><td>5 Hz</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">Reported on the team project site; results page last updated May 1, 2026.</p>
+    <p class="tnote reveal">As reported on our team project site, where the results page was last updated May 1, 2026.</p>
     <figure class="reveal">
       <a href="../assets/rosmaster/project-poster.pdf" target="_blank" rel="noopener">
-        <img src="../assets/rosmaster/project-poster.jpg" alt="EGR 530 Team 5 technical poster: Digital Twin and Warehouse Simulation for Autonomous Navigation — problem statement, goals, ROS navigation stack architecture diagram, operation modes, workflow, ROSMASTER X3 hardware callouts, key specifications, and outcomes.">
+        <img src="../assets/rosmaster/project-poster.jpg" alt="EGR 530 Team 5 technical poster, Digital Twin and Warehouse Simulation for Autonomous Navigation, showing the problem statement, goals, ROS navigation stack architecture diagram, operation modes, workflow, ROSMASTER X3 hardware callouts, key specifications, and outcomes.">
       </a>
-      <figcaption><span class="n">FIG 04</span>The EGR 530 Team 5 technical poster — problem framing, the full Gazebo → navigation stack → motor driver architecture, both operation modes, and the hardware the twin models. Click for the PDF.</figcaption>
+      <figcaption><span class="n">FIG 04</span>Our EGR 530 Team 5 technical poster. It lays out the problem, the full architecture from Gazebo through the navigation stack to the motor driver, both operating modes, and the hardware the twin copies. Click it for the PDF.</figcaption>
     </figure>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/rosmaster/team-demo-1.jpg" target="_blank" rel="noopener">
           <img src="../assets/rosmaster/team-demo-1.jpg" alt="The project team demonstrating the ROSMASTER X3 robot live at the ASU Engineering Expo 2026.">
         </a>
-        <figcaption><span class="n">FIG 05</span>ASU Engineering Expo 2026 — live demonstration of the X3 running marker detection in front of visitors.</figcaption>
+        <figcaption><span class="n">FIG 05</span>At the ASU Engineering Expo 2026, showing visitors the X3 running marker detection live.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/rosmaster/team-demo-3.jpg" target="_blank" rel="noopener">
           <img src="../assets/rosmaster/team-demo-3.jpg" alt="The project team standing with the technical poster and the ROSMASTER X3 robot at the ASU Engineering Expo 2026.">
         </a>
-        <figcaption><span class="n">FIG 06</span>Team showcase — technical poster alongside the running robot.</figcaption>
+        <figcaption><span class="n">FIG 06</span>Our team with the poster and the robot running beside it.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>A digital twin is a measurement instrument, not a demo.</strong> The value of the
-      AWS warehouse world isn't that it looks like a warehouse — it's that the same goal can be
-      commanded a hundred times under identical conditions, which is the only way "95% success"
-      becomes a number instead of an impression.
-      <strong>Writing the global planner changes what you understand.</strong> Dropping a custom
-      A* into move_base's plugin interface forces the costmap, the inflation layer, and the
-      plan-to-controller handoff to stop being configuration and start being code.
-      <strong>And the layers must disagree at different speeds:</strong> a 1 Hz global route and
-      a 5 Hz local reaction is not redundancy, it's a deliberate split between the question of
-      where to go and the question of what's in the way right now.
+      A digital twin is a measuring tool first and a demo second. The point of
+      the AWS warehouse world isn't that it looks like a warehouse. It's that you can send the robot
+      to the same goal a hundred times under identical conditions, and that's the only way "95%
+      success" becomes a real number instead of a feeling. Writing the global planner yourself also
+      changes how well you understand the stack. Plugging our own A* into move_base meant the
+      costmap, the inflation layer and the handoff from plan to controller stopped being settings
+      and became code we had to get right. And the layers should work at different speeds. A 1 Hz
+      global route next to a 5 Hz local reaction isn't doubling up. It splits "where should I go"
+      from "what's in my way right now" on purpose.
     </p>
     <p class="reveal">
-      Next phases identified by the team: full hardware validation of the stack on the physical
-      X3, multi-robot fleet coordination, richer camera-based perception for warehouse tasks,
-      and benchmarking in a real facility rather than a modeled one.
+      Where our team wants to take it next: testing the full stack on the physical X3, coordinating a
+      fleet of several robots, better camera-based perception for warehouse jobs, and benchmarking in
+      a real building instead of a modeled one.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">ROS Melodic / Noetic</span><span class="tag">Gazebo</span><span class="tag">AWS RoboMaker World</span>
@@ -372,8 +371,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -385,7 +384,7 @@
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  /* Background: the warehouse twin — wireframe shelf racks form aisles, a mecanum rover runs an
+  /* Background: the warehouse twin, wireframe shelf racks form aisles, a mecanum rover runs an
      A* waypoint route through them with a 360° LiDAR fan sweeping, an AMCL particle cloud
      trailing its pose estimate, and marker posts that stop it (red) or slow it (amber). */
   const canvas=document.getElementById('whscene');
@@ -403,9 +402,9 @@
   grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.45;
   scene.add(grid);
 
-  /* ---- warehouse layout: rack blocks on a grid, with the aisles between them as the
+  /*  warehouse layout: rack blocks on a grid, with the aisles between them as the
      only free space. Every route waypoint below sits on an aisle centerline, so the
-     rover physically cannot cut through a rack. ---- */
+     rover physically cannot cut through a rack.  */
   const BLOCK_W=5.4, BLOCK_D=2.6, BLOCK_H=2.2;   // one rack block
   const AISLE=3.6;                                // clear width between blocks
   const nCols=mobile?2:3, nRows=2;
@@ -441,7 +440,7 @@
     }
   }
 
-  /* ---- the A* route: a serpentine down the cross-aisles, turning on the end aisles ---- */
+  /*  the A* route: a serpentine down the cross-aisles, turning on the end aisles  */
   const XL=aisleX(0), XR=aisleX(nCols);           // leftmost / rightmost aisle centerlines
   const WP=[];
   for(let k=0;k<=nRows;k++){                      // each cross-aisle, alternating direction
@@ -472,9 +471,9 @@
     m.position.set(p.x,0.13,p.z); scene.add(m); return m;
   });
 
-  /* ---- marker posts: a red octagon (stop) and an amber triangle (caution). Both are read
+  /*  marker posts: a red octagon (stop) and an amber triangle (caution). Both are read
      at a glance, so they get a filled face plus a bright outline, and they billboard about
-     their post so the shape stays legible as the camera orbits. ---- */
+     their post so the shape stays legible as the camera orbits.  */
   const signs=[];
   function marker(x,z,color,sides,rot,r){
     const g=new THREE.Group();
@@ -499,12 +498,12 @@
   /* placed beside the route, in the aisle they govern */
   const stopSign=marker(blockX(0)*0.35,aisleZ(0)-1.15,RED,8,Math.PI/8,0.62);      // octagon
   const warnSign=marker(blockX(nCols-1)*0.35,aisleZ(1)+1.15,AMBER,3,Math.PI/2,0.72); // triangle
-  /* the point on the route each sign governs — checked by distance, so the rule applies on
+  /* the point on the route each sign governs, checked by distance, so the rule applies on
      every pass through that spot rather than on one hard-coded leg */
   const STOP_PT=new THREE.Vector3(stopSign.x,0,stopSign.z+1.15);
   const WARN_PT=new THREE.Vector3(warnSign.x,0,warnSign.z-1.15);
 
-  /* ---- the rover: mecanum chassis, LiDAR puck, camera stub ---- */
+  /*  the rover: mecanum chassis, LiDAR puck, camera stub  */
   const rover=new THREE.Group(); scene.add(rover);
   const chassis=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.24,0.62),wire(AMBER,0.75));
   chassis.position.y=0.24; rover.add(chassis);
@@ -517,8 +516,8 @@
     w.rotation.z=Math.PI/2; w.position.set(sx*0.34,0.13,sz*0.24); rover.add(w);
   });
 
-  /* ---- 360° LiDAR fan: each ray is actually cast against the rack footprints, so the scan
-     genuinely traces the aisle walls instead of faking a range profile ---- */
+  /*  360° LiDAR fan: each ray is actually cast against the rack footprints, so the scan
+     genuinely traces the aisle walls instead of faking a range profile  */
   const RAYS=mobile?48:96, MAX_RANGE=12;   // the real RPLIDAR A1 tops out at 12 m
   const rayPos=new Float32Array(RAYS*6);
   const rayGeo=new THREE.BufferGeometry();
@@ -552,7 +551,7 @@
     rayGeo.attributes.position.needsUpdate=true;
   }
 
-  /* ---- AMCL particle cloud: a scatter of pose hypotheses around the rover ---- */
+  /*  AMCL particle cloud: a scatter of pose hypotheses around the rover  */
   const NP=mobile?60:140;
   const partPos=new Float32Array(NP*3);
   const partSeed=[];
@@ -562,7 +561,7 @@
   const partCloud=new THREE.Points(partGeo,new THREE.PointsMaterial({color:AMBER,size:0.075,transparent:true,opacity:0.75}));
   scene.add(partCloud);
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?350:900;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*60;pp[i*3+1]=Math.random()*14;pp[i*3+2]=(Math.random()-0.5)*40;}
@@ -570,7 +569,7 @@
   pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
   scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.45})));
 
-  /* ---- drive: constant-speed traversal of the route, with stop/slow zones ---- */
+  /*  drive: constant-speed traversal of the route, with stop/slow zones  */
   const legLen=WP.map((p,i)=>p.distanceTo(nextWP(i)));
   let leg=0,legT=0,heading=0,holdT=0;
   const CRUISE=3.4;                      // m/s in scene units
@@ -586,7 +585,7 @@
   const clock=new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);
-    const dt=Math.min(clock.getDelta(),0.05); // delta first — getElapsedTime() would consume it
+    const dt=Math.min(clock.getDelta(),0.05); // delta first, getElapsedTime() would consume it
     const t=clock.elapsedTime;
 
     if(!reduced){

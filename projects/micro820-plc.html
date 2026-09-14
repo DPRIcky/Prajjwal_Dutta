@@ -119,7 +119,7 @@
   .finding.done h4 .fno{color:var(--cyan);}
   .finding.done .status b{color:var(--cyan);}
 
-  /* ---------- interactive lab widgets ---------- */
+  /*  interactive lab widgets  */
   .lab{border:1px solid var(--line);border-radius:12px;background:rgba(8,14,28,0.72);
     margin:2rem 0;overflow:hidden;}
   .lab-head{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.18em;text-transform:uppercase;
@@ -174,6 +174,7 @@
   .matrix td.f{color:var(--cyan);}
   .matrix td.r{color:var(--amber);}
   .matrix td.tie{outline:1px solid rgba(140,170,220,0.4);outline-offset:-2px;border-radius:3px;}
+  .mx-key .tie-key{display:inline-block;width:0.85em;height:0.85em;border:1px solid rgba(140,170,220,0.5);border-radius:3px;vertical-align:-0.1em;margin-right:0.4em;}
   .matrix td.cur{background:rgba(79,216,232,0.16);border-radius:3px;color:var(--text);}
   .mx-key{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;color:var(--muted);
     margin-top:0.7rem;display:flex;gap:1.2rem;flex-wrap:wrap;}
@@ -252,7 +253,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -287,7 +288,7 @@
 
   <section>
     <div class="sec-label reveal">The Machine</div>
-    <h2 class="reveal">Not G-code. A carousel that has to choose a direction.</h2>
+    <h2 class="reveal">There is no G-code here, just a carousel that has to pick a direction.</h2>
     <p class="reveal">
       The trainer is an eight-station rotating tool wheel. A magnet on the platter passes over eight discrete position sensors, so the controller never sees an encoder count, only a <strong>one-hot code spread across eight wires</strong>. A four-bit BCD thumbwheel lets an operator name a station by number, and two digital outputs drive the wheel forward and reverse. That is the entire interface I had to work with.
     </p>
@@ -306,11 +307,11 @@
       <tbody>
         <tr><td>_IO_EM_DI_00</td><td>Stop</td><td>IN</td><td>Stop push button</td></tr>
         <tr><td>_IO_EM_DI_01</td><td>Start</td><td>IN</td><td>Start push button</td></tr>
-        <tr><td>_IO_EM_DI_02…05</td><td>BCD1, 2, 4, 8</td><td>IN</td><td>Thumbwheel bits, binary weights</td></tr>
-        <tr><td>_IO_EM_DI_06…11</td><td>Position1…6</td><td>IN</td><td>Wheel position sensors 1 to 6</td></tr>
-        <tr class="hl"><td>_IO_P1_DI_00…01</td><td>Position7, 8</td><td>IN</td><td>Sensors 7 and 8, via the 2080-IQ4 plug-in</td></tr>
-        <tr><td>_IO_EM_DO_00…01</td><td>Light1, Light2</td><td>OUT</td><td>Indicator lamps</td></tr>
-        <tr><td>_IO_EM_DO_02…03</td><td>FWD_Motor, REV_Motor</td><td>OUT</td><td>Forward / reverse motor relays</td></tr>
+        <tr><td>_IO_EM_DI_02 to 05</td><td>BCD1, 2, 4, 8</td><td>IN</td><td>Thumbwheel bits, binary weights</td></tr>
+        <tr><td>_IO_EM_DI_06 to 11</td><td>Position1 to 6</td><td>IN</td><td>Wheel position sensors 1 to 6</td></tr>
+        <tr class="hl"><td>_IO_P1_DI_00 to 01</td><td>Position7, 8</td><td>IN</td><td>Sensors 7 and 8, via the 2080-IQ4 plug-in</td></tr>
+        <tr><td>_IO_EM_DO_00 to 01</td><td>Light1, Light2</td><td>OUT</td><td>Indicator lamps</td></tr>
+        <tr><td>_IO_EM_DO_02 to 03</td><td>FWD_Motor, REV_Motor</td><td>OUT</td><td>Forward / reverse motor relays</td></tr>
       </tbody>
     </table>
     </div>
@@ -344,7 +345,7 @@
     <table>
       <thead><tr><th>Block</th><th>Takes</th><th>Returns</th><th>Responsibility</th></tr></thead>
       <tbody>
-        <tr><td>FB_Position_to_dec</td><td>8 sensor bits</td><td>PositionValue_out (UINT)</td><td>One-hot sensor bus → station number 1 to 8</td></tr>
+        <tr><td>FB_Position_to_dec</td><td>8 sensor bits</td><td>PositionValue_out (UINT)</td><td>One-hot sensor bus into a station number, 1 to 8</td></tr>
         <tr><td>FB_BCD_to_Dec</td><td>4 thumbwheel bits</td><td>PositionSelect_out, BCD_load_out</td><td>Debounce, decode BCD, flag switch position 0</td></tr>
         <tr class="hl"><td>FB_DeterminRotation</td><td>base, target, detected</td><td>DirectionState (1 fwd / 2 rev)</td><td>Shortest-arc decision, latched between base crossings</td></tr>
         <tr><td>FB_detectTool</td><td>as above + RotationState</td><td>DirectionState (BOOL)</td><td>Flip direction at the pickup, and again at the base</td></tr>
@@ -460,7 +461,7 @@
         <div class="mx-key">
           <i class="kf">F = forward (DirectionState := 1)</i>
           <i class="kr">R = reverse (DirectionState := 2)</i>
-          <i>▢ = equidistant, both arcs are 4 stations</i>
+          <i><span class="tie-key" aria-hidden="true"></span>outlined = equidistant, both arcs are 4 stations</i>
         </div>
       </div>
     </div>
@@ -653,7 +654,7 @@ FB_DeterminRotation_1(<span class="k">TRUE</span>, POSITIONSELECT, POSITIONSEQUE
         On the direction rung, <code>DirectionState</code> is assigned twice: once as the output pin of <code>FB_detectTool</code>, and once as an OTE coil terminating the rung. The compiler emits them in that order:
       </p>
       <div class="law st">DIRECTIONSTATE := FB_detectTool_1.DirectionState;   <span class="c">// the computed direction</span>
-DIRECTIONSTATE := FB_detectTool_1.DetT_out_EN;      <span class="c">// …replaced by rung power. This one wins.</span></div>
+DIRECTIONSTATE := FB_detectTool_1.DetT_out_EN;      <span class="c">// then replaced by rung power. This one wins.</span></div>
       <p style="margin-top:0.9rem;">
         <code>DetT_out_EN</code> only propagates rung power, so the second write replaces the computed direction with the rung's power state, and it lands last, which means the motor rungs downstream consume the overwritten value for the rest of that scan. The pattern reproduces the reference manual's own figures rather than originating here, and it is present from Stage 4 onward. The remedy is to delete the terminating coil and let the output pin be the sole writer. It still needs confirming on hardware before I would trust the direction logic, because a program whose direction Boolean is pinned true still <em>appears</em> to run. It would just always rotate forward.
       </p>
@@ -668,10 +669,10 @@ DIRECTIONSTATE := FB_detectTool_1.DetT_out_EN;      <span class="c">// …replac
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
+    <div class="sec-label reveal">Looking Back</div>
     <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-        <strong>Incremental beats monolithic when every stage is downloadable.</strong> Six programs that each run on the trainer is a completely different debugging experience from one program that either works or does not, because every regression has an obvious blast radius. <strong>The ladder and ST boundary is a real design decision,</strong> and drawing it at interlocking versus arithmetic is what kept a sixteen-rung program legible while it did genuinely algorithmic work. <strong>A known limitation is worth characterising rather than apologising for:</strong> the antipode test's asymmetry turned out to be exactly one equidistant target per base out of seven, with zero suboptimal choices in the remaining 48 pairs, and that bound is worth more than a vague caveat. And <strong>the diagram is not the program.</strong> Two of the three defects I found were bindings that rendered perfectly and meant something else, and both became visible the moment I read the compiler's own output instead.
+        <strong>Incremental beats monolithic when every stage is downloadable.</strong> Six programs that each run on the trainer is a completely different debugging experience from one program that either works or does not, because every regression has an obvious blast radius. <strong>The ladder and ST boundary is a real design decision,</strong> and drawing it at interlocking versus arithmetic is what kept a sixteen-rung program legible while it did real algorithmic work. <strong>A known limitation is worth characterising rather than apologising for:</strong> the antipode test's asymmetry turned out to be exactly one equidistant target per base out of seven, with zero suboptimal choices in the remaining 48 pairs, and that bound is worth more than a vague caveat. And <strong>the diagram is not the program.</strong> Two of the three defects I found were bindings that rendered perfectly and meant something else, and both became visible the moment I read the compiler's own output instead.
       </p>
     <div class="proj-stack reveal">
       <span class="tag">Allen-Bradley Micro820</span><span class="tag">Connected Components Workbench</span>
@@ -688,18 +689,18 @@ DIRECTIONSTATE := FB_detectTool_1.DetT_out_EN;      <span class="c">// …replac
   </section>
 
   <div class="pager">
-    <a href="../index.html#projects">← All work</a>
-    <a href="plc-tank.html">CODESYS × Factory I/O →</a>
+    <a href="../index.html#projects">All work</a>
+    <a href="plc-tank.html">Next: CODESYS and Factory I/O</a>
   </div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* ==========================================================================
+/* 
    Shared: the shortest-path decision, transcribed from FB_DeterminRotation.
    Used by the two interactive widgets AND by the background scene, so all
    three agree with the controller by construction.
-   ========================================================================== */
+    */
 function computeDir(base,target){
   var opp=((base+4)%8)+1,fwd;
   if(opp>base) fwd=(base<target)&&(target<opp);
@@ -716,7 +717,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
 
-  /* ---------- shared SVG wheel geometry (station 1 at top, forward = clockwise) ---------- */
+  /*  shared SVG wheel geometry (station 1 at top, forward = clockwise)  */
   var SVGNS='http://www.w3.org/2000/svg';
   var CX=150,CY=150,R=104;
   function ang(p){return -90+(p-1)*45;}
@@ -729,9 +730,9 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     return 'M'+p0[0]+' '+p0[1]+'A'+r+' '+r+' 0 '+(sweep>180?1:0)+' 1 '+p1[0]+' '+p1[1];
   }
 
-  /* ======================================================================
+  /* 
      WIDGET A: FB_DeterminRotation explorer
-     ====================================================================== */
+      */
   (function(){
     var wheel=document.getElementById('dirWheel');
     if(!wheel) return;
@@ -897,9 +898,9 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     draw();
   })();
 
-  /* ======================================================================
+  /* 
      WIDGET B: the finished magazine, load, run, dwell, count, cycle-stop
-     ====================================================================== */
+      */
   (function(){
     var wheel=document.getElementById('runWheel');
     if(!wheel) return;
@@ -914,7 +915,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       pickT:0, placeT:0
     };
 
-    /* ---------- wheel furniture ---------- */
+    /*  wheel furniture  */
     wheel.appendChild(mk('circle',{cx:CX,cy:CY,r:R,fill:'none',stroke:'rgba(140,170,220,0.14)','stroke-width':1}));
     var platter=mk('circle',{cx:CX,cy:CY,r:R-30,fill:'none',stroke:'rgba(140,170,220,0.1)','stroke-width':1,'stroke-dasharray':'3 6'});
     wheel.appendChild(platter);
@@ -934,7 +935,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     var midB=mk('text',{x:CX,y:CY+68,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':'9',fill:'#5d6d88','letter-spacing':'1.4'});
     wheel.appendChild(midA); wheel.appendChild(midB);
 
-    /* ---------- controls ---------- */
+    /*  controls  */
     var baseBtns=[];
     var baseHost=document.getElementById('runBaseBtns');
     for(var b=1;b<=8;b++)(function(s){
@@ -963,7 +964,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       arrHost.appendChild(d); slots.push({box:d,val:v});
     }
 
-    /* ---------- thumbwheel: FB_BCD_to_Dec + rung 4 (> compare, MOV) + FB_LoadArray ---------- */
+    /*  thumbwheel: FB_BCD_to_Dec + rung 4 (> compare, MOV) + FB_LoadArray  */
     function dialTo(v){
       v=Math.max(0,Math.min(9,v));
       if(v===st.dial) return;
@@ -981,13 +982,13 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
         }else{
           st.seq.push(st.hold);
           st.max=st.max+1;                              // PositionMax_out := PositionMax_out + 1
-          log('LOAD','Stored station '+st.hold+' → PositionSequence['+st.seq.length+']. PositionMax = '+st.max+'.');
+          log('LOAD','Stored station '+st.hold+' into PositionSequence['+st.seq.length+']. PositionMax = '+st.max+'.');
         }
       }else if(st.hold===9){
         st.seq=[]; st.max=1; st.idx=1;                  // ELSE branch: 9 resets index and maximum
         log('LOAD','Thumbwheel 9. SequenceIndex and PositionMax reset to 1, sequence cleared.');
       }
-      st.hold=0;                                        // ResetHold_EN → MOV 0 into PositionHold
+      st.hold=0;                                        // ResetHold_EN to MOV 0 into PositionHold
     }
 
     /* motors are gated by (RunState OR CycleStop) on every rung; see Stage 6, rung 14 */
@@ -995,7 +996,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
 
     function plural(n){ return n+" station"+(n===1?"":"s"); }
 
-    /* ---------- FB_SequenceArray index advance ---------- */
+    /*  FB_SequenceArray index advance  */
     function advanceIndex(){
       var i=(st.idx%st.max)+1;
       if(i===0||i>=st.max) i=1;
@@ -1003,7 +1004,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     }
     function currentTarget(){ return st.seq[st.idx-1]||0; }
 
-    /* ---------- run control ---------- */
+    /*  run control  */
     function log(tag,msg){
       var el=document.getElementById('runLog'),d=document.createElement('div');
       d.innerHTML='<span class="s">#'+st.scan+'</span><span class="t t-'+tag.toLowerCase()+'">'+tag+'</span><span class="m">'+msg+'</span>';
@@ -1078,7 +1079,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
       render();
     }
 
-    /* ---------- render ---------- */
+    /*  render  */
     function row(k,v,cls){
       return '<div><span class="k">'+k+'</span><span class="v '+(cls||'')+'">'+v+'</span></div>';
     }
@@ -1132,8 +1133,8 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
         row('DirectionState',active()?(st.dir===1?'1  (FWD)':'0  (REV)'):'idle',active()?(st.dir===1?'':'amb'):'off')+
         row('PartsCount (CTU)',st.parts,st.parts?'':'off')+
         row('CycleStopCount',st.csCount,st.csCount?'':'off')+
-        row('PickDetectPulse',st.pickT>0?'▮ pulse':'idle',st.pickT>0?'':'off')+
-        row('PlaceDetectPulse',st.placeT>0?'▮ pulse':'idle',st.placeT>0?'amb':'off');
+        row('PickDetectPulse',st.pickT>0?'PULSE':'idle',st.pickT>0?'':'off')+
+        row('PlaceDetectPulse',st.placeT>0?'PULSE':'idle',st.placeT>0?'amb':'off');
     }
 
     document.getElementById('dialUp').addEventListener('click',function(){dialTo(st.dial+1);});
@@ -1152,11 +1153,11 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     setInterval(tick,TICK);
   })();
 
-  /* ======================================================================
+  /* 
      Background: the tool magazine itself, a wireframe carousel whose
      platter runs the real computeDir over a sequence, sensor posts that
      fire as the magnet passes, and ladder rails drifting behind it.
-     ====================================================================== */
+      */
   var canvas=document.getElementById('plcscene');
   if(!canvas||typeof THREE==='undefined') return;
   var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
@@ -1174,7 +1175,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.42;
   scene.add(grid);
 
-  /* ---- the carousel ---- */
+  /*  the carousel  */
   var WR=4.0;                                   // station ring radius
   var hub=new THREE.Group(); hub.position.set(0,FLOOR+0.6,0); scene.add(hub);
   hub.add(new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.75,0.5,14),wire(DEEPBLUE,0.5)));
@@ -1218,7 +1219,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   var baseRing=new THREE.Mesh(new THREE.TorusGeometry(0.45,0.05,6,20),wire(AMBER,0.7));
   baseRing.rotation.x=Math.PI/2; baseRing.position.y=0.06; hub.add(baseRing);
 
-  /* ---- ladder rails, drifting behind ---- */
+  /*  ladder rails, drifting behind  */
   var rails=new THREE.Group(); rails.position.set(0,2.2,-13); scene.add(rails);
   (function(){
     var railMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.16});
@@ -1233,7 +1234,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     rails.add(new THREE.LineSegments(g,railMat));
   })();
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   var PC=mobile?400:1000;
   var pp=new Float32Array(PC*3);
   for(var i2=0;i2<PC;i2++){pp[i2*3]=(Math.random()-0.5)*52;pp[i2*3+1]=(Math.random()-0.5)*22;pp[i2*3+2]=(Math.random()-0.5)*28;}
@@ -1241,7 +1242,7 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
   pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
   scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.45})));
 
-  /* ---- the run: the same decision the controller makes ---- */
+  /*  the run: the same decision the controller makes  */
   var SEQ=[4,7,2,6], sIdx=0, baseSt=1, targetSt=SEQ[0];
   var legDir=computeDir(baseSt,targetSt), carrying=false;
   var station=baseSt, frac=0;                    // continuous position, in stations

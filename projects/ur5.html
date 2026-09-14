@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="UR5 multi-task manipulation — PolyScope, RoboDK, and URScript programming, virtual cube tracing, ROBOTIQ gripper repeatability, pick-and-place, and torque-controlled flashlight assembly. By Prajjwal Dutta.">
-<title>UR5 Multi-Task Manipulation — Prajjwal Dutta</title>
+<meta name="description" content="What I did with a UR5 across PolyScope, RoboDK and URScript: tracing a cube in the air, measuring repeatability, pick-and-place with a ROBOTIQ gripper, and a flashlight assembly tightened by torque feedback.">
+<title>UR5 Multi-Task Manipulation · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,7 +120,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -128,12 +128,13 @@
     <div class="eyebrow reveal"><span>Manipulation · Fall 2023</span><span>ASU · Robotics &amp; Autonomous Systems</span></div>
     <h1 class="reveal">One UR5, Three Languages, and a Flashlight That Screws Itself Together</h1>
     <p class="sub reveal">
-      Hands-on mastery of an industrial cobot across every layer of its programming stack:
-      PolyScope waypoints on the teach pendant, offline path planning and simulation in
-      RoboDK, and raw URScript on the controller. Validated by tracing all eight vertices of
-      a virtual cube with linear moves, quantifying gripper repeatability with a dial
-      indicator, running pallet-to-pallet pick-and-place with a ROBOTIQ adaptive gripper,
-      and finishing with a full flashlight assembly — fastened by torque feedback, not hope.
+      I spent this project learning to talk to an industrial cobot at every level it offers:
+      teaching waypoints with PolyScope on the pendant, planning and simulating paths offline in
+      RoboDK, and writing URScript that runs straight on the controller. To prove it all worked,
+      I had the arm trace the eight corners of an imaginary cube with straight-line moves,
+      measured how repeatable it was with a dial indicator, moved blocks between pallets with a
+      ROBOTIQ adaptive gripper, and finished by having it assemble a flashlight, tightening each
+      thread by feeling the torque rather than hoping for the best.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/Universal-Robot-5" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -145,9 +146,9 @@
     </div>
     <div class="metrics reveal">
       <div class="metric"><b>3</b><span>programming environments</span></div>
-      <div class="metric"><b>8</b><span>cube vertices · moveL</span></div>
+      <div class="metric"><b>8</b><span>cube corners traced with moveL</span></div>
       <div class="metric"><b>3 N·m</b><span>torque-controlled fastening</span></div>
-      <div class="metric"><b>~850 mm</b><span>spherical reach · 6-DoF</span></div>
+      <div class="metric"><b>850 mm</b><span>reach, roughly · 6-DoF</span></div>
     </div>
   </header>
 
@@ -157,28 +158,27 @@
       aria-label="The physical UR5 tracing the eight vertices of a virtual cube in the air with straight-line moves.">
       <source src="../media/ur5-cube-real.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>Cube tracing on the real robot — nine waypoints, moveJ to the first corner, then pure moveL: every edge a straight line in Cartesian space.</figcaption>
+    <figcaption><span class="n">FIG 01</span>Tracing the cube on the real robot. Nine waypoints, a moveJ to the first corner and then only moveL, so every edge is a straight line in space.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">Three Environments</div>
-    <h2 class="reveal">Same arm, three ways to talk to it.</h2>
+    <h2 class="reveal">One arm, and three ways to talk to it.</h2>
     <p class="reveal">
-      The point of this project wasn't one demo — it was fluency. Every task was approached
-      through the UR5's full programming stack: <strong>PolyScope</strong> on the teach
-      pendant for real-time waypoint control, <strong>RoboDK</strong> for offline simulation
-      and path planning against a modeled table station, and <strong>URScript</strong> for
-      text-level programs running directly on the controller — including gripper primitives
-      like <strong>rq_close_and_wait()</strong> and torque telemetry via
-      <strong>get_joint_torques()</strong>. Each environment executed the same waypoint
-      missions, so their trade-offs showed up in practice, not in a datasheet.
+      I wasn't after a single demo here. I wanted to be fluent. So I came at every task through
+      the UR5's whole programming stack: <strong>PolyScope</strong> on the teach pendant to move
+      waypoints live, <strong>RoboDK</strong> to simulate and plan paths offline around a model of
+      the table, and <strong>URScript</strong> for programs written as text that run right on the
+      controller, using calls like <strong>rq_close_and_wait()</strong> for the gripper and
+      <strong>get_joint_torques()</strong> to read torque. Each one ran the same waypoint
+      missions, so I felt the trade-offs for myself instead of reading them off a datasheet.
     </p>
     <table class="reveal">
       <thead><tr><th>Feature</th><th>PolyScope</th><th>RoboDK</th><th>URScript</th></tr></thead>
       <tbody>
-        <tr><td>Interface</td><td>pendant GUI</td><td>simulation + GUI</td><td>text</td></tr>
+        <tr><td>Interface</td><td>pendant GUI</td><td>simulation and GUI</td><td>text</td></tr>
         <tr><td>Learning curve</td><td>low</td><td>medium</td><td>high</td></tr>
-        <tr><td>Control level</td><td>high-level</td><td>high-level + detail</td><td>fine-grained</td></tr>
+        <tr><td>Control level</td><td>high-level</td><td>high-level with detail</td><td>fine-grained</td></tr>
         <tr><td>Simulation</td><td>basic built-in</td><td>full offline</td><td>none</td></tr>
         <tr class="hl"><td>Best for</td><td>bring-up, teaching</td><td>path planning</td><td>custom algorithms</td></tr>
       </tbody>
@@ -187,27 +187,27 @@
 
   <section>
     <div class="sec-label reveal">Simulate First</div>
-    <h2 class="reveal">RoboDK: crash in software, deploy with confidence.</h2>
+    <h2 class="reveal">Crash it in RoboDK so you don't crash it for real.</h2>
     <p class="reveal">
-      The UR5 model was imported into RoboDK with its table station, three targets were
-      recorded, and the program linked them with linear joint-space moves. Only after the
-      simulated run was verified did the same program go to the physical robot — the same
-      three poses were also driven through PolyScope in both <strong>joint space</strong>
-      (per-joint angles, fine control) and <strong>Cartesian space</strong> (pose targets,
-      simpler paths), making the coordinate-system trade-off concrete.
+      I brought the UR5 model into RoboDK along with its table, recorded three targets, and
+      linked them with linear joint-space moves. The program only went to the real robot after
+      the simulated run checked out. I also drove those same three poses through PolyScope twice,
+      once in <strong>joint space</strong>, setting each joint angle for fine control, and once in
+      <strong>Cartesian space</strong>, giving pose targets for simpler paths. Doing both made the
+      difference between the two coordinate systems very real.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/ur5/1.jpg" target="_blank" rel="noopener">
           <img src="../assets/ur5/1.jpg" alt="RoboDK simulation of the UR5 in its default upright pose on a modeled table station.">
         </a>
-        <figcaption><span class="n">FIG 02</span>RoboDK station — the UR5 model in its default pose on the simulated table.</figcaption>
+        <figcaption><span class="n">FIG 02</span>The RoboDK station, with the UR5 model in its default pose on the simulated table.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/ur5/3.jpg" target="_blank" rel="noopener">
           <img src="../assets/ur5/3.jpg" alt="RoboDK view of the UR5 with three target coordinate frames labeled Target 1, 2, and 3, connected by straight yellow path lines.">
         </a>
-        <figcaption><span class="n">FIG 03</span>Three recorded targets and the linear path linking them — validated in sim before touching hardware.</figcaption>
+        <figcaption><span class="n">FIG 03</span>The three recorded targets and the straight path between them, checked in simulation before the hardware ever moved.</figcaption>
       </figure>
     </div>
     <table class="reveal">
@@ -223,17 +223,18 @@
 
   <section>
     <div class="sec-label reveal">Cube Tracing</div>
-    <h2 class="reveal">Draw a cube in thin air. Then measure it.</h2>
+    <h2 class="reveal">Drawing a cube in thin air, then measuring it.</h2>
     <p class="reveal">
-      The capstone of the motion work: trace all <strong>8 vertices of a virtual cube</strong>
-      hanging in the workspace. One <strong>moveJ</strong> gets the arm to the first corner;
-      every subsequent edge is a <strong>moveL</strong>, forcing straight Cartesian lines
-      rather than joint-space arcs. The recorded waypoints then let the cube be measured from
-      its own trajectory — the diagonal between corner points recovers the side length:
+      The motion work ended with the arm tracing all <strong>8 corners of an imaginary
+      cube</strong> floating in the workspace. One <strong>moveJ</strong> brings the arm to the
+      first corner, and every edge after that is a <strong>moveL</strong>, which forces straight
+      lines in space instead of the curves you get from moving joints. Because I recorded the
+      waypoints, I could then measure the cube from the arm's own path. The diagonal between two
+      corners gives back the side length:
     </p>
     <div class="law reveal">
-      d = √( Δx² + Δy² + Δz² ) = √( 2500 + 2500 + 10000 ) ≈ <span class="a">122.47 mm</span> &nbsp;<span class="c">// side from the corner-to-corner diagonal</span><br>
-      V = d³ ≈ <span class="a">1.80 × 10⁶ mm³</span> &nbsp;<span class="c">// the cube the arm drew, computed from its own waypoints</span>
+      d = √( Δx² + Δy² + Δz² ) = √( 2500 + 2500 + 10000 ) ≈ <span class="a">122.47 mm</span> &nbsp;<span class="c">side length from the corner to corner diagonal</span><br>
+      V = d³ ≈ <span class="a">1.80 × 10⁶ mm³</span> &nbsp;<span class="c">the cube the arm drew, worked out from its own waypoints</span>
     </div>
     <figure class="reveal">
       <video autoplay muted loop playsinline preload="metadata"
@@ -241,76 +242,75 @@
         aria-label="RoboDK simulation of the UR5 tracing the virtual cube's vertices with straight-line motion.">
         <source src="../media/ur5-cube-sim.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">FIG 04</span>The same cube trace in simulation — points 1–5 walk the top face, 6–9 the bottom, every leg a straight line.</figcaption>
+      <figcaption><span class="n">FIG 04</span>The same trace in simulation. Points 1 to 5 walk the top face and 6 to 9 the bottom, every leg a straight line.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Repeatability</div>
-    <h2 class="reveal">Trust, but verify with a dial indicator.</h2>
+    <h2 class="reveal">Trust the arm, but check it with a dial indicator.</h2>
     <p class="reveal">
-      Before asking the arm to assemble anything, its precision was measured. A digital
-      pressure indicator was mounted perpendicular to a 3D-printed block, and the robot
-      traced the block's edge between waypoints — then its full face through four corner
-      waypoints — over <strong>10 iterations</strong>, recording the indicator at each pass.
-      The UR5 held its line: the only visible variation came from the print surface itself,
-      not the robot.
+      Before I asked the arm to build anything, I measured how precise it really was. I mounted a
+      digital pressure indicator square to a 3D-printed block and had the robot trace the block's
+      edge between waypoints, then its whole face through four corner waypoints, for <strong>10
+      rounds</strong>, reading the indicator every time. The UR5 held its line. The only variation
+      I could see came from the rough printed surface, not from the robot.
     </p>
     <figure class="reveal">
       <a href="../assets/ur5/5.jpg" target="_blank" rel="noopener">
         <img src="../assets/ur5/5.jpg" alt="Grid of ten photos showing the UR5 gripper holding position against a dial pressure indicator across ten repeatability iterations, with colored blocks in the foreground.">
       </a>
-      <figcaption><span class="n">FIG 05</span>All ten repeatability passes against the dial indicator — the needle barely moves; the rough 3D-printed edge accounts for the residual.</figcaption>
+      <figcaption><span class="n">FIG 05</span>All ten repeatability passes against the dial indicator. The needle barely moves, and what little it does comes from the rough printed edge.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Grip &amp; Move</div>
-    <h2 class="reveal">Calibrated force, transformed frames, undamaged blocks.</h2>
+    <h2 class="reveal">Squeezing just hard enough, and moving blocks without a scratch.</h2>
     <p class="reveal">
-      The <strong>ROBOTIQ adaptive gripper</strong> work went from manual open/close on the
-      pendant to scripted control, with grip force calibrated in newtons against a
-      <strong>load cell</strong> across speed and force settings. The pick-and-place program
-      then transferred blocks pallet-to-pallet using <strong>coordinate transformations from
-      the robot base frame to each pallet</strong>, with positions held in variables so the
-      pallets could move without rewriting the program. A precision epilogue: inserting and
-      removing a <strong>10 mm dowel pin</strong> through a sequence of different-sized holes
-      in a mating plate.
+      With the <strong>ROBOTIQ adaptive gripper</strong> I started by opening and closing it by
+      hand on the pendant and worked up to controlling it from scripts, calibrating the grip force
+      in newtons against a <strong>load cell</strong> at different speed and force settings. The
+      pick-and-place program then moved blocks from one pallet to another using
+      <strong>coordinate transforms from the robot's base frame to each pallet</strong>. I kept
+      the positions in variables, so a pallet could move without me rewriting the program. As a
+      last test of precision, I had the arm push a <strong>10 mm dowel pin</strong> in and out of
+      a row of different-sized holes in a mating plate.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/ur5/6.jpg" target="_blank" rel="noopener">
           <img src="../assets/ur5/6.jpg" alt="The ROBOTIQ adaptive gripper positioned above a set of colored blocks on the workbench.">
         </a>
-        <figcaption><span class="n">FIG 06</span>ROBOTIQ gripper over the block set — force settings calibrated against a load cell before touching parts.</figcaption>
+        <figcaption><span class="n">FIG 06</span>The ROBOTIQ gripper over the blocks, with its force settings calibrated on a load cell before it touched a part.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/ur5/7.jpg" target="_blank" rel="noopener">
           <img src="../assets/ur5/7.jpg" alt="The UR5 gripper lifting a blue block from a pallet of colored blocks during the pick-and-place task.">
         </a>
-        <figcaption><span class="n">FIG 07</span>Pallet-to-pallet pick-and-place — grip force high enough to hold, low enough to leave no marks.</figcaption>
+        <figcaption><span class="n">FIG 07</span>Moving blocks between pallets, gripping firmly enough to hold and gently enough to leave no marks.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-label reveal">Assembly</div>
-    <h2 class="reveal">Screw until the joints say 3 N·m.</h2>
+    <h2 class="reveal">Keep screwing until the joints feel 3 N·m.</h2>
     <p class="reveal">
-      The final task assembled a working flashlight: head clamped in a <strong>pneumatic
-      chuck via Digital I/O</strong>, barrel threaded on until joint torque readings from
-      <strong>get_joint_torques()</strong> hit <strong>3 N·m</strong>, battery pack inserted
-      with correct polarity, and the tail cap tightened to its own <strong>2 N·m</strong>
-      spec before unclamping. Fastening by torque feedback instead of position means the
-      thread decides when it's seated — the robot just listens.
+      The last task was building a working flashlight. The arm clamps the head in a
+      <strong>pneumatic chuck through Digital I/O</strong>, screws the barrel on until
+      <strong>get_joint_torques()</strong> reads <strong>3 N·m</strong>, slides the batteries in the
+      right way round, and tightens the tail cap to its own <strong>2 N·m</strong> before
+      unclamping. Tightening by torque rather than by position means the thread itself decides
+      when it's seated, and the robot just has to pay attention.
     </p>
     <table class="reveal">
       <thead><tr><th>Step</th><th>Action</th><th>Control signal</th></tr></thead>
       <tbody>
         <tr><td>Clamp head</td><td>place into pneumatic chuck</td><td>Digital I/O</td></tr>
-        <tr class="hl"><td>Thread barrel</td><td>screw onto head</td><td>torque → 3 N·m</td></tr>
+        <tr class="hl"><td>Thread barrel</td><td>screw onto head</td><td>torque up to 3 N·m</td></tr>
         <tr><td>Insert battery</td><td>into barrel, correct polarity</td><td>pose sequence</td></tr>
-        <tr class="hl"><td>Thread tail cap</td><td>align and screw</td><td>torque → 2 N·m</td></tr>
+        <tr class="hl"><td>Thread tail cap</td><td>align and screw</td><td>torque up to 2 N·m</td></tr>
         <tr><td>Release</td><td>unclamp, place in tray</td><td>Digital I/O</td></tr>
       </tbody>
     </table>
@@ -319,36 +319,36 @@
         <a href="../assets/ur5/8.jpg" target="_blank" rel="noopener">
           <img src="../assets/ur5/8.jpg" alt="The UR5 positioning the flashlight head into the pneumatic chuck at the start of the assembly sequence.">
         </a>
-        <figcaption><span class="n">FIG 08</span>Head into the pneumatic chuck — clamped through Digital I/O before threading begins.</figcaption>
+        <figcaption><span class="n">FIG 08</span>The head going into the pneumatic chuck, clamped through Digital I/O before any threading starts.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/ur5/9.jpg" target="_blank" rel="noopener">
           <img src="../assets/ur5/9.jpg" alt="The UR5 gripper holding the flashlight barrel during the threading stage of assembly.">
         </a>
-        <figcaption><span class="n">FIG 09</span>Barrel stage — the gripper drives the thread while joint torques stream back as the stop condition.</figcaption>
+        <figcaption><span class="n">FIG 09</span>Threading the barrel. The gripper turns it while the joint torques stream back and tell it when to stop.</figcaption>
       </figure>
     </div>
     <figure class="reveal">
       <a href="../assets/ur5/10.jpg" target="_blank" rel="noopener">
         <img src="../assets/ur5/10.jpg" alt="The UR5 holding the fully assembled flashlight above the workbench at the end of the sequence.">
       </a>
-      <figcaption><span class="n">FIG 10</span>The deliverable — an assembled, working flashlight, torqued to spec and placed in the tray.</figcaption>
+      <figcaption><span class="n">FIG 10</span>The finished product, a working flashlight, tightened to spec and set down in the tray.</figcaption>
     </figure>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Environments are tools, not identities.</strong> PolyScope got the arm moving in
-      minutes, RoboDK caught path problems before they cost hardware time, and URScript did
-      what no GUI could — read joint torques mid-motion and use them as a stop condition.
-      Knowing when to drop a layer is the actual skill. <strong>moveJ and moveL are different
-      promises:</strong> one guarantees where the joints end up, the other guarantees the path
-      between — the cube trace only measures correctly because every edge kept the second
-      promise. And <strong>force is a sensor:</strong> the flashlight threads seated by
-      listening to torque, which is the difference between assembly and cross-threading with
-      confidence.
+      No single programming environment is the right one. PolyScope had the arm moving within
+      minutes, RoboDK caught path problems before they cost me time on the hardware, and URScript
+      did something no GUI could, reading joint torques in the middle of a move and using them to
+      decide when to stop. The real skill is knowing when to drop down a level. I also came to see
+      moveJ and moveL as two different promises. One promises where the joints end up, and the
+      other promises the path in between, and the cube only measured correctly because every edge
+      kept that second promise. And force works as a sensor. The flashlight threads seated
+      properly because the arm was listening to torque, which is the difference between
+      assembling something and confidently cross-threading it.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">UR5</span><span class="tag">PolyScope</span><span class="tag">RoboDK</span>
@@ -358,8 +358,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -371,7 +371,7 @@
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  /* Background: the cube-tracing experiment — a wireframe arm walks its stylus through the
+  /* Background: the cube-tracing experiment, a wireframe arm walks its stylus through the
      eight vertices of a faint virtual cube in the report's exact visit order (top face loop,
      then the bottom face), lighting each traversed edge amber. Trace, admire, reset. */
   const canvas=document.getElementById('ur5scene');
@@ -390,7 +390,7 @@
   grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
   scene.add(grid);
 
-  /* ---- arm: base yaw + 2-link IK (elbow-up), stylus tool pointing down ---- */
+  /*  arm: base yaw + 2-link IK (elbow-up), stylus tool pointing down  */
   const L1=2.7,L2=2.5,TOOL=0.5;
   const armBase=new THREE.Group();
   armBase.position.set(0,FLOOR,-3.6);
@@ -428,7 +428,7 @@
     wrist.rotation.z=-(shoulder.rotation.z+elbow.rotation.z);
   }
 
-  /* ---- the virtual cube: report visit order — top face loop, then bottom face ---- */
+  /*  the virtual cube: report visit order, top face loop, then bottom face  */
   const S=0.8;                                  // half-side
   const CC=new THREE.Vector3(0,FLOOR+2.0,-0.3); // cube center
   const HI=CC.y+S, LO=CC.y-S;
@@ -471,7 +471,7 @@
     trailGeo.attributes.position.needsUpdate=true;
   }
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?450:1100;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
@@ -479,7 +479,7 @@
   pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
   scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
 
-  /* ---- trace timing: approach, 8 legs with dwells, admire, repeat ---- */
+  /*  trace timing: approach, 8 legs with dwells, admire, repeat  */
   const APPROACH=1.2, LEG_T=1.1, DWELL=0.25, ADMIRE=2.8;
   const CYCLE=APPROACH+LEGS*(LEG_T+DWELL)+ADMIRE;
   const home=new THREE.Vector3(1.6,FLOOR+3.3,-2.2);

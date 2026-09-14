@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="CLF–CBF–QP safety filtering for a 70-robot fleet — safety, line-of-sight connectivity, and input bounds as one convex QP per control step, benchmarked across quadprog, CVX, and OSQP. ASU EGR 611. By Prajjwal Dutta.">
-<title>CLF–CBF–QP Safety Filtering, 70 Robots — Prajjwal Dutta</title>
+<meta name="description" content="How I kept 70 robots safe and connected with one convex QP per control step, and what happened when I solved that same QP with quadprog, CVX and OSQP. ASU EGR 611.">
+<title>CLF-CBF-QP Safety Filtering, 70 Robots · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -130,7 +130,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -138,27 +138,27 @@
     <div class="eyebrow reveal"><span>Optimization · Fall 2025</span><span>ASU · EGR 611 Complex Engineering Analysis</span></div>
     <h1 class="reveal">70 Robots, One Quadratic Program, Solved Three Ways</h1>
     <p class="sub reveal">
-      A fleet of robots crosses a cluttered workspace while keeping line-of-sight
-      communication alive. At every control step, a convex QP nudges a nominal goal-seeking
-      controller <em class="q">just enough</em> to stay safe, stay connected, and stay inside
-      actuator limits — safety and connectivity as <strong>control barrier functions</strong>,
-      goal convergence as a <strong>control Lyapunov function</strong>. The research question
-      isn't a new barrier function. It's the numerical one underneath: given a fixed
-      safety-critical QP, <strong>how do different solvers behave in the inner loop</strong>,
-      and what do the KKT multipliers say about which constraints are actually driving the
-      fleet?
+      Picture a fleet of robots crossing a cluttered room while making sure every one of them
+      can still see a teammate to talk to. At every control step, a convex QP nudges a simple
+      goal-seeking controller <em class="q">just enough</em> to keep the robots safe, connected
+      and inside their actuator limits. Safety and connectivity are written as <strong>control
+      barrier functions</strong>, and reaching the goal as a <strong>control Lyapunov
+      function</strong>. I wasn't trying to invent a new barrier function here. I wanted to
+      answer the numerical question underneath it: if the QP stays fixed, <strong>how do
+      different solvers behave inside the control loop</strong>, and what do the KKT multipliers
+      tell me about which constraints are really steering the fleet?
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/Optimization-of-CLF-CBF-QP-Control" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       </a>
-      <a class="btn" href="../assets/clfcbf/final-report.pdf" target="_blank" rel="noopener">Final report ↓</a>
+      <a class="btn" href="../assets/clfcbf/final-report.pdf" target="_blank" rel="noopener">Final report (PDF)</a>
     </div>
     <div class="metrics reveal">
       <div class="metric"><b>70</b><span>robots · 140 decision vars</span></div>
       <div class="metric"><b>8.63 ms</b><span>OSQP average solve</span></div>
       <div class="metric"><b>26×</b><span>quadprog faster than CVX</span></div>
-      <div class="metric"><b>~2%</b><span>objective spread across solvers</span></div>
+      <div class="metric"><b>2%</b><span>objective spread across solvers</span></div>
     </div>
   </header>
 
@@ -168,36 +168,37 @@
       aria-label="Three side-by-side simulations of 70 robots solved by quadprog, CVX and OSQP, with solve time, objective value and CBF slack plotted below.">
       <source src="../media/clf-solver-comparison.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>The same CLF–CBF–QP at every control step, solved three ways in parallel — <code>quadprog</code>, CVX, OSQP. Bottom row: per-iteration solve time, objective value, and max CBF slack.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The same CLF-CBF-QP at every control step, solved three ways side by side with <code>quadprog</code>, CVX and OSQP. The bottom row tracks solve time per iteration, the objective value and the largest CBF slack.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Filter</div>
-    <h2 class="reveal">Least-change projection: let the robot do what it wants, minus the parts that kill it.</h2>
+    <h2 class="reveal">Let the robot do what it wants, minus the parts that would get it hurt.</h2>
     <p class="reveal">
-      The architecture is a <strong>safety filter</strong>. A nominal controller proposes
-      whatever heads for the goal; the QP finds the closest admissible input to that proposal.
-      Nothing about the nominal controller has to be safe, which is the point — safety is
-      enforced structurally, at the last step, rather than woven into every behavior upstream.
+      The whole thing is built as a <strong>safety filter</strong>. A simple controller suggests
+      whatever gets a robot to its goal, and the QP finds the closest safe input to that
+      suggestion. The simple controller doesn't have to know anything about safety, and that's
+      the point. Safety gets enforced once, right at the end, instead of being tangled into
+      every behavior before it.
     </p>
     <p class="reveal">
-      Under single-integrator dynamics, both the CLF and CBF conditions are <strong>affine in
-      the control input</strong>. That's the property the whole method rests on: an objective
-      that's quadratic in u with linear constraints is a convex QP, and a convex QP is
-      something you can solve to global optimality at every tick of a control loop.
+      With single-integrator dynamics, the CLF and CBF conditions are both <strong>affine in the
+      control input</strong>. Everything else depends on that. A cost that's quadratic in u with
+      linear constraints is a convex QP, and a convex QP is something you can solve to the true
+      global optimum on every tick of a control loop.
     </p>
     <div class="law reveal">
       <span class="big">min<sub>u,δ,ε</sub></span> ‖u − u<sub>nom</sub>‖² + p<sub>cbf</sub>‖δ‖² + p<sub>clf</sub>‖ε‖²<br>
-      <span class="c">s.t.</span> A<sub>cbf</sub>(x)·u − δ ≤ b<sub>cbf</sub>(x) &nbsp;<span class="c">// safety · connectivity · obstacles</span><br>
-      <span class="c">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> A<sub>clf</sub>(x)·u − ε ≤ b<sub>clf</sub>(x) &nbsp;<span class="c">// goal convergence, relaxable</span><br>
+      <span class="c">s.t.</span> A<sub>cbf</sub>(x)·u − δ ≤ b<sub>cbf</sub>(x) &nbsp;<span class="c">safety, connectivity, obstacles</span><br>
+      <span class="c">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> A<sub>clf</sub>(x)·u − ε ≤ b<sub>clf</sub>(x) &nbsp;<span class="c">reaching the goal, allowed to bend</span><br>
       <span class="c">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> −u<sub>max</sub>𝟙 ≤ u ≤ u<sub>max</sub>𝟙, &nbsp; <span class="a">δ ≥ 0</span>, &nbsp; <span class="a">ε ≥ 0</span>
     </div>
     <p class="reveal">
-      The <strong>slack variables carry the priority ordering</strong>. Safety and connectivity
-      get slack δ penalized heavily; goal convergence gets slack ε penalized less. When the two
-      genuinely conflict — a robot must break formation or hit something — the QP stays feasible
-      by relaxing the cheaper constraint, and the magnitude of the slack is a readout of exactly
-      how much was given up. A hard-constrained formulation would simply fail to solve.
+      The <strong>slack variables decide what matters most</strong>. Safety and connectivity get a
+      slack δ with a heavy penalty, and reaching the goal gets a slack ε with a lighter one. When
+      the two really do clash, say a robot has to either break formation or hit something, the QP
+      stays solvable by bending the cheaper constraint, and the size of the slack tells you
+      exactly how much was given up. If every constraint were hard, the solver would simply fail.
     </p>
     <div class="scroll-x">
       <table class="reveal">
@@ -210,87 +211,87 @@
       </table>
     </div>
     <p class="reveal">
-      Safety and connectivity are the same inequality with the sign flipped — one pushes robots
-      apart below R<sub>s</sub>, the other pulls them together above R<sub>c</sub>. Every pair is
-      squeezed inside an annulus, and connectivity is enforced only along a
-      <strong>minimum spanning tree</strong> of the LOS graph rather than every edge, which keeps
-      the constraint count linear in the fleet size instead of quadratic. That's what makes 70
-      robots tractable.
+      Safety and connectivity are really the same inequality with the sign flipped. One pushes
+      robots apart when they get closer than R<sub>s</sub>, and the other pulls them back when
+      they drift past R<sub>c</sub>, so every pair lives inside a ring. I only enforce
+      connectivity along a <strong>minimum spanning tree</strong> of the line-of-sight graph
+      rather than on every edge. That keeps the number of constraints growing linearly with the
+      fleet instead of quadratically, and it's the reason 70 robots was manageable at all.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Why It's Well-Posed</div>
-    <h2 class="reveal">KKT: necessary, sufficient, and physically readable.</h2>
+    <h2 class="reveal">The KKT conditions are both a guarantee and a window into the fleet.</h2>
     <p class="reveal">
-      Because H ⪰ 0 and every constraint is linear, the KKT conditions are
-      <strong>necessary and sufficient</strong> — any point satisfying them is <em class="q">the</em>
-      unique global minimizer. That's not a footnote; it's what makes the entire cross-solver
-      study meaningful. Three different algorithms are provably chasing the same point, so any
-      disagreement between them is numerical, not structural.
+      Since H ⪰ 0 and every constraint is linear, the KKT conditions are <strong>necessary and
+      sufficient</strong>. Any point that satisfies them is <em class="q">the</em> one global
+      minimizer. That matters a lot for this study, because it means all three solvers are
+      provably aiming at the same answer. If they disagree, the difference is numerical and not
+      something about the problem itself.
     </p>
     <p class="reveal">
-      The multipliers are also directly interpretable, which is half the value of solving it
-      this way rather than hand-tuning a potential field:
+      The multipliers also mean something physical, and that's half the reason to solve it
+      this way instead of hand-tuning a potential field:
     </p>
     <div class="scroll-x">
       <table class="reveal">
-        <thead><tr><th>Nonzero multiplier on…</th><th>Physical reading</th></tr></thead>
+        <thead><tr><th>If the multiplier is nonzero on</th><th>It means</th></tr></thead>
         <tbody>
-          <tr><td>a safety row</td><td>two robots sit exactly on the safety boundary; that constraint is steering their relative motion</td></tr>
+          <tr><td>a safety row</td><td>two robots are sitting right on the safety boundary, and that constraint is steering how they move relative to each other</td></tr>
           <tr class="hl"><td>a connectivity row</td><td>that LOS edge is about to break and is being actively held together</td></tr>
           <tr><td>an input bound</td><td>the robot is saturated at ±u<sub>max</sub></td></tr>
-          <tr class="hl"><td>a slack (δ, ε)</td><td>constraints are in genuine conflict — the value is how much safety or convergence was traded away</td></tr>
+          <tr class="hl"><td>a slack (δ, ε)</td><td>the constraints are truly fighting each other, and the value says how much safety or progress was traded away</td></tr>
         </tbody>
       </table>
     </div>
     <p class="reveal">
-      A dual variable, in other words, is a sensor. Rather than inferring why the fleet did
-      something from the trajectories afterward, the QP reports which constraints were binding
-      at that instant and by how much.
+      So a dual variable works a bit like a sensor. I don't have to guess afterward from the
+      trajectories why the fleet did something. The QP tells me which constraints were binding
+      at that moment, and by how much.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">The Experiment</div>
-    <h2 class="reveal">Four clusters, five obstacles, one vortex.</h2>
+    <h2 class="reveal">Four clusters of robots, five obstacles and a whirlpool.</h2>
     <p class="reveal">
-      <strong>N = 70</strong> robots in a 10 × 10 m workspace with five rectangular obstacles,
-      initialized in four tight clusters with fixed goals across the map — safety radius
-      R<sub>s</sub> = 0.25 m, communication range R<sub>c</sub> = 4.0 m, obstacle clearance
-      R<sub>obs</sub> = 0.8 m, u<sub>max</sub> = 3.0 m/s. Every solver ran identical initial
-      conditions, goals, and CLF/CBF parameters; the fleet reaches its goals by
+      I started <strong>N = 70</strong> robots in four tight clusters inside a 10 × 10 m space with
+      five rectangular obstacles, each robot with a fixed goal on the far side. The safety radius
+      R<sub>s</sub> was 0.25 m, the communication range R<sub>c</sub> 4.0 m, the obstacle clearance
+      R<sub>obs</sub> 0.8 m and u<sub>max</sub> 3.0 m/s. Every solver got exactly the same starting
+      positions, goals and CLF and CBF parameters, and the fleet reached its goals by
       <strong>iteration 79</strong>.
     </p>
     <p class="reveal">
-      Two scenarios: a static workspace, and the same run with a <strong>vortex flow
-      field</strong> superimposed — a stand-in for currents in the underwater setting this work
-      ultimately targets. The flow distorts the trajectories substantially, and the optimization
-      still preserves connectivity and delivers every robot to its goal.
+      I ran two versions: the plain workspace, and the same run with a <strong>vortex flow
+      field</strong> laid over it to stand in for the ocean currents this work is ultimately
+      aimed at. The flow bends the trajectories a lot, and the optimization still keeps everyone
+      connected and gets every robot home.
     </p>
     <figure class="reveal">
       <a href="../assets/clfcbf/setup-initial.jpg" target="_blank" rel="noopener">
         <img src="../assets/clfcbf/setup-initial.jpg" alt="Two side-by-side workspace plots showing 70 robots in four colored clusters with line-of-sight edges, obstacles in black, goals as hollow circles; the right plot adds a vortex flow field of blue arrows.">
       </a>
-      <figcaption><span class="n">FIG 02</span>Initial configurations — four clusters joined by LOS edges, obstacles black, goals hollow. Right: the same start with a vortex flow field superimposed.</figcaption>
+      <figcaption><span class="n">FIG 02</span>Where everyone starts. Four clusters joined by line-of-sight edges, obstacles in black and goals as hollow circles. On the right is the same start with the vortex added.</figcaption>
     </figure>
     <figure class="reveal">
       <a href="../assets/clfcbf/trajectories-final.jpg" target="_blank" rel="noopener">
         <img src="../assets/clfcbf/trajectories-final.jpg" alt="Two plots of final robot trajectories: without flow the paths spread cleanly around obstacles to the goals; with vortex flow the trajectories curve but still converge.">
       </a>
-      <figcaption><span class="n">FIG 03</span>Trajectories and final positions under the CLF–CBF–QP controller — without flow (left) and with the vortex (right). Connectivity survives both.</figcaption>
+      <figcaption><span class="n">FIG 03</span>Paths and final positions under the CLF-CBF-QP controller, without flow on the left and with the vortex on the right. The fleet stays connected in both.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Solver Shootout</div>
-    <h2 class="reveal">Same QP, same seed, wildly different clocks.</h2>
+    <h2 class="reveal">Same QP, same seed, and very different stopwatches.</h2>
     <p class="reveal">
-      Three solvers, three algorithm families: MATLAB <code>quadprog</code>
-      (<strong>interior-point</strong>), CVX (<strong>conic interior-point</strong> through a
-      disciplined-convex-programming modeling layer), and OSQP
-      (<strong>operator-splitting ADMM</strong>). Solve time, objective value, max CBF slack, and
-      trajectory deviation from the <code>quadprog</code> baseline were recorded every iteration.
+      I picked three solvers from three different families: MATLAB's <code>quadprog</code>
+      (<strong>interior point</strong>), CVX (<strong>conic interior point</strong> behind a
+      disciplined convex programming layer) and OSQP (<strong>operator-splitting ADMM</strong>).
+      On every iteration I logged the solve time, the objective value, the largest CBF slack and
+      how far the trajectories drifted from the <code>quadprog</code> run.
     </p>
     <div class="scroll-x">
       <table class="reveal">
@@ -303,88 +304,88 @@
       </table>
     </div>
     <p class="reveal">
-      <strong>Runtime.</strong> OSQP averages <strong>8.63 ms</strong>, <code>quadprog</code>
-      <strong>30.13 ms</strong>, CVX <strong>784.90 ms</strong> — one to two orders of magnitude
-      slower. Across the full horizon that's 0.68 s, 2.38 s, and 62 s of cumulative solve time.
-      For a controller that must close its loop every step, that's the difference between real
-      time and not.
+      <strong>Speed first.</strong> OSQP averaged <strong>8.63 ms</strong>, <code>quadprog</code>
+      <strong>30.13 ms</strong> and CVX <strong>784.90 ms</strong>, which is one to two orders of
+      magnitude slower. Over the whole run that adds up to 0.68 s, 2.38 s and 62 s of solving.
+      For a controller that has to close its loop on every step, that's the line between running
+      in real time and not.
     </p>
     <p class="reveal">
-      <strong>The variance matters more than the mean.</strong> OSQP's worst-case solve is
-      27.72 ms against a 8.63 ms average — a tight, predictable distribution. <code>quadprog</code>
-      averages 30 ms but spikes to <strong>1101 ms</strong>, a 36× excursion, with a standard
-      deviation four times its own mean. For hard-real-time work the tail is the specification,
-      not the average, and this is exactly the plot that argues for ADMM in the inner loop.
+      <strong>The spread mattered more than the average.</strong> OSQP's slowest solve was
+      27.72 ms against an 8.63 ms average, which is nicely predictable. <code>quadprog</code>
+      averaged 30 ms but jumped to <strong>1101 ms</strong> at one point, 36 times its average,
+      with a standard deviation four times its own mean. In hard real-time work the worst case is
+      what you design around, and this is the result that makes the case for ADMM in the inner
+      loop.
     </p>
     <p class="reveal">
-      <strong>Agreement.</strong> Average objectives match within ~2%, and all three report
-      essentially identical maximum CBF slack (<strong>≈1.7114</strong>) — they agree on
-      <em class="q">when</em> safety and connectivity are tightest, which is the property that
-      actually matters for a safety filter. Trajectory deviation stays around 0.6–0.8 m in a
-      10 m workspace: visible, but driven by numerical tolerance rather than different control
-      decisions.
+      <strong>Do they agree?</strong> Mostly, yes. The average objectives land within about 2%
+      of each other, and all three report practically the same largest CBF slack
+      (<strong>≈1.7114</strong>). So they agree on <em class="q">when</em> safety and
+      connectivity are tightest, and for a safety filter that's what counts. The trajectories
+      drift apart by about 0.6 to 0.8 m in a 10 m space. You can see it, but it comes from
+      numerical tolerance, not from the solvers making different decisions.
     </p>
     <figure class="reveal">
       <a href="../assets/clfcbf/solver-comparison.jpg" target="_blank" rel="noopener">
         <img src="../assets/clfcbf/solver-comparison.jpg" alt="Six-panel comparison: solve time box plots, cumulative computation time, trajectory deviation, quadprog speedup factors, objective traces, and a summary statistics table.">
       </a>
-      <figcaption><span class="n">FIG 04</span>Full comparison — solve-time distributions, cumulative time, trajectory deviation from baseline, speedup factors, objective traces, and summary statistics.</figcaption>
+      <figcaption><span class="n">FIG 04</span>The full comparison: how solve times are distributed, total time, how far trajectories drift from the baseline, speedups, objective traces and a summary table.</figcaption>
     </figure>
     <p class="reveal">
-      <strong>Robustness is where the ranking flips.</strong> <code>quadprog</code> never broke
-      down numerically and hands back KKT multipliers directly, which is what makes the
-      constraint-level analysis above possible at all. OSQP occasionally satisfied its stopping
-      criteria while its KKT residuals were still larger than the interior-point solvers' — and
-      on exactly those iterations its objective and trajectory drifted furthest. Fast is not the
-      same as converged.
+      <strong>Reliability turns the ranking upside down.</strong> <code>quadprog</code> never had
+      a numerical breakdown, and it hands back the KKT multipliers directly, which is the only
+      reason the constraint analysis above was possible. OSQP sometimes met its stopping criteria
+      while its KKT residuals were still bigger than the interior point solvers', and those were
+      exactly the iterations where its objective and trajectory drifted furthest. Finishing fast
+      isn't the same thing as finishing.
     </p>
     <p class="reveal">
-      The headroom is real, though: OSQP exploits the structure here — P = H is diagonal and A is
-      time-invariant — so its (P + ρI) factorization is computed once and cached across the whole
-      run. With tuned ρ, scaling, and polishing it should be able to replace <code>quadprog</code>
-      in the loop safely. <strong>Verdict:</strong> <code>quadprog</code> as the reliable
-      baseline, OSQP as the real-time candidate pending tuning, CVX as a high-accuracy reference
-      for validating the formulation — never as a controller.
+      OSQP still has plenty of room to improve here. P = H is diagonal and A doesn't change over
+      time, so OSQP factors (P + ρI) once and reuses it for the entire run. With ρ, scaling and
+      polishing tuned properly, I think it could safely take <code>quadprog</code>'s place in the
+      loop. <strong>Where I landed:</strong> <code>quadprog</code> is the dependable baseline,
+      OSQP is the real-time option once it's tuned, and CVX is a high-accuracy reference for
+      checking the formulation, but never something to run as the controller.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Context</div>
-    <h2 class="reveal">Why a planar toy problem is about ice.</h2>
+    <h2 class="reveal">Why a flat toy problem is really about ice.</h2>
     <p class="reveal">
-      This sits inside a larger effort on long-duration exploration of under-ice and subsurface
-      environments with heterogeneous AUV fleets — the <strong>MOTHERSHIP</strong> concept —
-      where communication is acoustic, intermittent, and range-limited, and GPS doesn't exist.
-      Line-of-sight connectivity as a hard constraint isn't an academic flourish there; losing
-      the graph means losing vehicles. The planar single-integrator abstraction is deliberately
-      small so the tooling — the barrier formulation, the MST connectivity structure, the KKT
-      analysis, the solver benchmarking — transfers to the harder vehicle models rather than
-      being rebuilt for them.
+      This project is one piece of a bigger effort on exploring under ice and below the surface
+      for long stretches with mixed fleets of AUVs, called the <strong>MOTHERSHIP</strong>
+      concept. Down there, communication is acoustic, patchy and short range, and there's no GPS.
+      Keeping line of sight as a hard constraint isn't an academic nicety in that world. If the
+      graph breaks, you lose vehicles. I kept the planar single-integrator version small on
+      purpose, so the pieces I built here, the barrier formulation, the MST connectivity
+      structure, the KKT analysis and the solver benchmarks, carry over to harder vehicle models
+      without being rebuilt.
     </p>
     <p class="reveal">
-      Next steps identified in the report: track how the <strong>active CBF set evolves</strong>
-      over time to quantify how often safety and connectivity genuinely compete; tune OSQP
-      specifically for this QP with polishing, scaling, and warm-starting; and scale to larger
-      teams with realistic AUV dynamics, communication delay, and environmental flow.
+      The report lists where I want to take it next. I'd like to follow how the <strong>set of
+      active CBFs changes</strong> over time, to measure how often safety and connectivity really
+      compete. I want to tune OSQP for this particular QP with polishing, scaling and warm
+      starts. And I want to scale up to bigger teams with realistic AUV dynamics, communication
+      delay and environmental flow.
     </p>
-    <p class="tnote reveal">Prajjwal Dutta and Wenlong Zhang, Manufacturing Systems and Networks, Arizona State University. Full formulation, metrics, and 36-entry bibliography in the final report.</p>
+    <p class="tnote reveal">Prajjwal Dutta and Wenlong Zhang, Manufacturing Systems and Networks, Arizona State University. The full formulation, all the metrics and a 36-entry bibliography are in the final report.</p>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Safety belongs in the constraint set, not the behavior.</strong> A filter that
-      projects any nominal controller onto the admissible set means the planner never has to be
-      trusted — which is the only version of this that survives contact with a learned or
-      hand-tuned policy upstream.
-      <strong>Convexity is the feature.</strong> Affine-in-u barriers turn a coupled 70-agent
-      coordination problem into one QP with a unique global optimum per step, and that's what
-      makes the solver question askable in the first place.
-      <strong>And the solver is part of the controller.</strong> Same math, same seed, same KKT
-      point — and a 90× spread in solve time plus a real difference in worst-case latency and
-      numerical robustness. Choosing between them is a control engineering decision, not an
-      implementation detail.
+      Safety belongs in the constraints, not in the behavior. When a filter projects whatever the
+      planner suggests onto the safe set, you never have to trust the planner, and that's the
+      only approach I'd want sitting under a learned or hand-tuned policy. Convexity is what
+      makes the whole thing work. Barriers that are affine in u turn a tangled 70-robot problem
+      into one QP with a single global optimum per step, and without that I couldn't even have
+      asked the solver question. And the solver turned out to be part of the
+      controller. Same math, same seed, same KKT point, and still a 90× spread in solve time,
+      plus real differences in worst-case delay and numerical reliability. Picking a solver is a
+      control engineering decision, not a detail to leave for later.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">CLF</span><span class="tag">Control Barrier Functions</span><span class="tag">Quadratic Programming</span>
@@ -395,8 +396,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -411,7 +412,7 @@
   /* Background: the safety filter itself, running. A fleet of single integrators heads for
      goals under a nominal controller; each step, pairwise safety and LOS-connectivity barriers
      modify the input. A live MST over the LOS graph is drawn, edges near the range limit glow
-     amber (connectivity constraint active), pairs near the safety radius glow red — the same
+     amber (connectivity constraint active), pairs near the safety radius glow red, the same
      "which constraint is binding" readout the KKT multipliers give. */
   const canvas=document.getElementById('qpscene');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
@@ -426,7 +427,7 @@
   const grid=new THREE.GridHelper(W,20,0x1c3a66,0x11223f);
   grid.material.transparent=true; grid.material.opacity=0.24; scene.add(grid);
 
-  /* ---- obstacles: five rectangles, as in the experiment ---- */
+  /*  obstacles: five rectangles, as in the experiment  */
   const OBS=[{x:-2.2,z:-4.4,w:3.4,d:0.7},{x:3.6,z:-2.0,w:0.7,d:2.6},
              {x:-0.4,z:1.2,w:2.8,d:0.7},{x:4.4,z:3.4,w:3.0,d:0.7},{x:-4.6,z:2.6,w:0.7,d:2.2}];
   OBS.forEach(o=>{
@@ -435,7 +436,7 @@
     m.position.set(o.x,0.25,o.z); scene.add(m);
   });
 
-  /* ---- the fleet: four clusters of single integrators with fixed goals ---- */
+  /*  the fleet: four clusters of single integrators with fixed goals  */
   const N=mobile?22:40;
   const Rs=0.42, Rc=3.2, Uma=2.4;              // safety radius, comm range, input bound
   const CLEAR=0.62, HARD=0.34;                 // barrier standoff, and the hard no-go margin
@@ -451,9 +452,9 @@
   const CLUSTER_COLORS=[0x63d97a,0xe8544f,0x4f9de8,0xd06ee0];
   const tmpC=new THREE.Color();
 
-  /* ---- the vehicle: a miniaturised BlueROV — frame, buoyancy block on top, cylindrical
+  /*  the vehicle: a miniaturised BlueROV, frame, buoyancy block on top, cylindrical
      electronics enclosure, two side thrusters, two vertical thrusters. Geometries and
-     materials are shared across the fleet so 50-odd of them stay cheap. ---- */
+     materials are shared across the fleet so 50-odd of them stay cheap.  */
   const G={
     frame:new THREE.BoxGeometry(0.30,0.17,0.44),
     foam:new THREE.BoxGeometry(0.26,0.06,0.32),
@@ -490,7 +491,7 @@
     scene.add(ring);
   });
 
-  /* ---- the LOS/MST graph, rebuilt every frame and colored by which constraint is binding ---- */
+  /*  the LOS/MST graph, rebuilt every frame and colored by which constraint is binding  */
   const MAXE=N*3;
   const edgePos=new Float32Array(MAXE*6), edgeCol=new Float32Array(MAXE*6);
   const edgeGeo=new THREE.BufferGeometry();
@@ -500,7 +501,7 @@
   edges.frustumCulled=false; scene.add(edges);
   const C_OK=new THREE.Color(0x2a6bb0), C_TIGHT=new THREE.Color(AMBER), C_SAFE=new THREE.Color(RED);
 
-  /* Prim's MST over the LOS graph — connectivity is enforced on the tree, not every edge */
+  /* Prim's MST over the LOS graph, connectivity is enforced on the tree, not every edge */
   const inTree=new Uint8Array(N), best=new Float64Array(N), parent=new Int32Array(N);
   function mst(){
     inTree.fill(0); best.fill(Infinity); parent.fill(-1);
@@ -520,7 +521,7 @@
     return out;
   }
 
-  /* ---- one control step: nominal goal-seeking input, then barrier corrections ---- */
+  /*  one control step: nominal goal-seeking input, then barrier corrections  */
   function stepFleet(dt,tree){
     for(const b of bots){                       // nominal CLF-ish input toward the goal
       const dx=b.gx-b.x, dz=b.gz-b.z, d=Math.hypot(dx,dz)||1;
@@ -548,7 +549,7 @@
       }
     }
     /* obstacle barriers, as an axis-aligned minimum-translation test. Working per axis means
-       a robot that is already inside a rectangle still gets a well-defined escape direction —
+       a robot that is already inside a rectangle still gets a well-defined escape direction , 
        the degenerate case that a closest-point-on-surface push cannot resolve. */
     for(const b of bots){
       for(const o of OBS){
@@ -571,7 +572,7 @@
       resolveObstacles(b);                      // hard backstop: never end a step inside one
     }
   }
-  /* position-level correction — the barrier can be out-argued by the connectivity pull, so
+  /* position-level correction, the barrier can be out-argued by the connectivity pull, so
      the invariant is enforced after integration too */
   function resolveObstacles(b){
     for(const o of OBS){

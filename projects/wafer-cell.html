@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="A laboratory semiconductor wafer handling cell re-hosted onto new robot hardware: a Dobot M1 Pro SCARA, an Elephant Robotics Pro600 cobot, a stepper conveyor with Hough-circle inspection, and an Allen-Bradley Micro820 acting as the coordination layer. Hybrid Cartesian/joint-space motion around a single valid IK elbow branch, an as-built seven-rung ladder audit, and a fail-direction handshake. By Prajjwal Dutta.">
-<title>Multi-Robot Wafer Handling Cell — Prajjwal Dutta</title>
+<meta name="description" content="How I moved a lab wafer handling cell onto new robots: a Dobot M1 Pro SCARA, an Elephant Robotics Pro600 cobot, a stepper conveyor with Hough-circle inspection and a Micro820 PLC. Mixed Cartesian and joint moves around the one valid elbow branch, a ladder audit, and a handshake that fails safe.">
+<title>Multi-Robot Wafer Handling Cell · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,6 +68,7 @@
   .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
     text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
   .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  .sec-label .num{color:var(--amber);margin-right:0.2em;}
   h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
     letter-spacing:-0.015em;margin-bottom:1.1rem;}
   h3.sh{font-family:var(--display);font-weight:500;font-size:1.05rem;color:var(--text);
@@ -123,7 +124,7 @@
   .credit a{color:var(--cyan);text-decoration:none;}
   .credit a:hover{text-decoration:underline;}
 
-  /* ---------- interactive lab widgets ---------- */
+  /*  interactive lab widgets  */
   .lab{border:1px solid var(--line);border-radius:12px;background:rgba(8,14,28,0.72);
     margin:2rem 0;overflow:hidden;}
   .lab-head{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.18em;text-transform:uppercase;
@@ -224,7 +225,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -232,15 +233,16 @@
     <div class="eyebrow reveal"><span>Industrial Automation · Multi-Robot Integration · 2026</span><span>ASU · RAS 598 / RS4 Industry 4.0</span></div>
     <h1 class="reveal">Five Machines, Four Languages, One Wafer</h1>
     <p class="sub reveal">
-      A laboratory semiconductor handling cell — a four-axis SCARA, a six-DoF collaborative
-      robot, a stepper conveyor with camera inspection, and an Allen-Bradley Micro820 —
-      moving 100 mm silicon wafers from a stacked cassette, past an inspection station, onto
-      a deposit platform, one shelf lower each cycle. The cell was originally commissioned on
-      different hardware. This is the re-host, and the coordination work the re-host made
-      necessary: a fixture sitting at <strong>393.8 mm of a 400 mm reach</strong> where only
-      one inverse-kinematic elbow branch survives the joint limits, an as-built ladder that
-      turns out to differ materially from the one in the manual, and a two-wire handshake
-      designed so that every signal fails in a stated direction.
+      This is a small semiconductor handling cell in a lab. A four-axis SCARA, a six-DoF cobot,
+      a stepper conveyor with a camera and an Allen-Bradley Micro820 work together to move
+      100 mm silicon wafers out of a stacked cassette, past an inspection station and onto a
+      deposit platform, one shelf lower every cycle. The cell was first built and commissioned
+      on different hardware. My job was moving it onto new robots, and that turned up three
+      problems I had to solve along the way. The deposit fixture sits at <strong>393.8 mm of a
+      400 mm reach</strong>, where only one elbow solution stays inside the joint limits. The
+      ladder actually running on the PLC turned out to be quite different from the one in the
+      manual. And the two-wire handshake between the machines needed designing so that every
+      signal fails in a direction I chose on purpose.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/plc-wafer-cell" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -251,7 +253,7 @@
       </a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>5</b><span>machines · 4 programming environments</span></div>
+      <div class="metric"><b>5</b><span>machines, 4 programming environments</span></div>
       <div class="metric"><b>393.8 mm</b><span>fixture radius of a 400 mm reach</span></div>
       <div class="metric"><b>7</b><span>as-built coordination rungs</span></div>
       <div class="metric"><b>15</b><span>faults traced to root cause</span></div>
@@ -262,18 +264,18 @@
     <a href="../assets/wafer/cell.jpg" target="_blank" rel="noopener">
       <img src="../assets/wafer/cell.jpg" alt="The assembled wafer cell on a wooden bench: at left the base of the Dobot M1 Pro SCARA with a yellow-and-red emergency stop and a blue 3D-printed wafer cassette; centre, the black conveyor belt with its stepper motor and a yellow-barrel infrared sensor; right, the white Elephant Robotics Pro600 cobot and a laptop.">
     </a>
-    <figcaption><span class="n">FIG 01</span>The cell as built. Left: the M1 Pro and the blue wafer cassette. Centre: the conveyor, its printed wafer cradle and the end-of-travel infrared sensor. Right: the Pro600 and the deposit platform.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The cell as it stands. On the left are the M1 Pro and the blue wafer cassette, in the middle the conveyor with its printed wafer cradle and end-of-travel infrared sensor, and on the right the Pro600 and the deposit platform.</figcaption>
   </figure>
 
   <section>
-    <div class="sec-label reveal">01 / The Cell</div>
-    <h2 class="reveal">Simple to state. The re-host is the work.</h2>
+    <div class="sec-label reveal"><span class="num">01</span>The Cell</div>
+    <h2 class="reveal">Easy to describe. Moving it onto new hardware was the real work.</h2>
     <p class="reveal">
-      The material flow takes one sentence: a SCARA draws a wafer from a vertical cassette and
-      lays it in a cradle on a conveyor; the belt carries the cradle past a camera that confirms
-      the wafer is there; a collaborative robot lifts it off the cradle and sets it on a deposit
-      platform; the belt returns and the cycle repeats one shelf lower. Every stage is triggered
-      by, and reports back to, a Micro820 PLC. Watch it run end to end:
+      What the cell does fits in a few lines. A SCARA pulls a wafer out of a vertical cassette and
+      lays it in a cradle on a conveyor. The belt carries the cradle past a camera that checks the
+      wafer is there. A cobot lifts it off the cradle and sets it on a deposit platform. Then the
+      belt comes back and the whole thing repeats one shelf lower. A Micro820 PLC triggers every
+      step and hears back when each one is done. Here it is running from start to finish:
     </p>
 
     <figure class="reveal">
@@ -281,13 +283,13 @@
         aria-label="One full wafer cycle recorded on the bench: the SCARA fork slides a silicon wafer off the cassette shelf, the conveyor carries the loaded cradle down the belt, and the collaborative robot lifts the wafer onto the deposit platform." controls>
         <source src="../media/wafer-cell-run.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 01</span>One full cycle, start to finish — the M1 Pro draws a wafer off the cassette shelf, the belt carries it past the inspection station, and the Pro600 lifts it onto the deposit platform. Recorded end to end, replayed at 5 fps. This recording has no audio track.</figcaption>
+      <figcaption><span class="n">VID 01</span>One full cycle. The M1 Pro draws a wafer off the cassette shelf, the belt carries it past the inspection station, and the Pro600 lifts it onto the deposit platform. Recorded from start to finish and played back at 5 fps. There's no audio track.</figcaption>
     </figure>
 
     <p class="reveal">
-      Reproducing that flow on the hardware actually available turned out to be the substance
-      of the project. Three of the five subsystems are not the ones the original commissioning
-      targeted, and none of the three is a like-for-like substitution.
+      Getting that flow working again on the hardware we actually had became the heart of the
+      project. Three of the five subsystems are different from the ones the cell was first built
+      around, and none of the three is a simple swap.
     </p>
     <div class="scroll-x reveal">
     <table>
@@ -300,16 +302,16 @@
     </table>
     </div>
     <p class="reveal">
-      Every absolute coordinate in the original program is therefore invalid on this cell, and
-      the API change removed the one call the original program used to disambiguate the arm's
-      configuration. That second point turned out to matter a great deal.
+      That means every absolute coordinate in the original program is wrong on this cell. On top
+      of that, the new API dropped the one call the original program used to tell the arm which
+      configuration to use, and that turned out to matter a lot.
     </p>
 
     <figure class="reveal pale">
       <a href="../assets/wafer/arch.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/arch.jpg" alt="Signal architecture diagram titled PLC-Controlled Wafer Cell: Wiring Overview. A central PLC sends a SCARA trigger and a cobot trigger out through opto-isolated relay blocks to the SCARA robot and the cobot, and receives SCARA Done and Cobot Done back through further relay blocks. Two command lines run from the PLC through resistors to a Magic Box, which drives the conveyor motor. Two infrared sensors at each end of the conveyor report back to the PLC.">
       </a>
-      <figcaption><span class="n">FIG 02</span>Signal architecture. The Micro820 is a coordination layer only — it issues trigger pulses and receives done pulses, and drives neither the belt motor nor either arm directly. Every crossing between the PLC and a robot passes through an opto-isolated interface board, so the 24 V control ground and the 48 V arm ground never meet.</figcaption>
+      <figcaption><span class="n">FIG 02</span>How the signals flow. The Micro820 only coordinates. It sends trigger pulses and receives done pulses, and never drives the belt motor or either arm directly. Every connection between the PLC and a robot goes through an opto-isolated board, so the 24 V control ground and the 48 V arm ground never touch.</figcaption>
     </figure>
 
     <div class="scroll-x reveal">
@@ -324,28 +326,28 @@
       </tbody>
     </table>
     </div>
-    <p class="tnote reveal">Four programming environments, no two of them sharing a language. That is characteristic of small-cell integration, and it is exactly why the PLC's role is kept deliberately narrow: it is the only element that sees the whole cell, so it is given signalling and nothing else.</p>
+    <p class="tnote reveal">Four programming environments, and no two of them speak the same language. That's normal when you integrate a small cell, and it's exactly why I kept the PLC's job narrow. It's the only piece that sees the whole cell, so it handles the signalling and nothing else.</p>
 
     <h3 class="sh reveal">Why a PLC here at all</h3>
     <p class="reveal">
-      The justification is determinism of scan, not computing power. A Python script on a PC is
-      subject to the operating system's scheduler, to garbage collection, and to whatever else
-      the machine is doing. A PLC executes its program on a bounded, repeatable scan. The
-      Micro820 is therefore given exactly the jobs that need that property — watching sensor
-      zones, emitting timed trigger pulses, latching done reports, hosting the operator
-      interface — and none of the jobs that do not.
+      The reason is timing you can count on, not computing power. A Python script on a PC is at
+      the mercy of the operating system's scheduler, garbage collection and whatever else the
+      computer happens to be doing. A PLC runs its program on a scan that is bounded and the same
+      every time. So the Micro820 gets exactly the jobs that need that: watching the sensors,
+      sending timed trigger pulses, latching done reports and running the operator interface. It
+      gets none of the jobs that don't.
     </p>
   </section>
 
   <section>
-    <div class="sec-label reveal">02 / The SCARA</div>
-    <h2 class="reveal">A Cartesian pose does not determine a configuration.</h2>
+    <div class="sec-label reveal"><span class="num">02</span>The SCARA</div>
+    <h2 class="reveal">Knowing where the tool is doesn't tell you how the arm is bent.</h2>
     <p class="reveal">
-      The M1 Pro is a SCARA: two revolute links in the horizontal plane, a vertical lead screw
-      and a wrist. Because the third axis is linear, <code>J3</code> <em>is</em> Z in
-      millimetres — a convenience with real consequences, since a change in <code>J3</code>
-      alone is a pure vertical translation that cannot sweep the tool into anything. With
-      <code>L1 = L2 = 200 mm</code> from the dimension drawing, forward kinematics are:
+      The M1 Pro is a SCARA, with two rotating links in the horizontal plane, a vertical lead screw
+      and a wrist. Because the third axis moves in a straight line, <code>J3</code> <em>is</em> Z in
+      millimetres. That's handy in a very practical way, since changing <code>J3</code> alone moves
+      the tool straight up or down and can't swing it into anything. With <code>L1 = L2 = 200
+      mm</code> from the dimension drawing, the forward kinematics are:
     </p>
     <div class="law reveal">
       X = L1·cos J1 + L2·cos(J1+J2)<br>
@@ -353,33 +355,32 @@
       Z = J3<span class="c">,</span>&nbsp; R = J1 + J2 + J4 <span class="c">(mod 360°)</span>
     </div>
     <p class="reveal">
-      The model was validated against live panel data before it was trusted for anything:
-      joint readings J1 = 19.02°, J2 = 29.37°, J4 = −159.79° substituted into those equations
-      return (321.9, 214.7) at R = −111.40°, reproducing the taught rack approach point to the
-      decimal.
+      I checked the model against live readings from the panel before trusting it with anything.
+      Plugging in J1 = 19.02°, J2 = 29.37° and J4 = −159.79° gives (321.9, 214.7) at R = −111.40°,
+      which matches the taught rack approach point to the decimal.
     </p>
     <p class="reveal">
-      Inverting them is where the trouble starts. For a two-link planar arm, a reachable point
-      at radius ρ admits <strong>two</strong> solutions, distinguished by the sign of J2 — the
-      left and the right elbow. Both are legitimate. The controller's solver picks one, and it
-      does not tell you which.
+      Running them backwards is where the trouble starts. For a two-link planar arm, any point it
+      can reach at radius ρ has <strong>two</strong> solutions, told apart by the sign of J2: elbow
+      left or elbow right. Both are valid. The controller's solver picks one and doesn't tell you
+      which.
     </p>
     <div class="law reveal">
       cos J2 = (ρ² − L1² − L2²) / (2·L1·L2)<span class="c">,</span>&nbsp;&nbsp;
       J2 = <span class="a">±</span>arccos(·)
     </div>
     <p class="reveal">
-      The deposit fixture sits at ρ = 393.8 mm of the arm's 400 mm reach — within 1.5% of full
-      extension. Two things happen there. The Jacobian becomes ill-conditioned, so small
-      Cartesian increments demand large joint excursions and the arm moves in ways that look
-      disproportionate to the command. And, decisively, <strong>only one branch stays inside
-      the joint limits</strong>. The controller was solving for the other one, so every
-      Cartesian command to the fixture came back <code>"Incorrect motion point for MovJ
+      The deposit fixture sits at ρ = 393.8 mm of the arm's 400 mm reach, within 1.5% of fully
+      stretched out. Two things happen that close to the edge. The Jacobian gets badly
+      conditioned, so tiny Cartesian steps need big joint swings and the arm moves far more than
+      the command seems to ask for. And the one that really mattered: <strong>only one branch
+      stays inside the joint limits</strong>. The controller kept solving for the other one, so
+      every Cartesian command to the fixture came back with <code>"Incorrect motion point for MovJ
       instruction"</code>.
     </p>
 
     <div class="lab reveal">
-      <div class="lab-head"><span>Elbow-branch explorer — <b>both IK solutions, live, against the real limits</b></span><span>L1 = L2 = 200 mm</span></div>
+      <div class="lab-head"><span>Elbow-branch explorer: <b>both IK solutions, live, against the real limits</b></span><span>L1 = L2 = 200 mm</span></div>
       <div class="lab-body">
         <div class="lab-viz">
           <svg id="ikSvg" viewBox="0 0 320 340" role="img" aria-label="Top view of the SCARA workspace showing the 400 millimetre reach circle, the 153 millimetre inner dead zone, and both inverse-kinematic arm solutions drawn to a target point.">
@@ -404,17 +405,17 @@
           <div class="readout" id="ikRead"></div>
           <div class="verdict" id="ikVerdict"></div>
           <div class="hint" style="padding:0;">
-            <b>Drag the amber target inside the workspace ring</b>, or pick a taught pose. Branch A
-            is the elbow-positive solution, branch B the elbow-negative one. Both reach the same
-            (X, Y); only the verdict differs.
+            <b>Drag the amber target around inside the workspace ring</b>, or pick one of the taught
+            poses. Branch A is the elbow-positive solution and branch B the elbow-negative one. Both
+            reach the same (X, Y). Only the verdict changes.
           </div>
         </div>
       </div>
     </div>
 
     <p class="reveal">
-      Worked on the traverse point that hardware actually rejected, (113.3, 214.7) at
-      R = −111.4°, the two branches come out like this:
+      Working it out for the traverse point the hardware actually rejected, (113.3, 214.7) at
+      R = −111.4°, the two branches look like this:
     </p>
     <div class="scroll-x reveal">
     <table>
@@ -425,34 +426,33 @@
       </tbody>
     </table>
     </div>
-    <p class="tnote reveal">Limits used for pre-flight checking: J1 ±85° (the binding one in practice), J2 ±130°, J3 5–245 mm, J4 ±360°, outer reach 400 mm, inner dead zone 153 mm.</p>
+    <p class="tnote reveal">The limits I check against before any move: J1 ±85° (the one that actually bites), J2 ±130°, J3 5 to 245 mm, J4 ±360°, an outer reach of 400 mm and an inner dead zone of 153 mm.</p>
 
     <div class="finding reveal">
-      <h4><span class="fno">CORRECTION</span>An earlier analysis rejected <em>both</em> branches — and was wrong</h4>
+      <h4><span class="fno">CORRECTION</span>My first analysis rejected <em>both</em> branches, and it was wrong</h4>
       <p>
-        It treated J4 = −226.3° as beyond the wrist limit. But J4 on the M1 Pro spans ±360°,
-        and −226.3° is the same wrist orientation as +133.7°, because R is defined only modulo
-        360°. Correcting the limit changes the diagnosis in a way that matters: the point is
-        not unreachable, it is <strong>reachable on exactly one branch</strong>, and the
-        controller was solving for the other. That also explains an observation the
-        "unreachable" theory could not — the operator can reach the fixture by hand-guiding
-        but not by Cartesian jogging, because hand-guiding moves joints directly and never
-        asks the solver to choose.
+        I had treated J4 = −226.3° as past the wrist limit. But J4 on the M1 Pro covers ±360°, and
+        −226.3° is the same wrist angle as +133.7°, because R only means anything modulo 360°. Fixing
+        that limit changed the diagnosis in an important way. The point isn't unreachable. It's
+        <strong>reachable on exactly one branch</strong>, and the controller was picking the other.
+        That also explained something the "unreachable" idea never could: the operator can reach the
+        fixture by hand-guiding the arm but not by jogging it in Cartesian mode, because hand-guiding
+        moves the joints directly and never asks the solver to choose.
       </p>
     </div>
 
-    <h3 class="sh reveal">Three remedies, one adopted</h3>
+    <h3 class="sh reveal">Three possible fixes, and the one I picked</h3>
     <ul class="plain reveal">
-      <li><strong>Linear interpolation</strong> — rejected. A straight-line move requires
-        <em>every</em> intermediate point to solve, which is strictly more constrained than a
-        joint-interpolated move. It fails harder, not more gracefully.</li>
-      <li><strong>Selecting the configuration explicitly</strong>, as the original M1 program
-        did with <code>SetArmOrientation</code> — unavailable. The Lua API exposes no
-        equivalent.</li>
-      <li><strong>Commanding the fixture side in joint coordinates</strong> — adopted. A taught
-        joint tuple <em>is</em> a configuration: there is no solve, so there is no ambiguity.
-        The rack side stays Cartesian, because a new Z must be computed for every shelf and
-        parametric Cartesian is the natural way to say that.</li>
+      <li><strong>Linear interpolation.</strong> Rejected. A straight-line move needs <em>every</em>
+        point along the way to solve, which is even stricter than a joint move. It would fail
+        harder, not more gently.</li>
+      <li><strong>Choosing the configuration explicitly</strong>, the way the original M1 program
+        did with <code>SetArmOrientation</code>. Not possible, because the Lua API has nothing like
+        it.</li>
+      <li><strong>Commanding the fixture side in joint coordinates.</strong> This is what I went
+        with. A taught set of joint angles <em>is</em> a configuration, so there's nothing to solve
+        and nothing to be ambiguous about. The rack side stays Cartesian, because every shelf needs
+        a new Z, and Cartesian coordinates are the natural way to express that.</li>
     </ul>
 
     <div class="scroll-x reveal">
@@ -463,26 +463,26 @@
         <tr><td>2</td><td>Cassette approach</td><td>Cartesian</td><td>x0, y0, z(n), r0</td></tr>
         <tr><td>3</td><td>Fork inserted, three steps</td><td>Cartesian</td><td>−X</td></tr>
         <tr><td>4</td><td>Lift and withdraw</td><td>Cartesian</td><td>+Z, then +X</td></tr>
-        <tr><td>5</td><td>Traverse to fixture</td><td>joints</td><td>J_TRAVERSE → J_ABOVE</td></tr>
-        <tr class="hl"><td>6</td><td>Deposit, then clear the prongs</td><td>joints</td><td>J_DEPOSIT → J_WITHDRAWN</td></tr>
-        <tr><td>7</td><td>Return home</td><td>joints</td><td>J_TRAVERSE → J_HOME</td></tr>
+        <tr><td>5</td><td>Traverse to fixture</td><td>joints</td><td>J_TRAVERSE, then J_ABOVE</td></tr>
+        <tr class="hl"><td>6</td><td>Deposit, then clear the prongs</td><td>joints</td><td>J_DEPOSIT, then J_WITHDRAWN</td></tr>
+        <tr><td>7</td><td>Return home</td><td>joints</td><td>J_TRAVERSE, then J_HOME</td></tr>
       </tbody>
     </table>
     </div>
     <p class="reveal">
-      Step 6 needs <strong>two</strong> moves, and this is not a stylistic choice. Lowering the
-      wafer leaves the fork underneath it; the prongs have to slide out along their own axis or
-      the wafer comes with them. The wafer counter increments after <code>J_WITHDRAWN</code>,
-      never after <code>J_DEPOSIT</code>, so an aborted cycle cannot inflate the count.
+      Step 6 needs <strong>two</strong> moves, and not for style. Lowering the wafer leaves the
+      fork sitting under it, so the prongs have to slide out along their own axis or the wafer
+      gets dragged along. The wafer counter only goes up after <code>J_WITHDRAWN</code>, never after
+      <code>J_DEPOSIT</code>, so a cycle that gets aborted can't pad the count.
     </p>
 
     <h3 class="sh reveal">The taught poses, and what they check</h3>
     <p class="reveal">
-      Five poses were taught by hand-guiding and read back from the controller with a probe
-      script rather than transcribed from the pendant, which removes an entire class of digit
-      errors. Each is carried alongside its forward-kinematic Cartesian equivalent, computed by
-      the program at startup — redundancy that costs a few lines and caught two badly-taught
-      poses before they reached the hardware.
+      The five poses were taught by hand-guiding the arm, and I read them back from the controller
+      with a probe script instead of copying numbers off the pendant, which rules out a whole
+      category of typos. Each one also carries its Cartesian equivalent from forward kinematics,
+      worked out by the program at startup. That bit of redundancy costs a few lines, and it caught
+      two badly taught poses before they ever reached the hardware.
     </p>
     <div class="scroll-x reveal">
     <table>
@@ -497,17 +497,17 @@
     </table>
     </div>
     <ul class="plain reveal">
-      <li><strong>Every pose has J2 &gt; 0.</strong> All five are on branch A, the same branch as
-        the rack side, so the arm never reconfigures anywhere in the cycle. A pose returning
-        branch B was grounds for re-teaching, not for running.</li>
-      <li><strong>Four poses share Y = 363.4 mm.</strong> Traverse, approach, deposit and
-        withdrawal lie on one line — which is what a straight fork withdrawal along X should
-        produce. <code>J_WITHDRAWN</code> retracts from X = 134.4 to X = 4.2 mm at unchanged Y,
-        a 130.2 mm translation along the prong axis.</li>
-      <li><strong>Home sits directly above the rack approach point</strong>, at (109.6, 352.7),
-        which is why the descent into the cassette is a pure Z move. The factory home was
-        explicitly not used: all-joints-zero puts the arm straight out at X = 400, Y = 0 with
-        the screw below its 5 mm software limit and the fork extended across the bench.</li>
+      <li><strong>Every pose has J2 &gt; 0.</strong> All five are on branch A, the same branch as the
+        rack side, so the arm never flips its elbow anywhere in the cycle. If a pose came back on
+        branch B, that meant teaching it again, not running it.</li>
+      <li><strong>Four poses share Y = 363.4 mm.</strong> Traverse, approach, deposit and withdrawal
+        all sit on one line, which is exactly what pulling the fork straight out along X should give.
+        <code>J_WITHDRAWN</code> pulls back from X = 134.4 to X = 4.2 mm with Y unchanged, a 130.2 mm
+        slide along the prongs.</li>
+      <li><strong>Home sits right above the rack approach point</strong>, at (109.6, 352.7), which is
+        why dropping into the cassette is a pure Z move. I deliberately didn't use the factory home.
+        All joints at zero puts the arm straight out at X = 400, Y = 0, with the screw below its 5 mm
+        software limit and the fork sticking out across the bench.</li>
     </ul>
 
     <div class="fig-grid">
@@ -515,85 +515,86 @@
         <a href="../assets/wafer/scara.jpg" target="_blank" rel="noopener">
           <img src="../assets/wafer/scara.jpg" alt="The Dobot M1 Pro SCARA on the bench with a white 3D-printed two-prong fork bolted to its J4 tool flange; a deposit platform and a spare printed cradle sit in the foreground.">
         </a>
-        <figcaption><span class="n">FIG 03</span>The M1 Pro with the printed two-prong fork on the J4 flange. No clamping and no vacuum on this side — the wafer simply rests on the prongs, which is the gentlest available strategy and why the SCARA half tolerates coarse positioning.</figcaption>
+        <figcaption><span class="n">FIG 03</span>The M1 Pro with the printed two-prong fork on the J4 flange. There's no clamp and no vacuum on this side. The wafer just rests on the prongs, which is the gentlest option there is, and it's why the SCARA side can get away with rough positioning.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/wafer/fixtures.jpg" target="_blank" rel="noopener">
           <img src="../assets/wafer/fixtures.jpg" alt="Two photographs side by side: at left the blue printed wafer cassette holding a 100 millimetre silicon wafer on its top shelf with the cobot's twin vacuum cups visible at the right edge; at right the magenta printed wafer cradle mounted on the conveyor belt, two curved arms locating the wafer by its edge.">
         </a>
-        <figcaption><span class="n">FIG 04</span>Fixtures as built. (a) The cassette — 20 mm shelf pitch, floor at Z = 30 mm. (b) The belt cradle: two curved arms that locate the wafer edge without touching its face.</figcaption>
+        <figcaption><span class="n">FIG 04</span>The fixtures as built. (a) The cassette, with shelves 20 mm apart and the floor at Z = 30 mm. (b) The belt cradle, two curved arms that hold the wafer by its edge without touching its face.</figcaption>
       </figure>
     </div>
     <p class="reveal">
-      The cassette is the manual's rack, so its internal geometry is a specification rather than
-      a measurement — but the program still refuses to run more than one cycle until the shelf
-      pitch has been confirmed physically, because every cycle after the first depends on it.
-      The measured lift of 13.0 mm is consistent with a 20 mm pitch: it clears the wafer's own
-      shelf lip while staying comfortably below the shelf above.
+      The cassette is the rack from the manual, so its inside dimensions come from a spec rather
+      than a measurement. Even so, the program won't run more than one cycle until someone has
+      physically confirmed the shelf spacing, because every cycle after the first relies on it. The
+      measured lift of 13.0 mm fits a 20 mm spacing. It clears the lip of the wafer's own shelf and
+      stays well below the shelf above.
     </p>
 
-    <h3 class="sh reveal">Guards: refuse, rather than try</h3>
+    <h3 class="sh reveal">Safety checks: refuse instead of trying</h3>
     <ul class="plain reveal">
-      <li><strong>Untaught poses abort.</strong> <code>{0,0,0,0}</code> is not an inert
-        placeholder — it is a real pose, arm straight out at the bottom of the Z screw. Any
-        joint move to an untaught tuple stops the run.</li>
-      <li><strong>Every target is range-checked</strong> against the joint limits and the
-        reach/dead-zone envelope before it is issued, so a bad point is reported by name
-        instead of being rejected mid-path by the controller.</li>
-      <li><strong>The run plan is printed and validated before anything moves.</strong> A wafer
-        count that would walk past the cassette floor aborts.</li>
-      <li><strong>Staged homing.</strong> If the arm is not near home it backs straight out of
-        the cassette corridor first, then rises, then joint-moves home. Rising first would hit
+      <li><strong>Poses nobody taught stop the run.</strong> <code>{0,0,0,0}</code> isn't a harmless
+        placeholder. It's a real pose, with the arm straight out at the bottom of the Z screw. Any
+        joint move to an untaught pose ends the run.</li>
+      <li><strong>Every target is checked</strong> against the joint limits and the reach and dead
+        zone before it's sent, so a bad point gets reported by name instead of the controller
+        rejecting it halfway through a move.</li>
+      <li><strong>The run plan is printed and checked before anything moves.</strong> A wafer count
+        that would go past the bottom of the cassette stops the run.</li>
+      <li><strong>Homing happens in stages.</strong> If the arm isn't near home, it first backs
+        straight out of the cassette, then rises, then moves its joints home. Rising first would hit
         the shelf above.</li>
-      <li><strong>On a fault the arm stays put.</strong> After an abort it may be somewhere a
-        joint move cannot leave safely, and moving is how a small problem becomes a crash.</li>
+      <li><strong>After a fault the arm doesn't move.</strong> Once something aborts, the arm might be
+        somewhere a joint move can't safely get out of, and moving anyway is how a small problem
+        turns into a crash.</li>
     </ul>
 
     <figure class="reveal">
       <a href="../assets/wafer/cad.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/cad.jpg" alt="CAD render of the SCARA fork: two thin prongs on a tapered yoke with a central mounting boss for the J4 flange.">
       </a>
-      <figcaption><span class="n">FIG 05</span>The fork as prepared for manufacture — two thin prongs on a tapered yoke, central boss for the J4 flange. The prongs must fit a cassette slot without touching its walls; the tapered tips ease entry when the fork is a little off-centre. This is the one printed part carried over unchanged: the cassette and the belt cradle were both redesigned afterwards, so FIG 04 is the current geometry, not this model.</figcaption>
+      <figcaption><span class="n">FIG 05</span>The fork ready for printing, with two thin prongs on a tapered yoke and a boss in the middle for the J4 flange. The prongs have to fit a cassette slot without touching the walls, and the tapered tips help them in when the fork is a little off centre. It's the only printed part that carried over unchanged. The cassette and belt cradle were both redesigned later, so FIG 04 shows the current shapes, not this model.</figcaption>
     </figure>
   </section>
 
   <section>
-    <div class="sec-label reveal">03 / Coordination</div>
-    <h2 class="reveal">The ladder in the manual is not the ladder that runs.</h2>
+    <div class="sec-label reveal"><span class="num">03</span>Coordination</div>
+    <h2 class="reveal">The ladder in the manual isn't the ladder that runs.</h2>
     <p class="reveal">
-      The controller is a 2080-LC20-20QBB: twelve digital inputs, seven transistor outputs, four
-      analog inputs, one analog output. Note the two isolated output groups — <code>O-00</code>
-      through <code>O-03</code> share <code>CM0</code> while <code>O-04</code> through
-      <code>O-06</code> share <code>CM1</code> — which is what lets the conveyor-side outputs
-      and the robot-trigger outputs sit in separate reference domains.
+      The controller is a 2080-LC20-20QBB, with twelve digital inputs, seven transistor outputs,
+      four analog inputs and one analog output. It has two isolated output groups.
+      <code>O-00</code> to <code>O-03</code> share <code>CM0</code>, and <code>O-04</code> to
+      <code>O-06</code> share <code>CM1</code>, and that's what lets the conveyor outputs and the
+      robot trigger outputs sit on separate references.
     </p>
 
     <figure class="reveal">
       <a href="../assets/wafer/plchw.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/plchw.jpg" alt="Three photographs of the Micro820 as wired: the input terminal block with labelled leads landing on I-06 and I-07, the 2080-LC20-20QBB module with its Ethernet lead and status LEDs, and the output terminal block showing two isolated groups.">
       </a>
-      <figcaption><span class="n">FIG 06</span>Micro820 hardware as wired. (a) Input block — Vref/−DC24, I-00…I-03, then COM0 and I-04…I-09; the two labelled leads land on I-06 and I-07. (b) The module with its Ethernet lead and status LEDs. (c) Output block: +CM0, O-00…O-03, −CM0, then the second isolated group +CM1, O-04…O-06, −CM1.</figcaption>
+      <figcaption><span class="n">FIG 06</span>The Micro820 as wired. (a) The input block: Vref/−DC24, I-00 to I-03, then COM0 and I-04 to I-09, with the two labelled leads landing on I-06 and I-07. (b) The module with its Ethernet lead and status LEDs. (c) The output block: +CM0, O-00 to O-03, −CM0, then the second isolated group, +CM1, O-04 to O-06, −CM1.</figcaption>
     </figure>
 
     <p class="reveal">
-      The as-built I/O map was recovered from the project's own global variable table and
-      cross-checked against the ladder source. Aliases, not raw addresses, appear on the rungs,
-      and getting them right is most of what makes the ladder readable.
+      I pieced the real I/O map together from the project's own global variable table and checked
+      it against the ladder source. The rungs use aliases instead of raw addresses, and getting
+      those right is most of what makes a ladder readable.
     </p>
     <div class="scroll-x reveal">
     <table>
       <thead><tr><th>Point</th><th>Alias</th><th>Role</th></tr></thead>
       <tbody>
         <tr><td>DI_06</td><td>Start_Switch</td><td>start pushbutton</td></tr>
-        <tr class="bad"><td>DI_07</td><td>Stop_Switch</td><td>stop — <em>measured</em> normally closed</td></tr>
+        <tr class="bad"><td>DI_07</td><td>Stop_Switch</td><td>stop, <em>measured</em> as normally closed</td></tr>
         <tr><td>DI_04</td><td>SCARA_DO</td><td>SCARA done, read <em>inverted</em> (NPN, active LOW)</td></tr>
         <tr><td>DI_05</td><td>Cobot_DO</td><td>cobot done, read direct (active HIGH)</td></tr>
-        <tr><td>AI_00</td><td>IR_SCARA_End</td><td>IR sensor, cassette end — WORD, thresholded</td></tr>
-        <tr><td>AI_01</td><td>IR_Cobot_End</td><td>IR sensor, cobot end — WORD, thresholded</td></tr>
+        <tr><td>AI_00</td><td>IR_SCARA_End</td><td>IR sensor at the cassette end, WORD, thresholded</td></tr>
+        <tr><td>AI_01</td><td>IR_Cobot_End</td><td>IR sensor at the cobot end, WORD, thresholded</td></tr>
         <tr><td>DO_04</td><td>DI_to_SCARA</td><td>2 s trigger pulse to the SCARA</td></tr>
         <tr><td>DO_05</td><td>DI_to_Cobot</td><td>2 s trigger pulse to the cobot</td></tr>
-        <tr><td>DO_00</td><td>Conv_SCARA_Side</td><td>conveyor — <em>negated</em> coil, idles HIGH</td></tr>
-        <tr><td>DO_01</td><td>Conv_Cobot_Side</td><td>conveyor — <em>negated</em> coil, idles HIGH</td></tr>
+        <tr><td>DO_00</td><td>Conv_SCARA_Side</td><td>conveyor, <em>negated</em> coil, idles HIGH</td></tr>
+        <tr><td>DO_01</td><td>Conv_Cobot_Side</td><td>conveyor, <em>negated</em> coil, idles HIGH</td></tr>
         <tr><td>AO_00</td><td>Conveyor</td><td>provisioned, not referenced by any rung</td></tr>
       </tbody>
     </table>
@@ -603,39 +604,39 @@
       <a href="../assets/wafer/globals.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/globals.jpg" alt="Connected Components Workbench global variable table for the Micro820, showing aliased I/O names against their physical points, with AI_00 and AI_01 typed as WORD and no variable marked retained.">
       </a>
-      <figcaption><span class="n">FIG 07</span>The global variable table — the alias column <em>is</em> the as-built I/O map. Three things it settles: the analog inputs are <code>WORD</code>, so the infrared sensors are read as raw counts and thresholded numerically rather than as booleans; only ten points are claimed, leaving the rest free for the handshake program; and nothing in the table is marked retained, which is why the detection threshold is lost on every download.</figcaption>
+      <figcaption><span class="n">FIG 07</span>The global variable table. The alias column <em>is</em> the real I/O map, and it settles three things. The analog inputs are <code>WORD</code>, so the infrared sensors are read as raw counts and compared against a number, not treated as on or off. Only ten points are used, which leaves the rest free for the handshake program. And nothing in the table is marked retained, which is why the detection threshold disappears on every download.</figcaption>
     </figure>
 
     <figure class="reveal">
       <a href="../assets/wafer/ladder.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/ladder.jpg" alt="Connected Components Workbench showing the seven-rung Prog1 ladder: rung 1 a start/stop seal-in, rungs 2 and 5 comparing an analog input against a threshold into two-second TP pulse timers, rungs 3 and 6 latching the robots' done reports through further TP timers, and rungs 4 and 7 driving the two conveyor outputs.">
       </a>
-      <figcaption><span class="n">FIG 08</span>The as-built seven-rung ladder. Rung 1 is the start/stop seal-in. Rungs 2 and 5 threshold the analog infrared sensors and fire 2 s pulse timers at the two robot triggers. Rungs 3 and 6 latch the robots' done reports. Rungs 4 and 7 drive the conveyor outputs through <em>negated</em> coils, so those points idle high and drop low to act.</figcaption>
+      <figcaption><span class="n">FIG 08</span>The seven rungs actually running. Rung 1 is the start and stop seal-in. Rungs 2 and 5 compare the analog infrared sensors against a threshold and fire 2 s pulse timers on the two robot triggers. Rungs 3 and 6 latch the robots' done reports. Rungs 4 and 7 drive the conveyor outputs through <em>negated</em> coils, so those points sit high and drop low to act.</figcaption>
     </figure>
 
     <div class="scroll-x reveal">
     <table>
       <thead><tr><th>#</th><th>Function</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>Stop ∧ (Start ∨ Start_latch) → Start. Seal-in latch.</td></tr>
-        <tr><td>2</td><td>Start ∧ (AI_00 ≤ threshold) → TP 2 s → DI_to_SCARA</td></tr>
-        <tr><td>3</td><td>Start ∧ ¬SCARA_DO → TP 2 s → SCARA_TaskVar</td></tr>
-        <tr><td>4</td><td>Start ∧ (DI_to_SCARA ∨ SCARA_TaskVar) → <em>negated</em> Conv_SCARA_Side</td></tr>
-        <tr><td>5</td><td>Start ∧ (AI_01 ≤ threshold) → TP 2 s → DI_to_Cobot</td></tr>
-        <tr><td>6</td><td>Start ∧ Cobot_DO → TP 2 s → Cobot_TaskVar</td></tr>
-        <tr><td>7</td><td>Start ∧ (DI_to_Cobot ∨ Cobot_TaskVar) → <em>negated</em> Conv_Cobot_Side</td></tr>
+        <tr><td>1</td><td>Stop ∧ (Start ∨ Start_latch) sets Start. Seal-in latch.</td></tr>
+        <tr><td>2</td><td>Start ∧ (AI_00 ≤ threshold) fires TP 2 s on DI_to_SCARA</td></tr>
+        <tr><td>3</td><td>Start ∧ ¬SCARA_DO fires TP 2 s on SCARA_TaskVar</td></tr>
+        <tr><td>4</td><td>Start ∧ (DI_to_SCARA ∨ SCARA_TaskVar) drives <em>negated</em> Conv_SCARA_Side</td></tr>
+        <tr><td>5</td><td>Start ∧ (AI_01 ≤ threshold) fires TP 2 s on DI_to_Cobot</td></tr>
+        <tr><td>6</td><td>Start ∧ Cobot_DO fires TP 2 s on Cobot_TaskVar</td></tr>
+        <tr><td>7</td><td>Start ∧ (DI_to_Cobot ∨ Cobot_TaskVar) drives <em>negated</em> Conv_Cobot_Side</td></tr>
       </tbody>
     </table>
     </div>
 
     <div class="finding reveal">
-      <h4><span class="fno">AUDIT</span>Retyping the published listing would have removed the stop button</h4>
+      <h4><span class="fno">AUDIT</span>Typing in the published listing would have deleted the stop button</h4>
       <p>
-        The ladder printed in the course manual — and the <code>PROG1.txt</code> that ships
-        beside it — is a stale artefact, not the program that runs. The live source is the
-        project's own <code>Prog1.stf</code>. Reproducing the manual's listing would delete the
-        stop input entirely and leave two robot-trigger rungs conducting whether or not the
-        operator had pressed start.
+        The ladder printed in the course manual, and the <code>PROG1.txt</code> that comes with it,
+        is an old leftover and not the program that runs. The real source is the project's own
+        <code>Prog1.stf</code>. If I had copied the manual's version, the stop input would be gone
+        completely, and two of the robot trigger rungs would conduct whether or not anyone had
+        pressed start.
       </p>
     </div>
 
@@ -646,66 +647,65 @@
         <tr class="hl"><td>Stop input</td><td>absent</td><td>DI_07, seal-in latch</td></tr>
         <tr class="hl"><td>Rung gating</td><td>two rungs ungated</td><td>every rung gated on Start</td></tr>
         <tr><td>Timers</td><td>TON, six instances</td><td>TP pulse, four instances</td></tr>
-        <tr><td>Naming</td><td>TRIGERA…D</td><td>functional aliases</td></tr>
+        <tr><td>Naming</td><td>TRIGERA to TRIGERD</td><td>functional aliases</td></tr>
         <tr><td>Conveyor coils</td><td>"normally high"</td><td>negated coils</td></tr>
       </tbody>
     </table>
     </div>
 
-    <h3 class="sh reveal">Three choices in this ladder worth naming</h3>
+    <h3 class="sh reveal">Three choices in this ladder worth pointing out</h3>
     <ul class="plain reveal">
-      <li><strong>Pulse timers, not on-delay timers.</strong> A <code>TP</code> produces a
-        fixed-width output pulse on a rising input and is immune to what the input does for the
-        rest of that pulse; a <code>TON</code> would track its input and release as soon as the
-        input fell. Since the whole point of these rungs is to emit a trigger of guaranteed
-        width to a robot that samples its input periodically, <code>TP</code> is the correct
-        primitive.</li>
-      <li><strong>Two-second pulses are a deliberate margin.</strong> A Micro820 scan is on the
-        order of milliseconds, so a two-second assertion is three orders of magnitude wider
-        than the receiver's sampling uncertainty. No element of this cell needs edge detection.
-        The cost is throughput, and on a laboratory cell that cost is worth paying.</li>
-      <li><strong>Negated conveyor coils</strong> mean those outputs idle high and drop low to
-        act, so a loss of power stops the belt rather than running it.</li>
+      <li><strong>Pulse timers instead of on-delay timers.</strong> A <code>TP</code> puts out a pulse
+        of fixed length when its input rises and ignores whatever the input does after that. A
+        <code>TON</code> would follow its input and let go the moment the input dropped. These rungs
+        exist to send a trigger of guaranteed length to a robot that only checks its input every so
+        often, so <code>TP</code> is the right tool.</li>
+      <li><strong>The two-second pulses are a deliberate safety margin.</strong> A Micro820 scan takes
+        milliseconds, so a two-second signal is about a thousand times longer than any uncertainty in
+        when the receiver looks. Nothing in this cell needs edge detection. The price is throughput,
+        and on a lab cell that price is worth paying.</li>
+      <li><strong>Negated conveyor coils</strong> mean those outputs sit high and drop low to act, so
+        losing power stops the belt instead of starting it.</li>
     </ul>
 
     <div class="finding reveal">
-      <h4><span class="fno">FAULT</span>The start button did nothing at all, with every other element correct</h4>
+      <h4><span class="fno">FAULT</span>The start button did nothing at all, even though everything else was right</h4>
       <p>
-        The panel stop button is <strong>NC-wired</strong>: its input reads TRUE at rest and
-        FALSE when pressed. That is the fail-safe convention — a cut wire reads as a press — but
-        it means the stop appears as a normally-<em>open</em> <code>] [</code> contact on every
-        rung, which looks wrong until you say it aloud: <em>conduct while the stop button is
-        not pressed</em>. Getting it backwards cost one download; rung 1 could not conduct at
-        all, and pressing start did nothing whatever.
+        The panel's stop button is <strong>wired normally closed</strong>, so its input reads TRUE at
+        rest and FALSE when pressed. That's the fail-safe way to do it, because a cut wire looks like a
+        press. But it means the stop shows up as a normally <em>open</em> <code>] [</code> contact on
+        every rung, which looks wrong until you say it out loud: <em>conduct while the stop button is
+        not pressed</em>. We had it backwards for one download. Rung 1 couldn't conduct at all, and
+        pressing start did absolutely nothing.
       </p>
     </div>
 
     <div class="finding reveal">
-      <h4><span class="fno">GOTCHA</span>The detection threshold does not survive a download</h4>
+      <h4><span class="fno">GOTCHA</span>The detection threshold gets wiped on every download</h4>
       <p>
-        <code>conveyoron</code>, the comparison value the two analog rungs threshold against,
-        reverts to its default on every project download and must be re-entered by hand.
-        Nothing in the global table is marked retained. The failure is silent: the cell simply
-        never triggers, or triggers continuously. Related, and equally undiagnosable from the
-        symptom: the controller lives at the link-local address
-        <code>169.254.19.93</code>, so the programming PC's adapter must be on
-        <code>169.254.x.x / 255.255.0.0</code> or the Micro820 never appears in the browse tree
-        — presenting as a dead controller rather than as a network misconfiguration.
+        <code>conveyoron</code>, the value the two analog rungs compare against, goes back to its
+        default every time the project is downloaded, and someone has to type it in again by hand.
+        Nothing in the global table is marked retained. It fails silently, too. The cell either never
+        triggers or triggers nonstop. A related trap that's just as hard to spot from the symptom: the
+        controller sits at the link-local address <code>169.254.19.93</code>, so the programming PC's
+        network adapter has to be on <code>169.254.x.x / 255.255.0.0</code>. Otherwise the Micro820
+        never shows up in the browse tree, and it looks like a dead controller instead of a network
+        setting.
       </p>
     </div>
   </section>
 
   <section>
-    <div class="sec-label reveal">04 / The Handshake</div>
-    <h2 class="reveal">Two wires carry the entire conversation.</h2>
+    <div class="sec-label reveal"><span class="num">04</span>The Handshake</div>
+    <h2 class="reveal">Two wires carry the whole conversation.</h2>
     <div class="law reveal">
-      Micro820 <span class="a">O-03</span> ──▶ opto board ──▶ M1 Pro <span class="a">DI10</span>&nbsp;&nbsp;<span class="c">"take a wafer"</span><br>
-      M1 Pro <span class="a">DO10</span> ──▶ opto board ──▶ Micro820 <span class="a">I-04</span>&nbsp;&nbsp;<span class="c">"wafer placed"</span>
+      Micro820 <span class="a">O-03</span> <span class="c">through the opto board to</span> M1 Pro <span class="a">DI10</span>&nbsp;&nbsp;<span class="c">"take a wafer"</span><br>
+      M1 Pro <span class="a">DO10</span> <span class="c">through the opto board to</span> Micro820 <span class="a">I-04</span>&nbsp;&nbsp;<span class="c">"wafer placed"</span>
     </div>
     <p class="reveal">
-      Both robot points are on the M1 Pro's <strong>second</strong> terminal block — the first
-      block's silkscreen only runs to channel 8, which is its own small trap. Expressed as
-      structured text, the rung set is three lines:
+      Both robot signals are on the M1 Pro's <strong>second</strong> terminal block. The first
+      block's labels only go up to channel 8, which is a small trap of its own. Written as
+      structured text, the handshake I designed is just three lines:
     </p>
     <div class="law st reveal"><span class="c">(* R1: ask for a wafer *)</span>
 Scara_in   := (Start <span class="k">OR</span> Scara_in) <span class="k">AND</span> Stop <span class="k">AND NOT</span> cycle_done ;
@@ -715,24 +715,24 @@ cycle_done := (Robot_Done <span class="k">OR</span> cycle_done) <span class="k">
 Light      := Scara_in ;</div>
 
     <p class="reveal">
-      Three properties are load-bearing, and the simulator below runs the real logic so you can
-      break each one:
+      Three properties hold the whole thing up, and the simulator below runs the real logic so you
+      can break each of them yourself:
     </p>
     <ul class="plain reveal">
-      <li><strong>The PLC must drop its request on seeing the done pulse.</strong> The arm waits
-        for its start input to <em>fall</em> before considering another wafer, so one long
-        assertion cannot be read as several requests. Hold the request high and the arm finishes
-        moving, then waits forever — indistinguishable, from the outside, from a completed run.</li>
-      <li><strong>The start signal is active HIGH by choice.</strong> A dead or disconnected PLC
-        output then reads as <em>no request</em>. Active LOW would read a broken wire as "take
-        another wafer, indefinitely", which is the wrong direction to fail in.</li>
-      <li><strong>The request is not a run permit.</strong> The arm samples its start input once,
-        at the top of a wafer. Dropping the request mid-cycle means "do not begin another", and
-        nothing more. Use the E-stop to stop a moving arm.</li>
+      <li><strong>The PLC has to drop its request when it sees the done pulse.</strong> The arm waits
+        for its start input to <em>fall</em> before it will think about another wafer, so one long
+        signal can't be mistaken for several requests. If the request stays high, the arm finishes
+        its move and then waits forever, which from the outside looks exactly like a finished run.</li>
+      <li><strong>I made the start signal active HIGH on purpose.</strong> That way a dead or
+        unplugged PLC output reads as <em>no request</em>. With active LOW, a broken wire would read
+        as "take another wafer, forever", which is the wrong way to fail.</li>
+      <li><strong>The request isn't permission to keep running.</strong> The arm only checks its start
+        input once, at the start of each wafer. Dropping the request mid-cycle means "don't start
+        another one" and nothing more. To stop an arm that's moving, use the E-stop.</li>
     </ul>
 
     <div class="lab reveal">
-      <div class="lab-head"><span>Handshake simulator — <b>the three rungs, on a 60 ms scan</b></span><span id="hsScan">SCAN 0</span></div>
+      <div class="lab-head"><span>Handshake simulator: <b>the three rungs on a 60 ms scan</b></span><span id="hsScan">SCAN 0</span></div>
       <div class="lab-body">
         <div class="lab-viz">
           <svg id="hsTrace" viewBox="0 0 330 236" role="img" aria-label="Rolling logic-analyzer trace of the five handshake signals: the start button, the normally-closed stop input, the PLC request to the SCARA, the arm's done report, and the latched cycle-done bit."></svg>
@@ -760,9 +760,9 @@ Light      := Scara_in ;</div>
       </div>
       <div class="log" id="hsLog"></div>
       <div class="hint">
-        <b>Press START once</b> — one wafer. <b>Hold START</b> — still one wafer, because rung 2's
-        reset term is <code>(Start ∨ Scara_in)</code> and not <code>Scara_in</code> alone. Switch
-        the reset term and hold START again to watch the same cell run away.
+        <b>Press START once</b> and you get one wafer. <b>Hold START</b> and you still get one wafer,
+        because rung 2's reset term is <code>(Start ∨ Scara_in)</code> and not <code>Scara_in</code> on
+        its own. Switch the reset term and hold START again to watch the same cell run away.
       </div>
     </div>
 
@@ -770,25 +770,25 @@ Light      := Scara_in ;</div>
       <a href="../assets/wafer/scara_io.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/scara_io.jpg" alt="The Dobot M1 Pro controller I/O face, showing an upper terminal block labelled DO1 to DO8 and DI1 to DI8 and a lower, wider block carrying DO9 to DO16 and DI9 to DI16, with wires landed on the lower block.">
       </a>
-      <figcaption><span class="n">FIG 09</span>The M1 Pro controller I/O face. The upper block carries DO1–DO8 and DI1–DI8; the lower, wider block carries DO9–DO16 and DI9–DI16. The handshake uses DI10 and DO10 — on the second block, which is not where the silkscreen leads you to look.</figcaption>
+      <figcaption><span class="n">FIG 09</span>The M1 Pro controller's I/O panel. The upper block has DO1 to DO8 and DI1 to DI8, and the lower, wider block has DO9 to DO16 and DI9 to DI16. The handshake uses DI10 and DO10 on the second block, which isn't where the labels lead you to look.</figcaption>
     </figure>
   </section>
 
   <section>
-    <div class="sec-label reveal">05 / Transport &amp; Inspection</div>
+    <div class="sec-label reveal"><span class="num">05</span>Transport &amp; Inspection</div>
     <h2 class="reveal">The same sensor has to mean two different things.</h2>
     <p class="reveal">
-      The belt is driven by a stepper through the Dobot Magic Box extended I/O module, which
-      exposes both a motor port and general-purpose digital I/O through the same Python API
-      that drives the arm: one connection, one library, two subsystems. Direction is the sign of
-      the commanded speed and stopping is a commanded speed of zero, so no mechanical changeover
-      is involved. Two infrared photoelectric sensors detect the cradle at each end of travel —
-      both NPN devices with active-low outputs.
+      A stepper drives the belt through the Dobot Magic Box extended I/O module, which offers a
+      motor port and general digital I/O through the same Python API that runs the arm. That's one
+      connection and one library for two subsystems. The direction is just the sign of the speed
+      command and stopping is a speed of zero, so nothing mechanical has to change over. Two
+      infrared photoelectric sensors spot the cradle at each end of the belt, both NPN devices whose
+      outputs go low when they see something.
     </p>
     <p class="reveal">
-      Belt motion is governed by the pairing of sensor state with <em>current belt state</em>,
-      not by the sensor alone. That is what lets the same sensor mean "depart" on one pass and
-      "stop" on the return:
+      What the belt does depends on the sensor reading <em>and what the belt is already doing</em>,
+      not the sensor alone. That's how the same sensor can mean "go" on the way out and "stop" on the
+      way back:
     </p>
     <div class="scroll-x reveal">
     <table>
@@ -806,69 +806,67 @@ Light      := Scara_in ;</div>
       <a href="../assets/wafer/conveyor.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/conveyor.jpg" alt="The conveyor: a stepper motor at the left end, an infrared photoelectric sensor in a yellow barrel housing, and the magenta 3D-printed wafer cradle taped to the belt, with the wafer cassette at the rear left and a wafer at the far end of the belt.">
       </a>
-      <figcaption><span class="n">FIG 10</span>The conveyor — stepper at left, infrared photoelectric sensor in the yellow barrel housing, printed cradle taped to the belt.</figcaption>
+      <figcaption><span class="n">FIG 10</span>The conveyor, with the stepper on the left, the infrared photoelectric sensor in the yellow barrel and the printed cradle taped to the belt.</figcaption>
     </figure>
 
-    <h3 class="sh reveal">Vision as a presence check, stated as one</h3>
+    <h3 class="sh reveal">The camera checks the wafer is there, and that's all I claim for it</h3>
     <p class="reveal">
-      Each frame is converted to greyscale, median-blurred to suppress speckle from the belt
-      texture, and run through a circular Hough transform tuned to the wafer's apparent radius.
-      On the first confirmed detection of a cycle the belt stops, a settling delay is allowed, a
-      frame is captured to a sequentially numbered file, and the belt restarts. Two latches make
-      that behave in a continuous loop: a <em>first-run</em> flag suppresses detection until a
-      wafer has actually been loaded, so the transform cannot trigger on circular background
-      objects; an <em>already-photographed</em> flag limits capture to one image per wafer and
-      clears when the load-end sensor fires again. Without them the same wafer is photographed
-      repeatedly while it sits in view, and the belt stops each time.
+      Each frame gets turned to greyscale, median blurred to hide the speckle from the belt's
+      texture, and run through a circular Hough transform tuned to how big the wafer looks. The
+      first time a cycle sees a wafer, the belt stops, waits a moment to settle, saves a frame to a
+      numbered file and starts again. Two latches keep that sane in a loop. A <em>first-run</em>
+      flag ignores detections until a wafer has really been loaded, so round things in the
+      background can't trigger it. An <em>already-photographed</em> flag allows one picture per
+      wafer and resets when the load-end sensor fires again. Without them, the camera would keep
+      photographing the same wafer the whole time it sat in view, stopping the belt every time.
     </p>
     <p class="reveal">
-      The transform is used as a presence and gross-geometry check, <strong>not</strong> as a
-      defect classifier. A genuine inspection function would need controlled illumination and a
-      calibrated scale, and the bench provides neither.
+      The transform checks that a wafer is present and roughly the right shape. It is
+      <strong>not</strong> a defect detector. Real inspection would need controlled lighting and a
+      calibrated scale, and this bench has neither.
     </p>
   </section>
 
   <section>
-    <div class="sec-label reveal">06 / The Cobot</div>
-    <h2 class="reveal">A gripper is a state. A vacuum tool is a circuit.</h2>
+    <div class="sec-label reveal"><span class="num">06</span>The Cobot</div>
+    <h2 class="reveal">A gripper is just open or closed. A vacuum tool is a whole circuit.</h2>
     <p class="reveal">
-      The Pro600 lifts the wafer off the cradle and sets it on the deposit platform. It is
-      programmed in RoboFlow, a block-structured environment hosted on the controller's own
-      Linux system and reached over remote desktop. The cell program alternates absolute joint
-      moves with tool actuations and <strong>two I/O blocks that constitute its entire
-      integration surface</strong>: a <code>Wait</code> on digital input 1, and a
-      <code>Set</code> that pulses digital output 1.
+      The Pro600 lifts the wafer off the cradle and sets it on the deposit platform. It's
+      programmed in RoboFlow, a block-based environment that runs on the controller's own Linux
+      system and is reached over remote desktop. The cell program switches between absolute joint
+      moves and tool actions, and <strong>two I/O blocks are its entire connection to the rest of the
+      cell</strong>: a <code>Wait</code> on digital input 1 and a <code>Set</code> that pulses digital
+      output 1.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/wafer/cobot.jpg" target="_blank" rel="noopener">
           <img src="../assets/wafer/cobot.jpg" alt="The white Elephant Robotics Pro600 collaborative robot at its taught home pose with a vacuum tool fitted, the pneumatic manifold on the bench in front of its base and a laptop running RoboFlow at right.">
         </a>
-        <figcaption><span class="n">FIG 11</span>The Pro600 at its taught home pose with the vacuum tool fitted. The pneumatic manifold sits in front of the base; RoboFlow runs over the controller's remote desktop.</figcaption>
+        <figcaption><span class="n">FIG 11</span>The Pro600 at its taught home pose with the vacuum tool on. The pneumatic manifold sits in front of the base, and RoboFlow runs over the controller's remote desktop.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/wafer/roboflow.jpg" target="_blank" rel="noopener">
           <img src="../assets/wafer/roboflow.jpg" alt="The RoboFlow program tree for the transfer cycle, its step list interleaving absolute joint moves with tool actuations, a wait on digital input 1 and a pulse on digital output 1.">
         </a>
-        <figcaption><span class="n">FIG 12</span>The RoboFlow program tree. The step list interleaves absolute joint moves with tool actuations, a wait on DI 1, and a pulse on DO 1 — the arm's whole interface to the rest of the cell.</figcaption>
+        <figcaption><span class="n">FIG 12</span>The RoboFlow program tree. The steps mix absolute joint moves with tool actions, a wait on DI 1 and a pulse on DO 1, and those last two are the arm's whole link to the rest of the cell.</figcaption>
       </figure>
     </div>
     <p class="reveal">
-      The original build used a DH PGE 8 electric parallel gripper with printed finger
-      extensions. This one uses a vacuum tool, and the change is not merely a swap of hardware.
-      A parallel gripper is a two-state device the controller commands directly; the vacuum tool
-      is a pneumatic circuit — filter-regulator, two 24 V solenoid valves for vacuum and
-      blow-off, and a digital vacuum switch whose output is <em>the only evidence that a wafer
-      is actually held</em>. Grip confirmation becomes a sensed quantity rather than an assumed
-      one, which is a strict improvement for a fragile part, at the cost of a compressed-air
-      dependency the gripper did not have.
+      The original build used a DH PGE 8 electric parallel gripper with printed finger extensions.
+      This one uses a vacuum tool, and that's more than a hardware swap. A parallel gripper is a
+      two-state device the controller commands directly. The vacuum tool is a pneumatic circuit: a
+      filter-regulator, two 24 V solenoid valves for suction and blow-off, and a digital vacuum
+      switch whose output is <em>the only proof that a wafer is really being held</em>. So the grip
+      becomes something measured instead of something assumed. For a fragile part that's a clear
+      improvement, though it does add a need for compressed air the gripper never had.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/wafer/eoat.jpg" target="_blank" rel="noopener">
           <img src="../assets/wafer/eoat.jpg" alt="Two photographs: the vacuum circuit for the cobot tool with its filter-regulator, two 24 volt solenoid valves, digital vacuum switch and pressure control board; and the Pro600 base I/O terminal block with labelled IN1 to IN6 points.">
         </a>
-        <figcaption><span class="n">FIG 13</span>(a) The vacuum circuit — filter-regulator, two 24 V solenoid valves, digital vacuum switch, pressure control board. (b) The Pro600 base I/O block, showing the IN1–IN6 points used for the handshake.</figcaption>
+        <figcaption><span class="n">FIG 13</span>(a) The vacuum circuit, with the filter-regulator, two 24 V solenoid valves, the digital vacuum switch and the pressure control board. (b) The Pro600 base I/O block, showing the IN1 to IN6 points used for the handshake.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/wafer/place.jpg" target="_blank" rel="noopener">
@@ -880,48 +878,46 @@ Light      := Scara_in ;</div>
   </section>
 
   <section>
-    <div class="sec-label reveal">07 / The Operator Layer</div>
-    <h2 class="reveal">A panel, a supervisory screen, and a count that crosses as edges.</h2>
+    <div class="sec-label reveal"><span class="num">07</span>The Operator Layer</div>
+    <h2 class="reveal">A panel, a screen, and a wafer count sent one pulse at a time.</h2>
     <p class="reveal">
-      The Micro820 hosts the operator interface as well as the coordination logic: a physical
-      panel with a run switch, four inputs, four output lamps and a 0–10 V analog meter, and a
-      supervisory screen adding start and stop controls, a wafer counter, and live lamps for the
-      start input, both analog sensors, both robot triggers and both conveyor outputs.
+      The Micro820 runs the operator interface as well as the coordination logic. There's a
+      physical panel with a run switch, four inputs, four output lamps and a 0 to 10 V analog meter,
+      and a supervisory screen that adds start and stop buttons, a wafer counter, and live lamps for
+      the start input, both analog sensors, both robot triggers and both conveyor outputs.
     </p>
     <figure class="reveal">
       <a href="../assets/wafer/hmi.jpg" target="_blank" rel="noopener">
         <img src="../assets/wafer/hmi.jpg" alt="Two photographs: at left the physical operator panel wired to the Micro820 with a run switch, four input buttons, four coloured output lamps and an analog voltmeter; at right a monitor showing the supervisory HMI during a run, with the start input lit green, the wafer counter reading 1, and the remaining I/O points idle.">
       </a>
-      <figcaption><span class="n">FIG 15</span>(a) The physical operator panel wired to the Micro820. (b) The supervisory HMI during a run — start asserted, wafer counter at one, remaining points idle.</figcaption>
+      <figcaption><span class="n">FIG 15</span>(a) The physical operator panel wired to the Micro820. (b) The supervisory HMI during a run, with start on, the wafer counter at one and everything else idle.</figcaption>
     </figure>
     <p class="reveal">
-      The counter deserves a note about representation. On the arm side the wafer count exists
-      as an integer, but the only channel to the PLC is a single discrete output pulsed once per
-      wafer — so what actually crosses the cell boundary is <strong>a sequence of edges that the
-      PLC re-integrates</strong>. Transferring the count as a number requires a Modbus holding
-      register. The point at which that belongs is marked in the arm program and left as future
-      work.
+      The counter is worth a closer look. On the arm's side the wafer count is a proper integer, but
+      the only line to the PLC is one digital output that pulses once per wafer. So what really
+      crosses between the two is <strong>a string of pulses that the PLC counts up again</strong>.
+      Sending the count as an actual number would need a Modbus holding register. I marked the spot
+      in the arm program where that belongs and left it for later.
     </p>
 
-    <h3 class="sh reveal">Familiarisation before anyone touches the panel</h3>
+    <h3 class="sh reveal">Learning the panel before anyone touches it</h3>
     <p class="reveal">
-      Before the cell was patched for real, the trainer panel was modelled in three.js with every
-      terminal and conductor labelled, so the I/O map could be walked through — and argued about
-      — without a live 24 V rail in the room.
+      Before the cell was wired up for real, the trainer panel was modelled in three.js with every
+      terminal and conductor labelled. That let us walk through the I/O map, and argue about it,
+      without a live 24 V rail in the room.
     </p>
     <figure class="reveal">
       <video autoplay muted loop playsinline preload="none" poster="../assets/wafer/trainer3d-poster.jpg"
         aria-label="A three.js model of the trainer panel orbiting slowly, with every terminal and conductor labelled and colour-coded.">
         <source src="../media/wafer-trainer3d.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 02</span>The three.js cell model — every terminal and conductor labelled, used for I/O familiarisation before anyone touches the real panel. The standalone page in the repository orbits, zooms and pans, and exports the geometry as OBJ or GLB. Silent clip.</figcaption>
+      <figcaption><span class="n">VID 02</span>The three.js cell model with every terminal and conductor labelled. It's how you learn the I/O before anyone touches the real panel. The standalone page in the repository lets you orbit, zoom and pan, and exports the geometry as OBJ or GLB. No sound.</figcaption>
     </figure>
 
     <h3 class="sh reveal">Nominal timing</h3>
     <p class="reveal">
-      These are configured constants, not measured cycle times. They bound the coordination
-      overhead at roughly <strong>seven seconds per wafer</strong>, on top of whatever the motion
-      itself takes.
+      These are settings, not measured cycle times. Together they put the coordination overhead at
+      about <strong>seven seconds per wafer</strong>, on top of however long the motion itself takes.
     </p>
     <div class="scroll-x reveal">
     <table>
@@ -941,12 +937,12 @@ Light      := Scara_in ;</div>
   </section>
 
   <section>
-    <div class="sec-label reveal">08 / Failure Log</div>
+    <div class="sec-label reveal"><span class="num">08</span>Failure Log</div>
     <h2 class="reveal">In integration work, the failure log is the result.</h2>
     <p class="reveal">
-      Fifteen substantive faults were recorded with their root cause and resolution. Several
-      share a shape: <strong>a signal was assumed rather than measured</strong>, and the
-      resulting symptom pointed somewhere other than the cause.
+      We logged fifteen real faults, each with its root cause and how it was fixed. A lot of them
+      follow the same pattern: <strong>someone assumed what a signal did instead of measuring
+      it</strong>, and the symptom pointed somewhere other than the real cause.
     </p>
     <div class="scroll-x reveal">
     <table>
@@ -957,7 +953,7 @@ Light      := Scara_in ;</div>
         <tr><td>Same, intermittently elsewhere</td><td>An edited parameter left a coordinate undefined</td><td>Check for nil before suspecting reach</td></tr>
         <tr><td>Cartesian jog cannot reach the fixture</td><td>Jogging will not cross a configuration boundary</td><td>Expected; hand-guide, then teach joints</td></tr>
         <tr><td>Four cycles run for three wafers</td><td>Loop bounded by height, not by count</td><td>Derive the shelf height from the count</td></tr>
-        <tr><td>Traverse waypoint descends to shelf height mid-path</td><td>Pose taught at the wrong height</td><td>Raise J3 only — pure screw move, branch unchanged</td></tr>
+        <tr><td>Traverse waypoint descends to shelf height mid-path</td><td>Pose taught at the wrong height</td><td>Raise J3 only, a pure screw move with the branch unchanged</td></tr>
         <tr><td>Fork dips 2.7 mm entering the slot</td><td>Approach and inserted poses taught at different heights</td><td>Adopt the lower height for both</td></tr>
         <tr><td>Wafer drags off the cradle</td><td>Deposit pose leaves prongs under the wafer</td><td>Add an explicit withdrawal pose</td></tr>
         <tr class="hl"><td>Start button does nothing at all</td><td>Stop wired normally closed but read as a normally-closed contact</td><td>Invert the contact form</td></tr>
@@ -971,51 +967,51 @@ Light      := Scara_in ;</div>
     </table>
     </div>
 
-    <h3 class="sh reveal">Three things that generalise past this bench</h3>
+    <h3 class="sh reveal">Three lessons that apply well beyond this bench</h3>
     <ul class="plain reveal">
-      <li><strong>Redundant representations catch errors that neither catches alone.</strong>
-        Every taught joint pose is carried alongside its forward-kinematic Cartesian equivalent,
-        computed at startup rather than transcribed. That caught the traverse pose taught at
-        shelf height, and the mismatch between approach and inserted heights, before either
-        reached hardware. The redundancy costs a few lines.</li>
-      <li><strong>The direction a signal fails in is a design parameter.</strong> The start
-        signal is active high so a dead wire means no request; the conveyor outputs idle high so
-        loss of power stops the belt; the stop button is normally closed so a cut wire reads as
-        a press. None of these follows from the sensor convention. Each is a decision about
-        which failure the cell should default to, and each was made explicitly.</li>
-      <li><strong>Signal width should exceed the receiver's sampling uncertainty by a
-        comfortable margin.</strong> Two-second pulses against a millisecond scan mean no element
-        of this cell needs edge detection. The cost is throughput; on a production cell the same
-        argument would be made with edge capture and a handshake acknowledgement instead.</li>
+      <li><strong>Keeping the same information in two forms catches mistakes neither would catch
+        alone.</strong> Every taught joint pose sits next to its Cartesian equivalent, calculated at
+        startup instead of copied by hand. That caught the traverse pose taught at shelf height, and
+        the mismatch between the approach and inserted heights, before either one reached the
+        hardware. It costs a few lines.</li>
+      <li><strong>The way a signal fails is something you design.</strong> The start signal is active
+        high, so a dead wire means no request. The conveyor outputs sit high, so losing power stops
+        the belt. The stop button is normally closed, so a cut wire counts as a press. None of that
+        comes from the sensor conventions. Each one is a choice about which failure the cell should
+        fall back to, and I made each one on purpose.</li>
+      <li><strong>A signal should last well past any doubt about when the receiver reads it.</strong>
+        Two-second pulses against a millisecond scan mean nothing in this cell needs edge detection.
+        The cost is throughput, and on a production cell I'd make the same argument with edge
+        capture and an acknowledgement instead.</li>
     </ul>
   </section>
 
   <section>
-    <div class="sec-label reveal">09 / What It Does Not Do Yet</div>
-    <h2 class="reveal">Four limitations, stated rather than buried.</h2>
+    <div class="sec-label reveal"><span class="num">09</span>What It Doesn't Do Yet</div>
+    <h2 class="reveal">Four things it still can't do, and I'd rather say so.</h2>
     <ul class="plain reveal">
-      <li><strong>The deposit fixture is at 393.8 mm of a 400 mm reach.</strong> Joint-space
-        commanding makes the configuration deterministic, but it does not improve the
-        conditioning of the workspace at that radius. Moving the fixture 30–40 mm toward the
-        robot is the single change that would most reduce the cell's fragility, and it costs one
-        re-teaching session.</li>
-      <li><strong>Conveyor positioning is open loop.</strong> The belt runs until a sensor sees
-        the cradle, and position within the detection window is uncontrolled — which bounds how
-        tightly the cobot's pick pose can be specified. An encoder on the drive, or a second
-        sensor for two-point edge timing, would tighten it.</li>
-      <li><strong>The wafer count crosses the cell boundary as edges, not as a value.</strong> A
-        Modbus holding register would carry it as an integer and let the HMI display the arm's
-        own count rather than the PLC's reconstruction of it.</li>
-      <li><strong>Interlocking is procedural rather than enforced.</strong> The busy output that
-        would keep the rest of the cell out of the arm's workspace is implemented and wired
-        through the same guarded output helper as everything else, but it is disabled by default
-        because its pin assignment is <em>assumed</em> rather than measured. Enabling it against
-        a confirmed terminal is the first safety improvement worth making.</li>
+      <li><strong>The deposit fixture is at 393.8 mm of a 400 mm reach.</strong> Commanding it in joint
+        space makes the arm's configuration predictable, but it doesn't make the workspace any better
+        behaved that far out. Moving the fixture 30 to 40 mm closer to the robot is the one change that
+        would do the most to make the cell less fragile, and it would only take one session of
+        re-teaching.</li>
+      <li><strong>The conveyor's positioning is open loop.</strong> The belt runs until a sensor sees the
+        cradle, and exactly where it stops inside the detection window isn't controlled. That limits
+        how precisely the cobot's pick pose can be set. An encoder on the drive, or a second sensor to
+        time both edges, would tighten it up.</li>
+      <li><strong>The wafer count crosses between machines as pulses, not as a number.</strong> A Modbus
+        holding register would send it as an integer and let the HMI show the arm's own count instead
+        of the PLC's rebuilt version.</li>
+      <li><strong>The interlocking relies on procedure, not enforcement.</strong> The busy output that
+        would keep the rest of the cell out of the arm's way is written and wired through the same
+        guarded output helper as everything else, but it's switched off by default because its pin is
+        <em>assumed</em> rather than measured. Turning it on against a confirmed terminal is the first
+        safety improvement I'd make.</li>
     </ul>
     <p class="reveal">
-      Beyond those: vision-based wafer alignment, using the inspection camera to correct the
-      cradle pose before the cobot picks, would remove the cell's dependence on the cradle being
-      taped in exactly the taught place. That is the natural next stage.
+      After those, the natural next step is using the inspection camera to line the wafer up and
+      correct the cradle's pose before the cobot picks. That would stop the cell depending on the
+      cradle being taped down in exactly the taught spot.
     </p>
 
     <div class="proj-stack reveal">
@@ -1028,34 +1024,34 @@ Light      := Scara_in ;</div>
 
     <div class="credit reveal">
       <p>
-        <strong>Credit where it is owed.</strong> The wafer automation cell, its original
-        commissioning and the accompanying laboratory manual are the work of
+        <strong>Credit where it's due.</strong> The wafer automation cell, its original
+        commissioning and the lab manual that goes with it are the work of
         <strong>Sameerjeet Singh Chhabra</strong>, under the guidance of
         <strong>Dr. Sangram Redkar</strong>, in the RAS 598 Advanced Robotic Systems program at
-        Arizona State University; the original team was Sameerjeet Singh Chhabra, Vishavjit
-        Singh Khinda and Shao-Chi Cheng
-        (<a href="https://github.com/Sjschhabra/wafer-automation-cell" target="_blank" rel="noopener">upstream repository ↗</a>).
-        The M1 Pro Lua port, the elbow-branch analysis, the ladder audit, the handshake design
-        and the report on this page are Prajjwal Dutta's, with
-        <a href="https://github.com/saidagit84" target="_blank" rel="noopener">@saidagit84 ↗</a>
-        contributing to the build and bring-up of the cell.
+        Arizona State University. The original team was Sameerjeet Singh Chhabra, Vishavjit Singh
+        Khinda and Shao-Chi Cheng
+        (<a href="https://github.com/Sjschhabra/wafer-automation-cell" target="_blank" rel="noopener">upstream repository</a>).
+        The M1 Pro Lua port, the elbow-branch analysis, the ladder audit, the handshake design and
+        the report on this page are mine, Prajjwal Dutta's, and
+        <a href="https://github.com/saidagit84" target="_blank" rel="noopener">@saidagit84</a>
+        helped build and bring up the cell.
       </p>
     </div>
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="micro820-plc.html">Micro820 CNC tool magazine →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="micro820-plc.html">Next: the Micro820 tool magazine</a>
   </div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* ==========================================================================
+/* 
    Shared: the planar 2-link inverse kinematics of the M1 Pro, with the real
    limits from the report. Used by the elbow-branch widget AND by the
    background scene's SCARA, so the page and the picture agree by construction.
-   ========================================================================== */
+    */
 var L1=200, L2=200, REACH=400, DEAD=153, J1LIM=85, J2LIM=130;
 
 function ikBranches(x,y){
@@ -1091,9 +1087,9 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     return '<div><span class="k">'+k+'</span><span class="v '+(cls||'')+'">'+v+'</span></div>';
   }
 
-  /* ======================================================================
-     WIDGET A — the elbow-branch explorer
-     ====================================================================== */
+  /* 
+     WIDGET A, the elbow-branch explorer
+      */
   (function(){
     var svg=document.getElementById('ikSvg');
     if(!svg) return;
@@ -1101,7 +1097,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     var CX=160, CY=178, S=0.345;                    // px per mm
     function px(x,y){ return [CX+x*S, CY-y*S]; }    // +Y is up on screen
 
-    /* ---- static furniture ---- */
+    /*  static furniture  */
     bg.appendChild(mk('circle',{cx:CX,cy:CY,r:REACH*S,fill:'rgba(79,216,232,0.03)',
       stroke:'rgba(140,170,220,0.28)','stroke-width':1}));
     bg.appendChild(mk('circle',{cx:CX,cy:CY,r:393.8*S,fill:'none',
@@ -1121,9 +1117,9 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     bg.appendChild(lbl(CX,CY-REACH*S-6,'REACH 400','#8a9ab5'));
     bg.appendChild(lbl(CX,CY+DEAD*S+12,'DEAD 153','#5d6d88'));
     bg.appendChild(lbl(CX+REACH*S-4,CY+16,'J1 ±85°','#f5a35c','end'));
-    bg.appendChild(lbl(CX,CY+REACH*S+15,'FIXTURE ρ = 393.8 — 98.5% OF REACH','#f5a35c'));
+    bg.appendChild(lbl(CX,CY+REACH*S+15,'FIXTURE ρ = 393.8, 98.5% OF REACH','#f5a35c'));
 
-    /* ---- arms ---- */
+    /*  arms  */
     function armGroup(color,dash){
       var g=mk('g',{});
       var l1=mk('line',{stroke:color,'stroke-width':3,'stroke-linecap':'round',opacity:0.9});
@@ -1168,7 +1164,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
         if(!s) return row(tag,'no solution','off');
         var j4=wrap180(st.r-s.j1-s.j2);
         var ok=limitsOk(s);
-        return '<span class="hdr">Branch '+tag+(tag==='A'?' — elbow +':' — elbow −')+'</span>'+
+        return '<span class="hdr">Branch '+tag+(tag==='A'?', elbow +':', elbow −')+'</span>'+
           row('J1',s.j1.toFixed(2)+'°',Math.abs(s.j1)>J1LIM?'amb':'')+
           row('J2',s.j2.toFixed(2)+'°',Math.abs(s.j2)>J2LIM?'amb':'')+
           row('J4',j4.toFixed(2)+'°','')+
@@ -1183,18 +1179,18 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
       var v=document.getElementById('ikVerdict');
       if(!k.ok){
         v.className='verdict no';
-        v.textContent=k.rho>REACH?'Outside the 400 mm envelope — no branch exists.'
-                                 :'Inside the 153 mm dead zone — the arm cannot fold in this far.';
+        v.textContent=k.rho>REACH?'Outside the 400 mm envelope, so no branch exists.'
+                                 :'Inside the 153 mm dead zone. The arm cannot fold in this far.';
       }else{
         var okA=limitsOk(A), okB=limitsOk(B);
-        if(okA&&okB){ v.className='verdict'; v.textContent='Both branches legal — the solver may pick either, and will not say which.'; }
+        if(okA&&okB){ v.className='verdict'; v.textContent='Both branches are legal. The solver may pick either, and it will not say which.'; }
         else if(okA||okB){ v.className='verdict ok';
           v.textContent='Exactly one legal branch ('+(okA?'A':'B')+'). Cartesian commands are a coin flip; joint-space commanding is not.'; }
-        else { v.className='verdict no'; v.textContent='No branch inside the joint limits — unreachable in practice.'; }
+        else { v.className='verdict no'; v.textContent='No branch inside the joint limits, so unreachable in practice.'; }
       }
     }
 
-    /* ---- drag ---- */
+    /*  drag  */
     function fromEvent(ev){
       var r=svg.getBoundingClientRect();
       var vx=(ev.clientX-r.left)/r.width*320, vy=(ev.clientY-r.top)/r.height*340;
@@ -1229,9 +1225,9 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     draw();
   })();
 
-  /* ======================================================================
-     WIDGET B — the three handshake rungs on a 60 ms scan
-     ====================================================================== */
+  /* 
+     WIDGET B, the three handshake rungs on a 60 ms scan
+      */
   (function(){
     var svg=document.getElementById('hsTrace');
     if(!svg) return;
@@ -1274,25 +1270,25 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
 
     function tick(){
       st.scan++;
-      /* ---- physical inputs ---- */
+      /*  physical inputs  */
       var Start = st.hold || st.pulseT>0;
       if(st.pulseT>0) st.pulseT-=SCAN;
       var Stop  = !st.stopPressed;            // NC: TRUE at rest, FALSE when pressed
       var Robot_Done = st.doneT>0;
       if(st.doneT>0) st.doneT-=SCAN;
 
-      /* ---- the three rungs, in ladder order: R2 reads the coil R1 just wrote ---- */
+      /*  the three rungs, in ladder order: R2 reads the coil R1 just wrote  */
       var prevReq=st.req;
       st.req = (Start || st.req) && Stop && !st.cyc;
       st.cyc = (Robot_Done || st.cyc) && (st.termA ? (Start || st.req) : st.req) && Stop;
       var req=st.req;
       st.start=Start; st.done=Robot_Done;
 
-      /* ---- the arm on the other end of the two wires ---- */
+      /*  the arm on the other end of the two wires  */
       if(!req && prevReq) st.armReady=true;                  // it waits for the fall
       if(st.armPhase==='idle' && req && st.armReady){
         st.armPhase='moving'; st.armT=MOVE; st.armReady=false;
-        log('ARM','Request sampled at the top of a wafer — cycle begins.',true);
+        log('ARM','Request sampled at the top of a wafer. Cycle begins.',true);
       }else if(st.armPhase==='moving'){
         st.armT-=SCAN;
         if(st.armT<=0){
@@ -1301,7 +1297,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
         }
       }
 
-      /* ---- trace ---- */
+      /*  trace  */
       var v=[Start?1:0,Stop?1:0,req?1:0,Robot_Done?1:0,cyc?1:0];
       buf.forEach(function(a,i){ a.shift(); a.push(v[i]); });
       render();
@@ -1326,22 +1322,22 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
       document.getElementById('lampLight').classList.toggle('on',st.req);
       document.getElementById('hsRead').innerHTML=
         row('Start',st.start?'TRUE':'FALSE',st.start?'':'off')+
-        row('Stop (NC input)',st.stopPressed?'FALSE — pressed':'TRUE — at rest',st.stopPressed?'amb':'')+
+        row('Stop (NC input)',st.stopPressed?'FALSE, pressed':'TRUE, at rest',st.stopPressed?'amb':'')+
         row('Scara_in',st.req?'TRUE':'FALSE',st.req?'':'off')+
-        row('Robot_Done',st.done?'▮ pulse':'—',st.done?'amb':'off')+
-        row('cycle_done',st.cyc?'TRUE — latched':'FALSE',st.cyc?'amb':'off')+
+        row('Robot_Done',st.done?'PULSE':'off',st.done?'amb':'off')+
+        row('cycle_done',st.cyc?'TRUE, latched':'FALSE',st.cyc?'amb':'off')+
         row('wafers this press',st.pressWafers,'')+
         row('wafers total',st.wafers,'');
       var v=document.getElementById('hsVerdict');
       if(!st.termA && st.pressWafers>1){
         v.className='verdict no';
-        v.textContent='Runaway: with the reset term on Scara_in alone, cycle_done clears the moment the request drops, so a held button asks again — and again.';
+        v.textContent='Runaway: with the reset term on Scara_in alone, cycle_done clears the moment the request drops, so a held button asks again, and again, and again.';
       }else if(st.hold && st.pressWafers===1){
         v.className='verdict ok';
         v.textContent='One wafer, button still held. cycle_done stays latched while Start is high, so the request cannot re-assert.';
       }else if(st.stopPressed){
         v.className='verdict no';
-        v.textContent='Stop pressed — its input reads FALSE, so every rung is broken at the series contact. The arm already moving is not stopped by this; that is what the E-stop is for.';
+        v.textContent='Stop pressed. Its input reads FALSE, so every rung is broken at the series contact. The arm already moving is not stopped by this; that is what the E-stop is for.';
       }else{
         v.className='verdict';
         v.textContent='Press START for one wafer. Then try holding it, and try the other reset term.';
@@ -1364,13 +1360,13 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     bStop.addEventListener('click',function(){
       st.stopPressed=!st.stopPressed;
       bStop.classList.toggle('on',st.stopPressed); bStop.classList.toggle('amb',st.stopPressed);
-      log('PANEL',st.stopPressed?'STOP pressed — NC input goes FALSE.':'STOP released.');
+      log('PANEL',st.stopPressed?'STOP pressed. The NC input goes FALSE.':'STOP released.');
     });
     function setTerm(a){
       st.termA=a; st.pressWafers=0;
       bTermA.classList.toggle('on',a); bTermB.classList.toggle('on',!a);
       bTermB.classList.toggle('amb',!a);
-      log('EDIT','Rung 2 reset term set to '+(a?'(Start OR Scara_in) — as built.':'Scara_in alone — the bug.'));
+      log('EDIT','Rung 2 reset term set to '+(a?'(Start OR Scara_in), as built.':'Scara_in alone, the bug.'));
     }
     bTermA.addEventListener('click',function(){setTerm(true);});
     bTermB.addEventListener('click',function(){setTerm(false);});
@@ -1380,12 +1376,12 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     setInterval(tick,SCAN);
   })();
 
-  /* ======================================================================
-     Background — the cell itself, in wireframe: cassette, SCARA on the same
+  /* 
+     Background, the cell itself, in wireframe: cassette, SCARA on the same
      branch-A IK the widget above solves, conveyor with a travelling cradle,
      inspection camera, cobot, deposit platform, and a PLC whose trigger
      lines pulse when it actually asks for something.
-     ====================================================================== */
+      */
   var canvas=document.getElementById('cellscene');
   if(!canvas||typeof THREE==='undefined') return;
   var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
@@ -1404,7 +1400,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   rig.position.y=mobile?-0.8:-1.4;
   scene.add(rig);
 
-  /* ---------- bench ---------- */
+  /*  bench  */
   (function(){
     var g=new THREE.BufferGeometry(), v=[];
     for(var x=-15;x<=15;x+=1.5){ v.push(x,0,-7, x,0,7); }
@@ -1413,7 +1409,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
     rig.add(new THREE.LineSegments(g,lineMat(DEEPBLUE,0.16)));
   })();
 
-  /* ---------- geometry constants (world units) ---------- */
+  /*  geometry constants (world units)  */
   var SH={x:-10.5,y:3.6,z:0};             // SCARA shoulder
   var LA=3.3, LB=3.3;                      // link lengths
   var CAS={x:-7.2,z:3.0};                  // cassette
@@ -1422,7 +1418,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   var DEP={x:10.5,y:1.85,z:2.6};
   var SHELVES=6;
 
-  /* ---------- cassette ---------- */
+  /*  cassette  */
   var cassette=new THREE.Group();
   cassette.position.set(CAS.x,0,CAS.z);
   rig.add(cassette);
@@ -1438,7 +1434,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   });
   function shelfY(n){ return 1.35+Math.max(0,SHELVES-1-n)*0.30; }
 
-  /* ---------- SCARA ---------- */
+  /*  SCARA  */
   var scaraCol=box(1.5,3.6,1.5,DEEPBLUE,0.3);
   scaraCol.position.set(SH.x,1.8,SH.z); rig.add(scaraCol);
   var shoulder=new THREE.Group(); shoulder.position.set(SH.x,SH.y,SH.z); rig.add(shoulder);
@@ -1454,7 +1450,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   });
   fork.add(box(0.14,0.06,0.55,AMBER,0.6));
 
-  /* ---------- conveyor ---------- */
+  /*  conveyor  */
   var belt=new THREE.Group(); belt.position.set(0,BELT_Y,BELT_Z); rig.add(belt);
   belt.add(box(10,0.14,1.7,DEEPBLUE,0.34));
   (function(){
@@ -1476,14 +1472,14 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   var wafer=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.52,0.035,18,1,true),wire(CYAN,0.9));
   rig.add(wafer); wafer.visible=false;
 
-  /* ---------- inspection camera ---------- */
+  /*  inspection camera  */
   var camPost=new THREE.Group(); camPost.position.set(0,0,BELT_Z+1.4); rig.add(camPost);
   camPost.add((function(){var m=box(0.12,3.4,0.12,DEEPBLUE,0.3);m.position.y=1.7;return m;})());
   var camHead=box(0.5,0.4,0.7,AMBER,0.5); camHead.position.set(0,3.3,-0.55); camPost.add(camHead);
   var camCone=new THREE.Mesh(new THREE.ConeGeometry(0.75,1.7,10,1,true),wire(AMBER,0.0));
   camCone.position.set(0,2.4,-1.0); camCone.rotation.x=Math.PI; camPost.add(camCone);
 
-  /* ---------- cobot ---------- */
+  /*  cobot  */
   var cobBase=box(1.2,0.9,1.2,DEEPBLUE,0.32); cobBase.position.set(COB.x,0.45,COB.z); rig.add(cobBase);
   var cYaw=new THREE.Group(); cYaw.position.set(COB.x,COB.y,COB.z); rig.add(cYaw);
   var cPitch=new THREE.Group(); cYaw.add(cPitch);
@@ -1494,14 +1490,14 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   var cup=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,0.3,10,1,true),wire(AMBER,0.7));
   cup.position.y=-0.2; cTool.add(cup);
 
-  /* ---------- deposit platform ---------- */
+  /*  deposit platform  */
   var depot=new THREE.Group(); depot.position.set(DEP.x,0,DEP.z); rig.add(depot);
   depot.add((function(){var m=box(0.5,1.6,0.5,DEEPBLUE,0.3);m.position.y=0.8;return m;})());
   var depPlate=new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.85,0.1,16,1,true),wire(AMBER,0.45));
   depPlate.position.y=1.6; depot.add(depPlate);
   var depStack=[];
 
-  /* ---------- PLC and its trigger lines ---------- */
+  /*  PLC and its trigger lines  */
   var plc=new THREE.Group(); plc.position.set(0,4.8,-5.2); rig.add(plc);
   plc.add(box(2.4,1.3,0.7,DEEPBLUE,0.4));
   for(var i2=0;i2<5;i2++){
@@ -1518,7 +1514,7 @@ function limitsOk(s){ return Math.abs(s.j1)<=J1LIM && Math.abs(s.j2)<=J2LIM; }
   var trigCobot=trigLine([COB.x,COB.y+0.6,COB.z]);
   var flashS=0, flashC=0;
 
-  /* ---------- the cycle ---------- */
+  /*  the cycle  */
   var PH=[
     {n:'dwell',    d:0.7},
     {n:'toCass',   d:1.7},

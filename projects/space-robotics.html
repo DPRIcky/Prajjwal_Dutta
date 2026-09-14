@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Space Robotics & AI coursework — LQR stabilization of a cart-pole under earthquake disturbance, a PD-tuned boustrophedon coverage navigator, and a PX4 SITL drone mission with RGB-D mapping and precision landing. ASU RAS/SES 598. By Prajjwal Dutta.">
-<title>LQR Stabilization &amp; Space Robotics — Prajjwal Dutta</title>
+<meta name="description" content="How I tuned an LQR controller to keep a cart-pole upright through a simulated earthquake in ASU RAS/SES 598, plus the coverage planning and PX4 landing challenge from the same course.">
+<title>LQR Stabilization &amp; Space Robotics · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,7 +127,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -135,19 +135,19 @@
     <div class="eyebrow reveal"><span>Optimal Control · Spring 2025</span><span>ASU · RAS/SES 598 Space Robotics &amp; AI</span></div>
     <h1 class="reveal">Balancing a Pendulum Through a Simulated Earthquake</h1>
     <p class="sub reveal">
-      An underactuated cart-pole — one actuator, four states, and a continuous earthquake force
-      generator trying to knock it over. The task was to design and tune a
-      <strong>Linear Quadratic Regulator</strong> that keeps the pole upright <em>and</em> the
-      cart inside a ±2.5 m rail, then prove it with logged metrics rather than a video that
-      looks stable. Tuning Q and R turned a controller that flung the cart 3 m and saturated at
-      ~300 N into one holding <strong>0.09 rad</strong> of pole deviation and
-      <strong>7.8 cm</strong> RMS cart error at a <strong>70 N</strong> peak.
+      A cart-pole has four states, one motor, and in this assignment an earthquake generator
+      that never stops trying to knock it over. My job was to design and tune a <strong>Linear
+      Quadratic Regulator</strong> that keeps the pole standing <em>and</em> keeps the cart on a
+      ±2.5 m rail, and then back it up with logged numbers instead of a video that just looks
+      steady. When I started, the controller threw the cart 3 m and hammered away at around
+      300 N. After tuning Q and R it held the pole within <strong>0.09 rad</strong> and the cart
+      within <strong>7.8 cm</strong> RMS, never pushing harder than <strong>70 N</strong>.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/RAS-SES-598-Space-Robotics-and-AI" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       </a>
-      <a class="btn" href="https://drive.google.com/file/d/1rPaYaQFi7gwk5XYfn2aMJvr7oC3SJ-R5/view?usp=sharing" target="_blank" rel="noopener">Demo video ↗</a>
+      <a class="btn" href="https://drive.google.com/file/d/1rPaYaQFi7gwk5XYfn2aMJvr7oC3SJ-R5/view?usp=sharing" target="_blank" rel="noopener">Demo video</a>
     </div>
     <div class="metrics reveal">
       <div class="metric"><b>0.0900 rad</b><span>max pole deviation · 5.2°</span></div>
@@ -161,80 +161,79 @@
     <a href="../assets/ses598/cartpole-rviz.jpg" target="_blank" rel="noopener">
       <img src="../assets/ses598/cartpole-rviz.jpg" alt="RViz view of the cart-pole system: a red cart on a blue rail with the pole held vertical, plus the disturbance force arrow.">
     </a>
-    <figcaption><span class="n">FIG 01</span>The stabilized system in RViz — pole vertical, cart near rail center, with the earthquake force arrow (magenta) actively pushing against it.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The balanced system in RViz. The pole is upright and the cart sits near the middle of the rail while the magenta earthquake arrow keeps shoving it.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Plant</div>
-    <h2 class="reveal">Four states, one actuator, and a ground that won't hold still.</h2>
+    <h2 class="reveal">Four states, one motor, and the ground won't keep still.</h2>
     <p class="reveal">
-      The cart-pole is the canonical underactuated system: the state is
-      <strong>[x, ẋ, θ, θ̇]</strong> — cart position and velocity, pole angle and angular rate —
-      but the only input is a horizontal force on the cart. There is no torque at the pole
-      joint. Every correction to the pole has to be bought by moving the cart, and the cart has
-      only <strong>±2.5 m</strong> of rail to spend. That coupling is the entire difficulty:
-      aggressively fixing the angle drives the cart into its limit, and protecting the cart
-      lets the pole fall.
+      The cart-pole is the classic underactuated system. Its state is <strong>[x, ẋ, θ,
+      θ̇]</strong>, the cart's position and speed plus the pole's angle and how fast it's
+      swinging, but the only thing you can push on is the cart, sideways. Nothing turns the pole
+      directly. Every fix to the pole has to be paid for by moving the cart, and the cart only has
+      <strong>±2.5 m</strong> of rail to spend. That's the whole challenge. Chase the angle too hard
+      and the cart runs off the end, but protect the cart too much and the pole falls over.
     </p>
     <p class="reveal">
-      What makes it more than a textbook exercise is the disturbance. An earthquake generator
-      injects continuous force built from a <strong>superposition of sine waves</strong> —
-      15 N base amplitude across <strong>0.5–4.0 Hz</strong>, with randomized amplitude and
-      phase plus Gaussian noise on top. It's broadband, persistent, and never repeats, so the
-      controller can't settle into any steady state; it's always rejecting.
+      The disturbance is what takes it past a textbook exercise. The earthquake generator pushes
+      constantly with a force made of <strong>many sine waves added together</strong>, 15 N at base
+      amplitude spread across <strong>0.5 to 4.0 Hz</strong>, with random amplitudes and phases and
+      Gaussian noise on top. It covers a wide band, never lets up and never repeats, so the
+      controller never gets to settle down. It's fighting back the entire time.
     </p>
     <div class="law reveal">
       A = [[0,1,0,0], [0,0, <span class="a">mg/M</span>, 0], [0,0,0,1], [0,0, <span class="a">(M+m)g/(ML)</span>, 0]]<br>
-      B = [0, <span class="a">1/M</span>, 0, <span class="a">−1/(ML)</span>]ᵀ &nbsp;<span class="c">// M = m = 1.0 kg, L = 1.0 m</span><br>
-      K = solve_continuous_are(A, B, Q, R) → <span class="a">u = −Kx</span> <span class="c">// control loop at 100 Hz</span>
+      B = [0, <span class="a">1/M</span>, 0, <span class="a">−1/(ML)</span>]ᵀ &nbsp;<span class="c">M = m = 1.0 kg, L = 1.0 m</span><br>
+      K = solve_continuous_are(A, B, Q, R), then <span class="a">u = −Kx</span> <span class="c">control loop at 100 Hz</span>
     </div>
     <p class="reveal">
-      The controller linearizes about the upright equilibrium, solves the continuous algebraic
-      Riccati equation for the optimal gain, and applies <strong>u = −Kx</strong>. Which means
-      the real design work isn't writing the controller at all — it's choosing what
-      <em>optimal</em> means, and that lives entirely in Q and R.
+      The controller linearizes around the upright position, solves the continuous algebraic
+      Riccati equation for the best gain, and applies <strong>u = −Kx</strong>. So the real design
+      work isn't in writing the controller at all. It's in deciding what <em>best</em> should mean,
+      and that's all in Q and R.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Tuning</div>
-    <h2 class="reveal">Q and R are where the engineering judgment goes.</h2>
+    <h2 class="reveal">Q and R are where the judgment calls live.</h2>
     <p class="reveal">
-      LQR minimizes ∫(xᵀQx + uᵀRu) dt — Q prices deviation in each state, R prices control
-      effort. The starting weights treated cart position as barely worth anything
-      (<code>Q[0,0] = 1.0</code>) and only mildly penalized pole angle
-      (<code>Q[2,2] = 10.0</code>), with cheap control (<code>R = 0.1</code>). The result was
-      exactly what those prices ask for: a controller that happily slides the cart 3 m and
-      slams in ~300 N of force to chase the angle, because neither was expensive.
+      LQR minimizes ∫(xᵀQx + uᵀRu) dt. Q sets the price of drifting in each state and R sets the
+      price of pushing. The starting weights treated cart position as nearly free
+      (<code>Q[0,0] = 1.0</code>), cared only a little about the pole angle
+      (<code>Q[2,2] = 10.0</code>), and made force cheap (<code>R = 0.1</code>). The controller did
+      exactly what those prices told it to. It happily slid the cart 3 m and threw around 300 N
+      at the angle, because nothing made either of those expensive.
     </p>
     <table class="reveal">
       <thead><tr><th>Weight</th><th>Before</th><th>After</th><th>Intent</th></tr></thead>
       <tbody>
-        <tr class="hl"><td>Q[0,0] — cart position</td><td>1.0</td><td>50.0</td><td>make displacement expensive → stay on the rail</td></tr>
-        <tr><td>Q[1,1] — cart velocity</td><td>1.0</td><td>5.0</td><td>smooth the cart, kill erratic darting</td></tr>
-        <tr class="hl"><td>Q[2,2] — pole angle</td><td>10.0</td><td>100.0</td><td>correct tilt harder — the primary objective</td></tr>
-        <tr><td>Q[3,3] — pole rate</td><td>10.0</td><td>20.0</td><td>damp fast oscillation before it builds</td></tr>
-        <tr><td>R — control effort</td><td>0.1</td><td>0.1</td><td>held: force headroom needed for 4 Hz disturbance</td></tr>
+        <tr class="hl"><td>Q[0,0], cart position</td><td>1.0</td><td>50.0</td><td>make drifting expensive so the cart stays on the rail</td></tr>
+        <tr><td>Q[1,1], cart velocity</td><td>1.0</td><td>5.0</td><td>smooth the cart out and stop it darting around</td></tr>
+        <tr class="hl"><td>Q[2,2], pole angle</td><td>10.0</td><td>100.0</td><td>correct tilt harder, since that is the main goal</td></tr>
+        <tr><td>Q[3,3], pole rate</td><td>10.0</td><td>20.0</td><td>calm fast swinging before it builds up</td></tr>
+        <tr><td>R, control effort</td><td>0.1</td><td>0.1</td><td>left alone, because a 4 Hz disturbance needs force in reserve</td></tr>
       </tbody>
     </table>
     <p class="reveal">
-      The key move is the <strong>50× increase on cart position</strong> alongside the
-      <strong>10× on pole angle</strong>. Raising only the angle weight makes the pole better
-      and the displacement worse; raising both in proportion is what buys stability in one
-      without sacrificing the other. Q[3,3] doing damping duty is the quiet one — penalizing
-      angular <em>rate</em> stops oscillations while they're small, which costs far less force
-      than correcting them once they're large.
+      What made the difference was raising <strong>cart position 50×</strong> at the same time as
+      <strong>pole angle 10×</strong>. If I only raise the angle weight, the pole gets better and
+      the cart wanders further. Raising both together is what keeps one steady without giving up
+      the other. Q[3,3] is the quiet helper. Penalizing how <em>fast</em> the pole swings stops the
+      wobble while it's still small, and that takes far less force than fixing it once it's big.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Results</div>
-    <h2 class="reveal">Logged, not eyeballed.</h2>
+    <h2 class="reveal">I logged the results instead of eyeballing them.</h2>
     <p class="reveal">
-      A dedicated <code>performance_metrics</code> node logs the numbers that matter while the
-      earthquake runs — peak pole deviation, RMS cart error, peak force, control effort
-      efficiency, recovery time, and the achieved control rate. Two runs from that node tell
-      the tuning story better than any plot: an intermediate configuration, and the final one.
+      A separate <code>performance_metrics</code> node records the numbers that matter while the
+      earthquake is running: the worst pole tilt, RMS cart error, peak force, how efficiently the
+      force is used, recovery time and the control rate it actually achieved. Two runs from that
+      node tell the tuning story better than any plot could, one from partway through and one
+      from the final setup.
     </p>
     <table class="reveal">
       <thead><tr><th>Logged metric</th><th>Intermediate run</th><th>Final tuning</th></tr></thead>
@@ -248,11 +247,11 @@
       </tbody>
     </table>
     <p class="reveal">
-      Against the untuned baseline the improvement is larger still: peak force fell from around
-      <strong>300 N to 70.12 N</strong>, and maximum cart excursion from roughly
-      <strong>3.1 m</strong> — outside the physical rail — to about <strong>1.1 m</strong>,
-      comfortably inside it. The honest caveat is the last row: the final configuration logs a
-      lower control rate, so there's a real trade between how hard the gains work and how fast
+      Compared with the untuned starting point the gap is even bigger. Peak force dropped from
+      around <strong>300 N to 70.12 N</strong>, and the cart's furthest trip went from about
+      <strong>3.1 m</strong>, which is off the end of the real rail, to about <strong>1.1 m</strong>,
+      well inside it. I should point out the last row, though. The final setup logs a lower
+      control rate, so there's a genuine trade between how hard the gains work and how quickly
       the loop closes.
     </p>
     <div class="fig-grid">
@@ -260,70 +259,70 @@
         <a href="../assets/ses598/metrics-final.jpg" target="_blank" rel="noopener">
           <img src="../assets/ses598/metrics-final.jpg" alt="Terminal log of the final performance metrics: max pole angle 0.0900 rad, RMS cart error 0.0779 m, peak force 70.12 N, efficiency 71.95%.">
         </a>
-        <figcaption><span class="n">FIG 02</span>Final metrics, logged live — repeated identically across successive reports, i.e. steady under continuing disturbance.</figcaption>
+        <figcaption><span class="n">FIG 02</span>The final metrics, logged live. They repeat exactly across reports, which means the system stays steady while the shaking continues.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/ses598/metrics-intermediate.jpg" target="_blank" rel="noopener">
           <img src="../assets/ses598/metrics-intermediate.jpg" alt="Split terminal showing the earthquake generator firing on the left and the LQR controller's per-step state and control force on the right.">
         </a>
-        <figcaption><span class="n">FIG 03</span>The loop under load — "Earthquake detected!" events on the left, per-step state and control force on the right.</figcaption>
+        <figcaption><span class="n">FIG 03</span>The loop under load, with "Earthquake detected!" events on the left and the state and control force for each step on the right.</figcaption>
       </figure>
     </div>
-    <p class="tnote reveal">Metrics as logged by the performance_metrics node in the repository; before-tuning figures as reported in the assignment README.</p>
+    <p class="tnote reveal">Metrics are as logged by the performance_metrics node in the repository. The before-tuning figures are from the assignment README.</p>
   </section>
 
   <section>
     <div class="sec-label reveal">Also In This Course</div>
     <h2 class="reveal">Coverage planning on a first-order system.</h2>
     <p class="reveal">
-      <strong>Boustrophedon coverage navigator.</strong> A first-order system (turtlesim) driven
-      through a lawnmower survey pattern by a PD controller, where the score is
-      <strong>cross-track error</strong> — how far the robot drifts off the prescribed path.
-      Tuning splits into two independent loops: linear gains govern how hard it drives down each
-      pass, angular gains govern how cleanly it turns at the ends of rows. Final gains were
-      <strong>Kp_linear = 10.0, Kd_linear = 0.1, Kp_angular = 5.0, Kd_angular = 0.2</strong> at
-      1.0 unit line spacing — an aggressive proportional term for tracking with light derivative
-      damping to keep cornering from overshooting. Reported average cross-track error under the
-      0.2-unit target.
+      <strong>Boustrophedon coverage navigator.</strong> Here a first-order system, turtlesim, is
+      driven back and forth in a lawnmower survey pattern by a PD controller, and it's graded on
+      <strong>cross-track error</strong>, meaning how far the robot drifts off the set path. The
+      tuning splits into two separate loops. The linear gains decide how hard it drives down each
+      row, and the angular gains decide how cleanly it turns at the ends. The final gains were
+      <strong>Kp_linear = 10.0, Kd_linear = 0.1, Kp_angular = 5.0, Kd_angular = 0.2</strong> with
+      rows 1.0 unit apart, a strong proportional term for tracking and a little derivative damping
+      so the corners don't overshoot. The reported average cross-track error came in under the
+      0.2 unit target.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Rocky Times Challenge</div>
-    <h2 class="reveal">Find two rocks, measure them, land on the tall one.</h2>
+    <h2 class="reveal">Find two rocks, measure them, and land on the tall one.</h2>
     <p class="reveal">
-      The course capstone flew a <strong>PX4 SITL</strong> quadrotor with a downward camera and
-      RGB-D sensing into an unknown scene holding two cylindrical rock formations —
-      <strong>10 m and 7 m</strong> tall. The mission: search the area, locate both, estimate
-      their diameters and world-frame positions, and land on top of the taller one, all while
-      logging time and energy.
+      The course finished with a <strong>PX4 SITL</strong> quadrotor, a downward camera and RGB-D
+      sensing, flown into an unknown scene with two cylindrical rock formations, one
+      <strong>10 m</strong> tall and one <strong>7 m</strong>. The mission was to search the area,
+      find both rocks, estimate how wide they are and where they sit in the world, and land on top
+      of the taller one, all while logging time and energy.
     </p>
     <p class="reveal">
-      The search strategy is the first real decision, and it's a coverage-versus-information
-      trade. A <strong>spiral</strong> is efficient when the target is likely central;
-      <strong>random</strong> walks suit total uncertainty; <strong>frontier-based</strong>
-      exploration is optimal when a SLAM map is being built live; a <strong>grid + TSP</strong>
-      hybrid wins in cluttered semi-known space. For a bounded arena with two guaranteed targets
-      the answer is the boring one — a <strong>lawnmower sweep</strong> with line spacing set
-      from the camera's field of view gives provable complete coverage, and its straight-line
-      legs keep the airframe stable enough to hand off to a precision descent. Same
-      boustrophedon idea as the turtlesim assignment, now in three dimensions with a real
-      vehicle under it.
+      Picking a search pattern is the first real decision, and it's a trade between covering
+      ground and learning fast. A <strong>spiral</strong> works well when the target is probably
+      near the middle. A <strong>random</strong> walk suits a situation where you know nothing.
+      <strong>Frontier-based</strong> exploration is best when a SLAM map is being built as you go,
+      and a <strong>grid with a TSP</strong> route does well in cluttered spaces you partly know.
+      For a closed arena with two targets guaranteed to be there, the boring answer wins. A
+      <strong>lawnmower sweep</strong> with rows spaced by the camera's field of view is sure to
+      cover everything, and its straight legs keep the aircraft steady enough to go straight into
+      a careful descent. It's the same back and forth idea as the turtlesim assignment, now in
+      three dimensions with a vehicle underneath it.
     </p>
     <div class="law reveal">
-      TAKEOFF <span class="c">→</span> SURVEY <span class="c">(lawnmower, abort on detection)</span> <span class="c">→</span> <span class="a">GOTO_ARUCO</span> <span class="c">→</span> HOVER <span class="c">→</span> DESCEND <span class="c">→</span> LAND<br>
-      <span class="c">marker pose:</span> OpenCV ArUco <span class="c">→</span> <span class="a">solvePnP</span>(intrinsics) <span class="c">+ PX4 odometry → world position</span><br>
+      TAKEOFF <span class="c">then</span> SURVEY <span class="c">(lawnmower, stop on detection)</span> <span class="c">then</span> <span class="a">GOTO_ARUCO</span> <span class="c">then</span> HOVER <span class="c">then</span> DESCEND <span class="c">then</span> LAND<br>
+      <span class="c">marker pose:</span> OpenCV ArUco <span class="c">into</span> <span class="a">solvePnP</span>(intrinsics) <span class="c">plus PX4 odometry gives the world position</span><br>
       <span class="c">control:</span> /fmu/in/offboard_control_mode · /fmu/in/trajectory_setpoint · /fmu/in/vehicle_command
     </div>
     <p class="reveal">
-      Detection runs on the downward mono stream against published camera intrinsics; when a
-      marker appears mid-survey the remaining sweep is <strong>abandoned immediately</strong>,
-      the marker's global position is inferred from <code>solvePnP</code>'s translation vector
-      composed with onboard odometry, and the vehicle walks in on position setpoints before
-      hovering to stabilize and descending. Mission parameters: <strong>0.8 m</strong> marker,
-      <strong>15 m</strong> takeoff altitude, <strong>2.0 m</strong> survey step,
-      <strong>0.2 m</strong> final descent height. RTAB-Map covered the 3D reconstruction
-      extension, exporting both rocks as a mesh.
+      Detection runs on the downward camera using its published intrinsics. The moment a marker
+      shows up during the survey, the rest of the sweep is <strong>dropped on the spot</strong>. The
+      marker's position in the world comes from combining <code>solvePnP</code>'s translation vector
+      with the onboard odometry, and the vehicle moves in on position setpoints, hovers to settle,
+      and then descends. The mission used a <strong>0.8 m</strong> marker, a <strong>15 m</strong>
+      takeoff altitude, a <strong>2.0 m</strong> survey step and a <strong>0.2 m</strong> final
+      descent height. RTAB-Map handled the 3D reconstruction extension and exported both rocks as
+      a mesh.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
@@ -332,7 +331,7 @@
           aria-label="Trial 1: the drone completes a lawnmower survey, detects the ArUco marker, hovers and descends.">
           <source src="../media/ses598-landing-trial1.mp4" type="video/mp4">
         </video>
-        <figcaption><span class="n">VID 01</span>Trial 1 — survey complete, marker detected mid-sweep, controlled descent.</figcaption>
+        <figcaption><span class="n">VID 01</span>Trial 1. The survey runs, the marker is spotted partway through a sweep, and the drone comes down under control.</figcaption>
       </figure>
       <figure class="reveal">
         <video autoplay muted loop playsinline preload="none"
@@ -340,7 +339,7 @@
           aria-label="Trial 2: the drone hovers over the detected marker and executes its landing sequence.">
           <source src="../media/ses598-landing-trial2.mp4" type="video/mp4">
         </video>
-        <figcaption><span class="n">VID 02</span>Trial 2 — hover held over the target before descent is triggered.</figcaption>
+        <figcaption><span class="n">VID 02</span>Trial 2. The drone holds a hover over the target before the descent begins.</figcaption>
       </figure>
     </div>
     <figure class="reveal">
@@ -349,34 +348,33 @@
         aria-label="Trial 3: full mission from lawnmower pattern through aerial marker detection to touchdown.">
         <source src="../media/ses598-landing-trial3.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 03</span>Trial 3 — the full pipeline end to end. Demo footage recorded by classmate <a href="https://github.com/anushka002/RAS-SES-598-Space-Robotics-and-AI" target="_blank" rel="noopener">Anushka Satapathy</a>, from the same class assignment.</figcaption>
+      <figcaption><span class="n">VID 03</span>Trial 3, the whole pipeline from start to finish. Demo footage recorded by classmate <a href="https://github.com/anushka002/RAS-SES-598-Space-Robotics-and-AI" target="_blank" rel="noopener">Anushka Satapathy</a>, from the same class assignment.</figcaption>
     </figure>
     <p class="reveal">
-      The instructive part is the failure. Across trials the pipeline ran clean — coverage,
-      detection, hover, descent — but touchdown landed <strong>consistently beside the marker
-      rather than on it</strong>, and consistency is the tell. A random scatter would suggest
-      noise; a repeatable offset in the same direction points at a systematic error: frame
-      misalignment between camera and body, the <code>tvec</code> from
-      <code>solvePnP</code> mapped into the world frame with a wrong transform, or depth
-      estimates drifting during descent as the marker fills the frame. Fixing that is a
-      calibration and TF problem, not a control-gain problem — which is exactly the kind of
-      diagnosis worth being able to make.
+      The most useful part is where it went wrong. In every trial the coverage, detection, hover
+      and descent all worked, but the drone <strong>always touched down next to the marker instead
+      of on it</strong>, and that "always" is the clue. Random scatter would point to noise. An
+      offset that repeats in the same direction points to something systematic: the camera and
+      body frames not lining up, the <code>tvec</code> from <code>solvePnP</code> going through the
+      wrong transform into the world frame, or the depth estimate drifting as the marker fills
+      the view on the way down. That's a calibration and TF problem, not a gain tuning problem,
+      and being able to tell those apart is a skill worth having.
     </p>
-    <p class="tnote reveal">The cart-pole assignment above is documented with my own logged results in this repository. This challenge was a common class assignment; the trial footage shown is credited to my classmate above.</p>
+    <p class="tnote reveal">The cart-pole assignment above is documented with my own logged results in this repository. This challenge was an assignment everyone in the class did, and the trial footage shown here belongs to my classmate, credited above.</p>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Optimal control is a pricing problem.</strong> The LQR machinery is four lines of
-      scipy; everything that determined whether this thing stayed on the rail was the relative
-      cost assigned to displacement, tilt, and effort. Getting Q wrong doesn't produce a broken
-      controller — it produces a controller that optimally does the wrong thing.
-      <strong>Underactuated means every fix costs something elsewhere:</strong> there is no gain
-      that improves pole angle for free, only a trade you choose deliberately.
-      <strong>And instrument before you tune</strong> — the metrics node is what turned "looks
-      stable" into 0.0900 rad and 70.12 N, which is the difference between a claim and a result.
+      Optimal control is really about setting prices. The LQR itself is four lines of scipy.
+      Whether the cart stayed on the rail came down entirely to how much I charged for drifting,
+      tilting and pushing. Get Q wrong and you don't get a broken controller, you get one that
+      does the wrong thing perfectly. With an underactuated system, every fix costs something
+      somewhere else. No gain makes the pole better for free, there are only trades you pick on
+      purpose. And measure before you tune. The metrics node is what turned "it looks stable"
+      into 0.0900 rad and 70.12 N, and that's the difference between saying something works and
+      showing it.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">LQR</span><span class="tag">Optimal Control</span><span class="tag">Riccati / CARE</span>
@@ -388,8 +386,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -419,7 +417,7 @@
   const grid=new THREE.GridHelper(34,34,0x1c3a66,0x11223f);
   grid.material.transparent=true; grid.material.opacity=0.24; scene.add(grid);
 
-  /* ---- the two rock formations: the 10 m and 7 m cylinders of the challenge ---- */
+  /*  the two rock formations: the 10 m and 7 m cylinders of the challenge  */
   const TALL={x:2.6,z:-1.2,r:0.95,h:3.6}, SHORT={x:-3.8,z:2.2,r:0.85,h:2.5};
   [TALL,SHORT].forEach(c=>{
     const m=new THREE.Mesh(new THREE.CylinderGeometry(c.r,c.r,c.h,16,3,true),wire(DEEPBLUE,0.45));
@@ -430,7 +428,7 @@
     scene.add(cap);
   });
 
-  /* ---- the ArUco marker on top of the tall cylinder ---- */
+  /*  the ArUco marker on top of the tall cylinder  */
   const marker=new THREE.Group();
   marker.position.set(TALL.x,TALL.h+0.02,TALL.z);
   marker.rotation.x=-Math.PI/2;
@@ -451,7 +449,7 @@
     new THREE.Vector3(MS/2,MS/2,0.003),new THREE.Vector3(-MS/2,MS/2,0.003)]),lineMat(AMBER,0.5));
   marker.add(mRing);
 
-  /* ---- the survey: a boustrophedon sweep at altitude ---- */
+  /*  the survey: a boustrophedon sweep at altitude  */
   const ALT=4.8, X0=-6.5, X1=6.5, Z0=-5.0, ZSTEP=2.5, ROWS=5;
   const SURVEY=[];
   for(let r=0;r<ROWS;r++){
@@ -469,7 +467,7 @@
   const planMat=lineMat(CYAN,0.22);
   scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(planPts),planMat));
 
-  /* ---- the quadrotor ---- */
+  /*  the quadrotor  */
   const drone=new THREE.Group(); scene.add(drone);
   const hull=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.12,0.34),wire(AMBER,0.9));
   drone.add(hull);
@@ -486,12 +484,12 @@
       [new THREE.Vector3(-0.19,0,0),new THREE.Vector3(0.19,0,0)]),lineMat(CYAN,0.5));
     blade.position.set(ax,0.045,az); drone.add(blade); rotors.push(blade);
   });
-  /* downward camera cone — the sensor that finds the marker */
+  /* downward camera cone, the sensor that finds the marker */
   const coneMat=wire(CYAN,0.14);
   const cone=new THREE.Mesh(new THREE.ConeGeometry(0.85,1.9,4,1,true),coneMat);
   cone.rotation.x=Math.PI; cone.position.y=-0.95; drone.add(cone);
 
-  /* ---- flown trail ---- */
+  /*  flown trail  */
   const TN=mobile?110:220;
   const trailPos=new Float32Array(TN*3);
   const trailGeo=new THREE.BufferGeometry();
@@ -500,7 +498,7 @@
   trail.frustumCulled=false; scene.add(trail);
   let trailN=0;
 
-  /* ---- mission state machine: TAKEOFF → SURVEY → GOTO → HOVER → DESCEND → LAND ---- */
+  /*  mission state machine: TAKEOFF to SURVEY to GOTO to HOVER to DESCEND to LAND  */
   const HOME=new THREE.Vector3(X0-1.5,0.12,Z0-1.5);
   const pos=new THREE.Vector3().copy(HOME);
   const tgt=new THREE.Vector3();

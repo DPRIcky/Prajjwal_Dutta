@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="AeroFusion — autonomous blimp with YOLOv5 vision autonomy, Kalman sensor fusion, and PI control on a custom airframe. RAS 598 project by Prajjwal Dutta, continued in ASU's AMASS Lab.">
-<title>Autonomous Blimp — AeroFusion — Prajjwal Dutta</title>
+<meta name="description" content="AeroFusion, the autonomous blimp we built in RAS 598: YOLOv5 vision, Kalman sensor fusion and PI control on a custom airframe, later carried on as the AMASS Lab competition platform.">
+<title>AeroFusion Autonomous Blimp · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,7 +127,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -135,12 +135,12 @@
     <div class="eyebrow reveal"><span>RAS 598 · Robotic Systems Deployment · Spring 2025</span><span>with Nihar Masurkar &amp; Tatwik Meesala</span></div>
     <h1 class="reveal">AeroFusion: An Autonomous Blimp, from Custom Airframe to Vision Autonomy</h1>
     <p class="sub reveal">
-      A lighter-than-air UAV that finds, tracks, and approaches balloon targets on its own:
-      a YOLOv5 detector feeding quadrant-based PI control, a Kalman filter fusing 200 Hz IMU
-      and barometric altitude, and thrust allocation through a pseudo-inverse motor map —
-      all running onboard a Raspberry Pi. Built as a three-person course team, then carried
-      forward as the AMASS Lab's Defend-the-Republic competition platform, where I lead the
-      software stack.
+      Nihar, Tatwik and I set out to build a blimp that could find a balloon, follow it and fly
+      up to it with nobody at the controls. A YOLOv5 detector feeds PI control based on which
+      quadrant of the image the balloon is in, a Kalman filter fuses a 200 Hz IMU with barometric
+      altitude, and a pseudo-inverse motor map splits the thrust between motors, all running on
+      a Raspberry Pi on board. It started as our three-person course project. It then became the
+      AMASS Lab's Defend-the-Republic competition platform, where I now lead the software.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/orgs/RAS598-2025-S-Team03/repositories" target="_blank" rel="noopener" aria-label="GitHub repositories" title="GitHub Repos">
@@ -149,10 +149,10 @@
       <a class="icon-link" href="https://github.com/BlimpsCompetitionAMASSLab/Blimp-Competition-AMASS-Lab-ASU/blob/main/Blimp_Project_Weekly_Report.pdf" target="_blank" rel="noopener" aria-label="Platform handoff report PDF" title="Platform Report (PDF)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
       </a>
-      <a class="btn alt" href="https://ras598-2025-s-team03.github.io/" target="_blank" rel="noopener">Team Site ↗</a>
+      <a class="btn alt" href="https://ras598-2025-s-team03.github.io/" target="_blank" rel="noopener">Team site</a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>~96%</b><span>mAP@0.5 · YOLOv5s</span></div>
+      <div class="metric"><b>96%</b><span>mAP@0.5 · YOLOv5s</span></div>
       <div class="metric"><b>50 Hz</b><span>onboard control loop</span></div>
       <div class="metric"><b>200 Hz</b><span>IMU fusion rate</span></div>
       <div class="metric"><b>12-state</b><span>Kalman estimator</span></div>
@@ -163,80 +163,81 @@
     <a href="../assets/blimp/gondola_cad.jpg" target="_blank" rel="noopener">
       <img src="../assets/blimp/gondola_cad.jpg" alt="CAD render of the blimp gondola suspended under the envelope: electronics board, servo and gear drive, and two carbon-fiber motor booms with propellers.">
     </a>
-    <figcaption><span class="n">FIG 01</span>Gondola CAD — compute, sensing, and gear-driven actuation packed under the envelope, with motor booms carrying the side thrusters.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The gondola in CAD. Compute, sensors and the gear-driven actuation all squeeze in under the envelope, and the booms carry the side thrusters.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Mission</div>
-    <h2 class="reveal">Fly slower than a drone. Think harder than a balloon.</h2>
+    <h2 class="reveal">It flies slower than a drone and has to think harder than a balloon.</h2>
     <p class="reveal">
-      The team's research question: <strong>how effectively can sensor data fusion enhance
-      control and tracking of hybrid robotic blimps in dynamic environments?</strong> A blimp
-      is a maddening control plant — buoyancy-dominated, underactuated, pushed around by air
-      currents a quadcopter would never notice, with actuators that whisper rather than shout.
-      The mission profile, drawn from the Defend-the-Republic competition format: autonomously
-      detect a balloon target, steer toward it, and capture it — with every sensor and every
-      inference cycle running onboard.
+      The question our team asked was <strong>how much sensor fusion can improve control and
+      tracking for a hybrid robotic blimp when the air around it keeps moving</strong>. A blimp is
+      a frustrating thing to control. Buoyancy dominates, it's underactuated, drafts a
+      quadcopter would never notice push it around, and its motors barely have any authority. We
+      borrowed the mission from the Defend-the-Republic competition: spot a balloon on its own,
+      steer toward it and capture it, with every sensor reading and every inference happening on
+      board.
     </p>
     <p class="reveal">
-      That constraint shaped everything. No motion-capture crutch, no offboard GPU: a
-      Raspberry Pi, a camera, an IMU, and a barometer had to carry detection, state
-      estimation, and control simultaneously — in real time.
+      That one rule shaped every decision. There was no motion capture to lean on and no GPU on
+      the ground. A Raspberry Pi, a camera, an IMU and a barometer had to handle detection, state
+      estimation and control all at once, in real time.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Platform</div>
-    <h2 class="reveal">Every gram argued for its seat.</h2>
+    <h2 class="reveal">Every gram had to earn its place.</h2>
     <p class="reveal">
-      The airframe is a custom SolidWorks design: an ellipsoidal helium envelope with a
-      3D-printed, foam-and-balsa gondola slung at the center of gravity. Onboard: a
-      <strong>Raspberry Pi 4B (8 GB)</strong> with a custom power-distribution PCB, a
-      <strong>BNO085 IMU at 200 Hz</strong>, a <strong>BMP390 barometer at 50 Hz</strong> for
-      altitude, and a <strong>Pi Camera v2</strong> streaming 640×480 at 30 fps. Thrust comes
-      from a differential pair of side motors plus vertical thrust for heave, driven through
-      ESCs at 50 Hz PWM — all fed by a single 7.4 V, 900 mAh LiPo.
+      We designed the airframe ourselves in SolidWorks: an ellipsoid helium envelope with a
+      3D-printed gondola of foam and balsa hanging at the center of gravity. On board there's a
+      <strong>Raspberry Pi 4B (8 GB)</strong> on a custom power distribution PCB, a <strong>BNO085
+      IMU at 200 Hz</strong>, a <strong>BMP390 barometer at 50 Hz</strong> for altitude, and a
+      <strong>Pi Camera v2</strong> streaming 640×480 at 30 fps. Two side motors push against
+      each other to turn, a vertical thruster handles up and down, and the ESCs run on 50 Hz PWM.
+      The whole thing lives off one 7.4 V, 900 mAh LiPo.
     </p>
     <figure class="reveal">
       <a href="../assets/blimp/envelope_cad.jpg" target="_blank" rel="noopener">
         <img src="../assets/blimp/envelope_cad.jpg" alt="SolidWorks CAD model of the ellipsoidal blimp envelope with the gondola assembly mounted underneath.">
       </a>
-      <figcaption><span class="n">FIG 02</span>SolidWorks envelope model — the ellipsoid geometry also feeds the dynamics model: volume, inertia, and added-mass terms are computed from this CAD.</figcaption>
+      <figcaption><span class="n">FIG 02</span>The envelope in SolidWorks. This geometry also feeds the dynamics model, since the volume, inertia and added mass terms all come from this CAD.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Architecture</div>
-    <h2 class="reveal">Sense. Fuse. Decide. Actuate — at 50 Hz.</h2>
+    <h2 class="reveal">Sensing, fusing, deciding and moving, fifty times a second.</h2>
     <div class="law reveal">
-      e<sub>u</sub> = u<sub>c</sub> − 320 &nbsp;<span class="c">// pixel yaw error: detection centroid vs frame center</span><br>
-      ψ<sub>cmd</sub> = <span class="a">K<sub>p,ψ</sub></span>·e<sub>u</sub> + <span class="a">K<sub>i,ψ</sub></span>·∫e<sub>u</sub> dt &nbsp;<span class="c">// vision-based yaw PI</span><br>
-      f<sub>z</sub> = <span class="a">K<sub>p,z</sub></span>·e<sub>z</sub> + <span class="a">K<sub>i,z</sub></span>·∫e<sub>z</sub> dt &nbsp;<span class="c">// barometric altitude PI</span><br>
-      u = T<sup>†</sup>( F<sub>desired</sub> − F<sub>buoyancy</sub> ) &nbsp;<span class="c">// pseudo-inverse thrust allocation → 4× PWM</span>
+      e<sub>u</sub> = u<sub>c</sub> − 320 &nbsp;<span class="c">yaw error in pixels, detection center against frame center</span><br>
+      ψ<sub>cmd</sub> = <span class="a">K<sub>p,ψ</sub></span>·e<sub>u</sub> + <span class="a">K<sub>i,ψ</sub></span>·∫e<sub>u</sub> dt &nbsp;<span class="c">yaw PI driven by vision</span><br>
+      f<sub>z</sub> = <span class="a">K<sub>p,z</sub></span>·e<sub>z</sub> + <span class="a">K<sub>i,z</sub></span>·∫e<sub>z</sub> dt &nbsp;<span class="c">altitude PI from the barometer</span><br>
+      u = T<sup>†</sup>( F<sub>desired</sub> − F<sub>buoyancy</sub> ) &nbsp;<span class="c">pseudo-inverse thrust allocation into four PWM signals</span>
     </div>
     <p class="reveal">
-      The ROS 2 stack is layered: a <strong>sensor layer</strong> publishing three asynchronous
-      streams (200 Hz IMU, 50 Hz barometer, ~30 fps detections); an <strong>estimation
-      layer</strong> where a Kalman filter fuses them into a 12-dimensional state — 6-DoF pose
-      plus linear and angular velocities — recovering the derivatives no sensor measures
-      directly; a <strong>control layer</strong> running the PI laws above; and an
-      <strong>actuation layer</strong> converting desired forces to individual motor commands
-      through the pseudo-inverse of the thrust-allocation matrix, saturated to ESC bounds.
-      A mode switcher arbitrates between joystick manual control, full autonomy, and safety
-      overrides. If the detector loses the balloon, the blimp holds barometric altitude and
-      stops yawing — hover, don't guess — until re-detection.
+      The ROS 2 stack comes in layers. The <strong>sensor layer</strong> publishes three streams
+      that don't line up in time: the IMU at 200 Hz, the barometer at 50 Hz and detections at
+      roughly 30 fps. In the <strong>estimation layer</strong> a Kalman filter fuses them into a
+      12-dimensional state, the 6-DoF pose plus linear and angular velocities, which recovers the
+      rates no sensor measures directly. The <strong>control layer</strong> runs the PI loops
+      above, and the <strong>actuation layer</strong> turns the forces we want into individual
+      motor commands through the pseudo-inverse of the thrust allocation matrix, clipped to what
+      the ESCs accept. A mode switcher decides between joystick control, full autonomy and
+      safety overrides. If the detector loses the balloon, the blimp holds its altitude and stops
+      turning until it finds it again. We'd rather it hover than guess.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Vision Autonomy</div>
-    <h2 class="reveal">A quadrant is all the geometry you need.</h2>
+    <h2 class="reveal">Knowing the quadrant turned out to be enough.</h2>
     <p class="reveal">
-      A YOLOv5s model, trained on a custom balloon dataset and quantized to 8-bit for CPU
-      inference, reached <strong>~96% mAP@0.5</strong> — about 20 ms per frame on GPU and
-      under 100 ms on CPU. Rather than full 3D target estimation, navigation uses the
-      detection centroid directly: the image is split into four quadrants plus a center
-      deadband, and each region maps to an intuitive command pair.
+      We trained a YOLOv5s model on our own balloon dataset and quantized it to 8-bit so it
+      could run on the CPU. It reached about <strong>96% mAP@0.5</strong>, taking around 20 ms a
+      frame on a GPU and under 100 ms on the CPU. Instead of estimating where the target is in
+      3D, the blimp just uses the center of the detection box. The image is split into four
+      quadrants with a small dead zone in the middle, and each region maps to an obvious pair of
+      commands.
     </p>
     <table class="reveal">
       <thead><tr><th>Region</th><th>Centroid</th><th>Yaw command</th><th>Vertical command</th></tr></thead>
@@ -248,80 +249,80 @@
         <tr class="hl"><td>Center</td><td>|u−320|&lt;ε, |v−240|&lt;ε</td><td>Hold</td><td>Hold altitude</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">Detections below 0.5 confidence are rejected; oversized boxes trigger a safety retreat — the balloon is about to hit the lens.</p>
+    <p class="tnote reveal">Detections under 0.5 confidence are thrown out. A box that gets too big triggers a safety retreat, because it means the balloon is about to hit the lens.</p>
     <figure class="reveal">
       <a href="../assets/blimp/quadrant_feed.jpg" target="_blank" rel="noopener">
         <img src="../assets/blimp/quadrant_feed.jpg" alt="Live onboard camera feed partitioned into quadrants Q1 to Q4 by a green crosshair, with a balloon target visible in quadrant Q4.">
       </a>
-      <figcaption><span class="n">FIG 03</span>Live onboard feed, quadrant-partitioned — balloon in Q4 means: yaw left, descend. The PI loops drive it back to center.</figcaption>
+      <figcaption><span class="n">FIG 03</span>The live onboard feed split into quadrants. A balloon in Q4 means turn left and descend, and the PI loops bring it back to the center.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Dynamics · Validated on Vicon</div>
-    <h2 class="reveal">A blimp is an underwater vehicle that got lucky.</h2>
+    <h2 class="reveal">A blimp is basically an underwater vehicle that got lucky.</h2>
     <p class="reveal">
-      Buoyancy-dominated flight means quadrotor models don't apply — so the team derived a
-      full 6-DoF lighter-than-air model instead: rigid-body mass and inertia extracted from
-      the CAD, <strong>added-mass terms computed via Lamb's k-factors</strong> for the
-      ellipsoid, plus Coriolis, damping, and gravity–buoyancy restoring terms. Single-axis
-      thrust tests tracked with <strong>Vicon motion capture</strong> validated the model:
-      theoretical and experimental trajectories align in both forward and vertical motion,
-      confirming that LTA vehicle dynamics follow the same structure as underwater-vehicle
-      models — with buoyancy doing the work water usually does.
+      When buoyancy does most of the lifting, quadrotor models don't fit. So we derived a full
+      6-DoF lighter-than-air model instead. The mass and inertia come out of the CAD, the
+      <strong>added mass terms come from Lamb's k-factors</strong> for an ellipsoid, and on top of
+      that sit the Coriolis, damping, and gravity and buoyancy restoring terms. To check it, we
+      ran single-axis thrust tests under <strong>Vicon motion capture</strong>. The predicted and
+      measured trajectories line up for both forward and vertical motion, which confirmed that a
+      lighter-than-air vehicle follows the same structure as an underwater one, with buoyancy
+      doing the job water normally does.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/blimp/vicon_x_dark.png" target="_blank" rel="noopener">
           <img class="diagram" src="../assets/blimp/vicon_x_dark.png" alt="Plot of forward single-degree-of-freedom test: experimental Vicon trajectory versus theoretical model prediction along the X axis.">
         </a>
-        <figcaption><span class="n">FIG 04</span>Forward (X-axis) single-DoF test — Vicon ground truth vs the derived dynamic model.</figcaption>
+        <figcaption><span class="n">FIG 04</span>The forward (X axis) test, with the Vicon measurement against what our model predicted.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/blimp/vicon_z_dark.png" target="_blank" rel="noopener">
           <img class="diagram" src="../assets/blimp/vicon_z_dark.png" alt="Plot of vertical single-degree-of-freedom test: experimental Vicon trajectory versus theoretical model prediction along the Z axis.">
         </a>
-        <figcaption><span class="n">FIG 05</span>Vertical (Z-axis) single-DoF test — heave dynamics against the model's prediction.</figcaption>
+        <figcaption><span class="n">FIG 05</span>The vertical (Z axis) test, comparing how the blimp actually rose and sank with the model's prediction.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-label reveal">Beyond the Course</div>
-    <h2 class="reveal">From class project to competition platform.</h2>
+    <h2 class="reveal">The class project that kept going.</h2>
     <p class="reveal">
-      The blimp outlived the semester. It became the AMASS Lab's Defend-the-Republic
-      competition platform, with a ten-person team building on the stack — and me owning
-      <strong>software architecture and integration</strong> as the primary code reviewer.
-      The 51-page technical handoff we published covers reproducible bring-up from a clean
-      OS image, full mechanical and electronics BOMs, wiring and pin maps, and system-level
-      acceptance tests with explicit pass criteria and archived evidence — logs, plots, and
-      videos pinned to commits.
+      The blimp didn't end with the semester. It became the AMASS Lab's Defend-the-Republic
+      competition platform, and a ten-person team now builds on the stack. I own the
+      <strong>software architecture and integration</strong> and do most of the code review. We
+      also published a 51-page technical handoff so anyone can pick it up. It walks through
+      bringing the system up from a clean OS image, lists the full mechanical and electronics
+      BOMs, maps out the wiring and pins, and records system acceptance tests with clear pass
+      criteria and saved evidence, meaning logs, plots and videos tied to specific commits.
     </p>
     <table class="reveal">
       <thead><tr><th>Acceptance test</th><th>Procedure</th><th>Pass criteria</th></tr></thead>
       <tbody>
-        <tr><td>Hover stability</td><td>60 s hover at 0.5 m</td><td>altitude std-dev &lt; 0.1 m, drift &lt; 0.2 m</td></tr>
+        <tr><td>Hover stability</td><td>60 s hover at 0.5 m</td><td>altitude std dev &lt; 0.1 m, drift &lt; 0.2 m</td></tr>
         <tr><td>Quadrant detection</td><td>10 trials per quadrant</td><td>&gt;90% detection accuracy</td></tr>
         <tr><td>Cage-gate actuation</td><td>20 open/close cycles</td><td>100% success, &lt; 2 s actuation</td></tr>
-        <tr><td>Vision autonomy</td><td>tethered approach, target at ~2 m</td><td>lock &lt; 15 s, altitude within 0.3 m, hold ≥ 5 s</td></tr>
+        <tr><td>Vision autonomy</td><td>tethered approach, target at about 2 m</td><td>lock &lt; 15 s, altitude within 0.3 m, hold ≥ 5 s</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">From the platform report's acceptance-test record (release tag platform_report_2026_02), evidence archived per commit.</p>
+    <p class="tnote reveal">Taken from the acceptance test record in the platform report (release tag platform_report_2026_02), with the evidence saved for each commit.</p>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Autonomy budgets are physical.</strong> Every design call — YOLOv5s over larger
-      models, quadrant logic over 3D estimation, IMU+barometer over GPS — traded capability
-      for grams, milliseconds, and milliamps, and the system flew because those trades were
-      made honestly. <strong>Fusion is what makes cheap sensors act expensive:</strong> no
-      single sensor onboard could localize the blimp, but the Kalman-fused stack held
-      autonomous lock on a moving target. And <strong>platforms outlive projects</strong> —
-      documentation, acceptance tests, and clean handoff turned one semester's build into a
-      lab's ongoing competition program.
+      On a blimp, autonomy has a physical budget. Choosing YOLOv5s over a bigger model,
+      quadrants over 3D estimation, and an IMU with a barometer instead of GPS each gave up some
+      capability to save grams, milliseconds and milliamps, and it flew because we made those
+      trades with our eyes open. Fusion is what lets cheap sensors punch above their weight. None of the
+      sensors on board could locate the blimp alone, but together through the Kalman filter they
+      kept a lock on a moving target. And a platform can outlast the project it came from. The
+      documentation, the acceptance tests and a clean handoff are what turned one semester's
+      build into a competition program the lab is still running.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">ROS 2</span><span class="tag">YOLOv5</span><span class="tag">Kalman Filtering</span>
@@ -331,8 +332,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -343,9 +344,9 @@
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  /* Background: the vision-autonomy loop itself — a wireframe blimp pursues a drifting
+  /* Background: the vision-autonomy loop itself, a wireframe blimp pursues a drifting
      balloon target; a camera frustum projects from the gondola onto a quadrant reticle
-     that tracks the balloon, echoing the Q1–Q4 navigation logic. */
+     that tracks the balloon, echoing the Q1 to Q4 navigation logic. */
   const canvas=document.getElementById('blimpscene');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -361,7 +362,7 @@
   grid.position.y=-4; grid.material.transparent=true; grid.material.opacity=0.5;
   scene.add(grid);
 
-  /* ---- blimp ---- */
+  /*  blimp  */
   const blimp=new THREE.Group();
   const hull=new THREE.Mesh(new THREE.SphereGeometry(1.5,16,12),wire(DEEPBLUE));
   hull.scale.set(1.7,0.64,0.64); blimp.add(hull);
@@ -388,13 +389,13 @@
   blimp.scale.setScalar(mobile?0.75:1.0);
   scene.add(blimp);
 
-  /* ---- balloon target ---- */
+  /*  balloon target  */
   const balloon=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,8),wire(AMBER));
   const knot=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.18,5),wire(AMBER));
   knot.position.y=-0.58; balloon.add(knot);
   scene.add(balloon);
 
-  /* ---- quadrant reticle tracking the balloon ---- */
+  /*  quadrant reticle tracking the balloon  */
   const reticle=new THREE.Group();
   const RW=2.2,RH=1.65;
   const frameGeo=new THREE.BufferGeometry().setFromPoints([
@@ -410,7 +411,7 @@
   reticle.add(new THREE.Line(crossV,crossMat));
   scene.add(reticle);
 
-  /* ---- camera frustum: gondola nose -> reticle corners ---- */
+  /*  camera frustum: gondola nose -> reticle corners  */
   const frusGeo=new THREE.BufferGeometry();
   const frusPos=new Float32Array(8*3);
   frusGeo.setAttribute('position',new THREE.BufferAttribute(frusPos,3));
@@ -418,7 +419,7 @@
     color:CYAN,transparent:true,opacity:0.18}));
   scene.add(frustum);
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?500:1200;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}

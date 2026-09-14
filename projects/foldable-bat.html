@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Robotic flight inspired by bat wings — a foldable, laminated flapping-wing robot with a gear-driven four-bar mechanism, single-servo actuation, parameter identification, and MuJoCo simulation. ASU Foldable Robotics. By Prajjwal Dutta.">
-<title>Foldable Flapping-Wing Robot — Prajjwal Dutta</title>
+<meta name="description" content="The bat-inspired flapping robot our Foldable Robotics team built at ASU: laminated folding wings, one servo driving a geared four-bar linkage, measured parameters and a MuJoCo simulation.">
+<title>Foldable Flapping-Wing Robot · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -124,7 +124,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -132,13 +132,14 @@
     <div class="eyebrow reveal"><span>Bio-Inspired · Fall 2024</span><span>ASU · Foldable Robotics</span></div>
     <h1 class="reveal">A Robot That Learned to Fly by Copying a Bat, One Fold at a Time</h1>
     <p class="sub reveal">
-      A foldable flapping-wing robot modeled on <em>Glossophaga soricina</em>, Pallas's
-      long-tongued bat. The wings are a <strong>two-layer lamination</strong> — vinyl film
-      bonded to a flexure layer — with vein-like creases that act as living hinges, so the
-      wingspan folds and changes in flight. A <strong>single servo</strong>, centrally mounted
-      between both wings, drives a gear train and a four-bar linkage that flaps them together.
-      The project ran the full loop: parameter identification on the physical parts, symbolic
-      four-bar kinematics, MuJoCo simulation, and a working prototype that flaps.
+      Our team built a flapping robot with folding wings, modeled on <em>Glossophaga
+      soricina</em>, Pallas's long-tongued bat. Each wing is <strong>two layers laminated
+      together</strong>, a vinyl film bonded to a flexure sheet, and creases shaped like the veins
+      in a bat's wing act as living hinges so the span can fold and change while it flies. One
+      <strong>servo</strong> sits in the middle between the wings and flaps both of them through a
+      gear train and a four-bar linkage. We went all the way around the loop: measuring the real
+      parts, working out the four-bar kinematics symbolically, simulating it in MuJoCo, and
+      building a prototype that actually flaps.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/Foldable-Robotics" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -149,7 +150,7 @@
       </a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>1</b><span>servo · both wings</span></div>
+      <div class="metric"><b>1</b><span>servo for both wings</span></div>
       <div class="metric"><b>2-layer</b><span>laminated wing membrane</span></div>
       <div class="metric"><b>6</b><span>incremental stiffness tests</span></div>
       <div class="metric"><b>0.158 m/N</b><span>foam compliance, measured</span></div>
@@ -162,95 +163,93 @@
       aria-label="The finished flapping-wing prototype driving its laminated wing through a flap cycle on the bench.">
       <source src="../media/foldable-flapping-demo.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>The prototype flapping under servo power — the laminated wing folds along its vein hinges through the stroke. It works.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The prototype flapping under servo power. Watch the laminated wing fold along its vein hinges through each stroke.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Premise</div>
-    <h2 class="reveal">Bats don't have wings. They have hands.</h2>
+    <h2 class="reveal">A bat's wing is really a hand.</h2>
     <p class="reveal">
-      A bat's flight surface is a membrane stretched over jointed fingers, which is why it can
-      change shape mid-stroke — folding, cambering, and adjusting span in ways a rigid airfoil
-      can't. That adaptive morphology is the whole reason bats out-maneuver comparable fliers in
-      cluttered space, and it's what makes them worth copying for search-and-rescue and survey
-      drones that have to work indoors and between obstacles.
+      A bat flies on a thin membrane stretched across jointed fingers, so it can reshape its wing
+      in the middle of a stroke, folding it, curving it and changing its span in ways a stiff wing
+      never could. That flexibility is why bats can outmaneuver other fliers their size in tight
+      spaces, and it's why they're worth copying for search and rescue or survey drones that have
+      to work indoors and around obstacles.
     </p>
     <p class="reveal">
-      The project started as a study of <strong>gliding and landing</strong> mechanics — model
-      the wing, predict trajectories and aerodynamic forces, evaluate configurations. After a
-      review, the professor pushed for something harder: add a <strong>flapping
-      mechanism</strong> and use the force the four-bar linkage was already producing. That
-      redirect is what turned a glider into a robot, and it forced two other changes downstream
-      — a stronger frame and a properly laminated wing.
+      We started out studying how a wing like that <strong>glides and lands</strong>: modeling it,
+      predicting trajectories and aerodynamic forces, and comparing configurations. After a
+      review, our professor pushed us toward something harder: add a <strong>flapping
+      mechanism</strong> and put the force the four-bar linkage was already making to use. That push is what turned our glider into a robot, and it led to two more changes along
+      the way, a stronger frame and a properly laminated wing.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">The Wing</div>
-    <h2 class="reveal">Laminate two layers, crease them, and the hinges come free.</h2>
+    <h2 class="reveal">Laminate two layers, crease them, and you get the hinges for free.</h2>
     <p class="reveal">
-      The final wing is the course's lamination technique applied literally: a
-      <strong>vinyl film with an adhesive backing</strong> cut to the wing profile, with a
-      <strong>flexure material</strong> bonded straight onto the adhesive side and the excess
-      trimmed. The pattern of that flexure layer forms <strong>vein-like structures</strong>
-      copied from bat wing anatomy — and those veins double as the hinges. No pin joints, no
-      bearings: the wing folds where the laminate is compliant and stays rigid where it isn't,
-      which is what lets the wingspan change dynamically during a stroke.
+      The final wing uses the lamination technique from the course exactly as taught. We cut a
+      <strong>vinyl film with an adhesive back</strong> to the shape of the wing, pressed a
+      <strong>flexure material</strong> straight onto the sticky side and trimmed off the rest. The
+      flexure layer is cut into <strong>vein shapes</strong> copied from a real bat wing, and those
+      veins are also the hinges. There are no pins and no bearings. The wing bends where the
+      laminate is flexible and stays stiff where it isn't, and that's what lets the span change
+      during a stroke.
     </p>
     <p class="reveal">
-      That was the endpoint, not the start. Early prototypes used whatever was to hand —
-      <strong>wax paper</strong>, then a kitchen paper sheet versus a clear
-      <strong>mylar sheet</strong>. The mylar won, and it won on data: the gliding experiment
-      from parameter identification is what chose it.
+      We didn't start there, though. The early prototypes used whatever we had lying around, first
+      <strong>wax paper</strong> and then kitchen paper against a clear <strong>mylar
+      sheet</strong>. Mylar won, and the gliding experiment from our parameter identification is
+      what decided it.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/foldable/wing-final.jpg" target="_blank" rel="noopener">
-          <img src="../assets/foldable/wing-final.jpg" alt="The final laminated wing — a yellow vinyl film sheet with dark vein-like flexure strips forming a triangular wing panel.">
+          <img src="../assets/foldable/wing-final.jpg"alt="The final laminated wing, a yellow vinyl film sheet with dark vein-like flexure strips forming a triangular wing panel.">
         </a>
-        <figcaption><span class="n">FIG 02</span>The final wing: vinyl film laminated to a flexure layer, with bat-inspired veins doing the hinging.</figcaption>
+        <figcaption><span class="n">FIG 02</span>The final wing, vinyl film laminated to a flexure layer, with veins borrowed from a bat doing the hinging.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/foldable/wing-mat-a.jpg" target="_blank" rel="noopener">
           <img src="../assets/foldable/wing-mat-a.jpg" alt="An early four-bar wing frame covered with a paper sheet membrane during wing material testing.">
         </a>
-        <figcaption><span class="n">FIG 03</span>Membrane trials on the early frame — paper sheet versus clear mylar, decided by the gliding tests.</figcaption>
+        <figcaption><span class="n">FIG 03</span>Trying out membranes on the early frame. Paper against clear mylar, settled by the gliding tests.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-label reveal">The Mechanism</div>
-    <h2 class="reveal">One motor, two wings, and a gear mesh that broke the first frame.</h2>
+    <h2 class="reveal">One motor, two wings, and a gear mesh that broke our first frame.</h2>
     <p class="reveal">
-      The drivetrain converts rotation into stroke through a <strong>gear-driven four-bar
-      linkage</strong>. One servo sits on the body structure <strong>between the two
-      wings</strong> and flaps both — a deliberate choice twice over: it halves the actuator
-      count, and its central placement keeps the <strong>center of gravity on the body
-      frame</strong> rather than skewed to one side, which matters more on something that has to
-      glide than on something that just has to move.
+      A <strong>gear-driven four-bar linkage</strong> turns the servo's rotation into a flapping
+      stroke. The servo sits on the body <strong>between the two wings</strong> and flaps both of
+      them, and we chose that for two reasons. It needs half as many actuators, and sitting in the
+      middle keeps the <strong>center of gravity on the body</strong> instead of pulling it to one
+      side. That matters a lot more for something that has to glide than for something that only
+      has to move.
     </p>
     <p class="reveal">
-      The frame material was the hard lesson. The initial build used <strong>balsa
-      board</strong>, and it simply couldn't hold a gear mesh — it <strong>broke under minimal
-      actuation</strong> and had none of the strength the flapping stroke demanded. The final
-      frame moved to <strong>3D-printed PLA</strong>, which was stiff enough to both survive the
-      stroke and carry a printed gear mesh that the balsa version could never support. Control
-      is an <strong>ESP32</strong>, powered directly for the prototype; onboard batteries were
-      left as future work.
+      The frame material taught us the hardest lesson. Our first build was <strong>balsa
+      board</strong>, and it just couldn't hold a gear mesh. It <strong>snapped with barely any
+      actuation</strong> and had nowhere near the strength a flapping stroke needs. We switched the
+      final frame to <strong>3D-printed PLA</strong>, which was stiff enough to survive the stroke
+      and to carry a printed gear mesh the balsa never could. An <strong>ESP32</strong> runs it,
+      powered by cable for the prototype, and batteries on board are left for later.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/foldable/body-frame-cad.jpg" target="_blank" rel="noopener">
-          <img src="../assets/foldable/body-frame-cad.jpg" alt="CAD render of the final body frame — a symmetric multi-link wing skeleton with a central gear sector between the two wings.">
+          <img src="../assets/foldable/body-frame-cad.jpg"alt="CAD render of the final body frame, a symmetric multi-link wing skeleton with a central gear sector between the two wings.">
         </a>
-        <figcaption><span class="n">FIG 04</span>Final body frame — the central gear sector between the wings is the whole transmission.</figcaption>
+        <figcaption><span class="n">FIG 04</span>The final body frame. The gear sector in the middle, between the wings, is the entire transmission.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/foldable/proto-cad.jpg" target="_blank" rel="noopener">
-          <img src="../assets/foldable/proto-cad.jpg" alt="CAD model of the initial four-bar prototype — a flat linkage of perforated bars forming a triangular wing frame.">
+          <img src="../assets/foldable/proto-cad.jpg"alt="CAD model of the initial four-bar prototype, a flat linkage of perforated bars forming a triangular wing frame.">
         </a>
-        <figcaption><span class="n">FIG 05</span>The initial four-bar CAD — built to vary wingspan, not to flap: fully open, partially open, fully closed.</figcaption>
+        <figcaption><span class="n">FIG 05</span>Our first four-bar in CAD. It was built to change the wingspan, fully open, half open or closed, not to flap.</figcaption>
       </figure>
     </div>
     <div class="fig-grid">
@@ -258,13 +257,13 @@
         <a href="../assets/foldable/proto-foam.jpg" target="_blank" rel="noopener">
           <img src="../assets/foldable/proto-foam.jpg" alt="The foam sheet version of the four-bar prototype assembled on a desk next to electronics.">
         </a>
-        <figcaption><span class="n">FIG 06</span>Foam-sheet build (a) — compliant, and measurably so.</figcaption>
+        <figcaption><span class="n">FIG 06</span>The foam sheet build (a). Bendy, and we measured exactly how bendy.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/foldable/proto-balsa.jpg" target="_blank" rel="noopener">
           <img src="../assets/foldable/proto-balsa.jpg" alt="The balsa board version of the four-bar linkage prototype being handled during assembly.">
         </a>
-        <figcaption><span class="n">FIG 07</span>Balsa build (b) — stiffer than foam, still too brittle for a gear mesh.</figcaption>
+        <figcaption><span class="n">FIG 07</span>The balsa build (b). Stiffer than foam, but still too brittle for a gear mesh.</figcaption>
       </figure>
     </div>
   </section>
@@ -273,99 +272,98 @@
     <div class="sec-label reveal">Parameter ID</div>
     <h2 class="reveal">Measure the parts before you trust the model.</h2>
     <p class="reveal">
-      Each team member owned one physical parameter, measured on the real hardware and fitted in
-      Python — the numbers that make a simulation mean something.
-      <strong>Stiffness (my piece):</strong> six tests starting from the empty chassis and adding
-      components one at a time up to the fully assembled system, with a <strong>power-law
-      model</strong> fitted to the force–displacement data so each component's contribution to
-      overall structural integrity could be separated out.
-      <strong>Compliance:</strong> loaded deflection tests across the cylinder, servo, batteries,
-      and ESP32 breadboard, fitted linearly — the foam board came out at
-      <strong>0.1578 m/N</strong>, bending measurably more than balsa under identical load.
+      Each of us took charge of one physical parameter, measured it on the real hardware and fit
+      it in Python. Those are the numbers that make a simulation worth anything.
+      <strong>Stiffness was mine.</strong> I ran six tests, starting with the empty chassis and
+      adding one component at a time until the whole thing was assembled, then fit a
+      <strong>power-law model</strong> to the force and displacement data so I could pick apart how
+      much each component added to the structure's strength.
+      <strong>Compliance</strong> came from loading and measuring deflection across the cylinder,
+      servo, batteries and ESP32 breadboard, fit with a straight line. The foam board came out at
+      <strong>0.1578 m/N</strong>, clearly bending more than balsa under the same load.
     </p>
     <p class="reveal">
-      <strong>Mass and inertia:</strong> a <strong>torsional pendulum</strong> on the balsa
-      chassis, timing oscillation periods at several pivot distances, polynomial-fitted in Python
-      and cross-checked against <strong>SolidWorks</strong>.
-      <strong>Gliding:</strong> three membrane configurations — plastic parchment, wax paper, and
-      a bare unmembraned frame — through free-fall and assisted drop tests, with a
-      <strong>4th-degree polynomial</strong> fitted to the motion to recover acceleration and
-      velocity profiles and back out a coefficient of gliding friction.
+      <strong>Mass and inertia</strong> came from hanging the balsa chassis as a <strong>torsional
+      pendulum</strong> and timing its swings at several pivot distances, fit with a polynomial in
+      Python and checked against <strong>SolidWorks</strong>.
+      <strong>Gliding</strong> compared three setups, plastic parchment, wax paper and a bare frame
+      with no membrane, in free-fall and assisted drops. A <strong>4th-degree polynomial</strong>
+      fit to the motion gave the acceleration and velocity, and from those a gliding friction
+      coefficient.
     </p>
     <table class="reveal">
       <thead><tr><th>Parameter</th><th>Method</th><th>Fit</th></tr></thead>
       <tbody>
-        <tr class="hl"><td>Stiffness</td><td>6 incremental load tests, empty chassis → full system</td><td>power law</td></tr>
-        <tr><td>Compliance</td><td>digital scale + loaded deflection</td><td>linear · foam 0.1578 m/N</td></tr>
+        <tr class="hl"><td>Stiffness</td><td>6 load tests, from the empty chassis up to the full system</td><td>power law</td></tr>
+        <tr><td>Compliance</td><td>digital scale and loaded deflection</td><td>linear, foam 0.1578 m/N</td></tr>
         <tr><td>Mass &amp; inertia</td><td>torsional pendulum, varied pivot distance</td><td>polynomial vs. SolidWorks</td></tr>
-        <tr><td>Gliding</td><td>free-fall + assisted drops, 3 membranes</td><td>4th-degree polynomial</td></tr>
+        <tr><td>Gliding</td><td>free-fall and assisted drops, 3 membranes</td><td>4th-degree polynomial</td></tr>
       </tbody>
     </table>
   </section>
 
   <section>
     <div class="sec-label reveal">Kinematics</div>
-    <h2 class="reveal">Close the loop symbolically, then check the Jacobian.</h2>
+    <h2 class="reveal">Solve the loop on paper, then check the Jacobian.</h2>
     <p class="reveal">
-      The four-bar was solved rather than sketched. The linkage's geometric
-      <strong>closure constraints</strong> were written symbolically and the valid angular
-      configurations found by posing it as an <strong>optimization</strong> that minimizes
-      constraint violation — which is what lets different link-length designs be evaluated
-      without hand-deriving each one. <strong>Jacobian matrices</strong> then relate the
-      independent joint velocity to the dependent ones, exposing how motion propagates through
-      the mechanism, and the result is plotted as linkage configurations with velocity vectors
-      at the key points.
+      We solved the four-bar properly instead of sketching it. The linkage's <strong>closure
+      constraints</strong> were written out symbolically, and the valid angles were found by
+      treating it as an <strong>optimization</strong> that makes the constraint error as small as
+      possible. That meant we could try different link lengths without deriving each design by
+      hand. <strong>Jacobian matrices</strong> then connect the one joint we drive to all the
+      others, which shows how motion travels through the mechanism, and we plotted the linkage
+      positions with velocity vectors at the important points.
     </p>
     <div class="law reveal">
-      <span class="c">closure:</span> Σ link vectors = 0 <span class="c">→ solve for dependent angles (optimization)</span><br>
-      <span class="c">velocity:</span> <span class="a">J</span> q̇ = 0 <span class="c">→ dependent q̇ from the independent input, at every configuration</span>
+      <span class="c">closure:</span> Σ link vectors = 0 <span class="c">solve for the dependent angles by optimization</span><br>
+      <span class="c">velocity:</span> <span class="a">J</span> q̇ = 0 <span class="c">dependent q̇ from the driven input, at every configuration</span>
     </div>
     <figure class="reveal narrow">
       <a href="../assets/foldable/kinematics.jpg" target="_blank" rel="noopener">
         <img src="../assets/foldable/kinematics.jpg" alt="Kinematics plot showing two four-bar linkage configurations in blue and orange with black velocity vectors at the outer points.">
       </a>
-      <figcaption><span class="n">FIG 08</span>Kinematics results — linkage configurations with the velocity vectors that fall out of the Jacobian.</figcaption>
+      <figcaption><span class="n">FIG 08</span>The kinematics results, showing linkage positions and the velocity vectors that come out of the Jacobian.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Simulation</div>
-    <h2 class="reveal">Sine waves in, flapping out.</h2>
+    <h2 class="reveal">Sine waves go in and flapping comes out.</h2>
     <p class="reveal">
-      The mechanism was rebuilt in <strong>MuJoCo</strong> as a hierarchical rigid-body model —
-      an XML tree of bodies joined by <strong>hinge joints</strong>, with actuators driving them.
-      A custom controller commands joint positions from <strong>time-dependent sine
-      functions</strong> parameterized by amplitude and frequency, which is the simplest honest
-      model of a flapping gait: one periodic input, coordinated output across the linkage. The
-      simulation steps forward and renders at 800×600, and the frames are compiled into an
-      animated GIF for inspecting kinematics and actuator behavior.
+      We rebuilt the mechanism in <strong>MuJoCo</strong> as a tree of rigid bodies written in XML,
+      joined by <strong>hinge joints</strong> and driven by actuators. A controller we wrote sets
+      the joint positions from <strong>sine waves over time</strong>, each with its own amplitude
+      and frequency. That's the simplest model of a flapping gait that isn't cheating: one repeating
+      input and a coordinated response through the whole linkage. The simulation renders at
+      800×600, and we stitched the frames into a GIF to study the kinematics and how the actuators
+      behaved.
     </p>
     <figure class="reveal">
       <a href="../assets/foldable/mujoco-frames.jpg" target="_blank" rel="noopener">
         <img src="../assets/foldable/mujoco-frames.jpg" alt="Four frames from the MuJoCo simulation showing the red central body and green wing links at successive points of the flapping stroke.">
       </a>
-      <figcaption><span class="n">FIG 09</span>Four frames of the MuJoCo flapping cycle — the wing links (green) sweep through the stroke about the red body under sinusoidal actuation.</figcaption>
+      <figcaption><span class="n">FIG 09</span>Four frames from the MuJoCo flapping cycle. The green wing links sweep through the stroke around the red body as the sine input drives them.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Results</div>
-    <h2 class="reveal">It flaps, consistently, and the model saw it coming.</h2>
+    <h2 class="reveal">It flaps the same way every time, and the model predicted it.</h2>
     <p class="reveal">
-      The finished prototype delivered <strong>consistent wing motion with minimal
-      deviation</strong> from the modeled kinematics, and the gliding and flapping tests showed
-      stable, controlled motion supported by the measured stiffness and the weight distribution
-      that came out of the CG work. Sim-to-real agreement was close, which the report credits to
-      feeding real measured values — compliance, mass distribution, joint friction — back into
-      MuJoCo and SolidWorks rather than trusting nominal ones. The residual gap is attributed to
-      what wasn't modeled: <strong>air currents during testing</strong> and small imperfections
-      in the printed parts.
+      The finished prototype moved its wings <strong>consistently, with very little
+      difference</strong> from the kinematics we modeled. The gliding and flapping tests showed
+      steady, controlled motion, helped by the stiffness we measured and the weight balance that
+      came out of the center of gravity work. The simulation and the real robot agreed closely, and
+      our report puts that down to feeding real measurements, compliance, mass distribution and
+      joint friction, back into MuJoCo and SolidWorks instead of trusting textbook values. What
+      little gap remained came from things we didn't model: <strong>air currents while
+      testing</strong> and small flaws in the printed parts.
     </p>
     <figure class="reveal">
       <a href="../assets/foldable/prototype-final.jpg" target="_blank" rel="noopener">
-        <img src="../assets/foldable/prototype-final.jpg" alt="The final flapping-wing prototype on a floor — 3D-printed PLA frame in yellow and black with the laminated wing extended, tethered by a power cable.">
+        <img src="../assets/foldable/prototype-final.jpg"alt="The final flapping-wing prototype on a floor, 3D-printed PLA frame in yellow and black with the laminated wing extended, tethered by a power cable.">
       </a>
-      <figcaption><span class="n">FIG 10</span>The final prototype — PLA frame, central servo and gear mesh, laminated foldable wings, ESP32 on a tether.</figcaption>
+      <figcaption><span class="n">FIG 10</span>The final prototype, with its PLA frame, the servo and gear mesh in the middle, laminated folding wings and an ESP32 on a tether.</figcaption>
     </figure>
   </section>
 
@@ -373,9 +371,9 @@
     <div class="sec-label reveal">Walkthrough</div>
     <h2 class="reveal">The full project video.</h2>
     <p class="reveal">
-      The team's final presentation — bio-inspiration and scope, the prototyping plan across
-      three builds, the circuit and actuation choices, and the finished mechanism flapping at
-      the end.
+      Our final presentation. It covers the bat that inspired us and what we set out to do, the
+      plan across three builds, why we chose the circuit and actuation we did, and the finished
+      mechanism flapping at the very end.
     </p>
     <figure class="reveal">
       <video controls preload="none"
@@ -383,32 +381,32 @@
         aria-label="Final project presentation video for the bat-inspired flapping-wing robot.">
         <source src="../media/foldable-presentation.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 01</span>Final project presentation — Niyati Vaidya, Vivek Kulkarni, Prajjwal Dutta, Yogesh Salvi. Also on <a href="https://www.youtube.com/watch?v=ZdsJeafwBmk" target="_blank" rel="noopener">YouTube ↗</a>.</figcaption>
+      <figcaption><span class="n">VID 01</span>Our final project presentation, given by Niyati Vaidya, Vivek Kulkarni, Prajjwal Dutta and Yogesh Salvi. It's also on <a href="https://www.youtube.com/watch?v=ZdsJeafwBmk" target="_blank" rel="noopener">YouTube</a>.</figcaption>
     </figure>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Compliance is a design material, not a defect.</strong> The wing has no hinges
-      because the laminate <em>is</em> the hinge — pick where the structure is allowed to bend
-      and you've designed the joint. <strong>Material choice is a load-path decision.</strong>
-      Balsa didn't fail because it was weak in the abstract; it failed because a gear mesh
-      concentrates force exactly where a brittle sheet has nothing to give, and the fix wasn't
-      more balsa but a different process. <strong>And a model is only as good as the parts you
-      measured.</strong> Sim and hardware agreed here because compliance, inertia, and friction
-      went into the simulation as measured numbers — the parameter-identification work is
-      invisible in the final video and is the reason the final video works.
+      Flexibility can be something you design with, not a flaw. The wing has no hinges because
+      the laminate <em>is</em> the hinge, so choosing where the structure is allowed to bend is
+      the same as designing the joint. Picking a material is really about where the load goes.
+      Balsa didn't fail for being weak in general. It failed because a gear mesh piles force into
+      exactly the spot where a brittle sheet has nothing left to give, and the answer wasn't more
+      balsa, it was a different way of making the part. And a model can only be as good as the
+      measurements behind it. Our simulation and hardware agreed because compliance, inertia and
+      friction went in as measured numbers. You can't see any of that parameter work in the final
+      video, but it's the reason the video works.
     </p>
     <p class="reveal">
-      The team's own honest caveat: this isn't a true digital twin yet. MuJoCo runs
-      <strong>box approximations</strong> rather than the real CAD geometry, so the next step is
-      importing the actual model. Beyond that — more power at the wings so flapping generates
-      forward thrust rather than just stroke, and better fitting algorithms in parameter
+      To be fair to ourselves and to you, this isn't a true digital twin yet. MuJoCo uses
+      <strong>simple boxes</strong> instead of the real CAD shapes, so the next step is bringing in
+      the actual model. After that we'd want more power at the wings so the flapping pushes the
+      robot forward instead of just moving the wings, and better fitting methods for the parameter
       identification.
     </p>
-    <p class="tnote reveal">Team project — Niyati Abhijeet Vaidya, Vivek Sunil Kulkarni, Prajjwal Dutta, Yogesh Pradeep Salvi (Arizona State University). Stiffness parameter identification was my contribution; figures from the team's final project report.</p>
+    <p class="tnote reveal">A team project by Niyati Abhijeet Vaidya, Vivek Sunil Kulkarni, Prajjwal Dutta and Yogesh Pradeep Salvi at Arizona State University. The stiffness parameter identification was my part. Figures are from our final project report.</p>
     <div class="proj-stack reveal">
       <span class="tag">Foldable Robotics</span><span class="tag">Lamination</span><span class="tag">Flexure Hinges</span>
       <span class="tag">Four-Bar Linkage</span><span class="tag">Gear Drive</span><span class="tag">MuJoCo</span>
@@ -418,8 +416,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -431,7 +429,7 @@
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  /* Background: the mechanism itself — a central gear pair drives a sinusoidal flap (the same
+  /* Background: the mechanism itself, a central gear pair drives a sinusoidal flap (the same
      one-input gait the MuJoCo controller used), each wing built from finger spars with a
      membrane webbed between them, folding at its vein hinges through the stroke, with the
      wingtips trailing their own path. */
@@ -448,7 +446,7 @@
 
   const robot=new THREE.Group(); scene.add(robot);
 
-  /* ---- body: a slim fuselage with the servo block and the gear pair between the wings ---- */
+  /*  body: a slim fuselage with the servo block and the gear pair between the wings  */
   const body=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.34,1.5),wire(DEEPBLUE,0.55));
   robot.add(body);
   const servo=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.34,0.5),wire(AMBER,0.7));
@@ -470,7 +468,7 @@
   gearA.position.set(-0.38,0.1,0.12); gearB.position.set(0.38,0.1,0.12);
   robot.add(gearA); robot.add(gearB);
 
-  /* ---- wings: humerus → folding elbow → three finger spars, membrane webbed between ---- */
+  /*  wings: humerus to folding elbow to three finger spars, membrane webbed between  */
   const SPARS=[{len:2.5,spread:0.30},{len:2.9,spread:0.02},{len:2.4,spread:-0.34}];
   function buildWing(side){
     const shoulder=new THREE.Group();          // flap axis
@@ -478,7 +476,7 @@
     robot.add(shoulder);
     const hum=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.05,1.5,6),wire(CYAN,0.7));
     hum.rotation.z=Math.PI/2*-side; hum.position.x=side*0.75; shoulder.add(hum);
-    const elbow=new THREE.Group();             // fold axis — this is what makes the span change
+    const elbow=new THREE.Group();             // fold axis, this is what makes the span change
     elbow.position.x=side*1.5; shoulder.add(elbow);
     const tips=[];
     SPARS.forEach(s=>{
@@ -524,7 +522,7 @@
     return tipW[1];                             // middle spar tip drives the trail
   }
 
-  /* ---- wingtip trail: a fading ribbon of where the tip has been ---- */
+  /*  wingtip trail: a fading ribbon of where the tip has been  */
   const TRAIL=mobile?70:130;
   const trailPos=new Float32Array(TRAIL*3);
   const trailGeo=new THREE.BufferGeometry();
@@ -534,7 +532,7 @@
   scene.add(trail);
   let trailN=0;
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?400:1000;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*46;pp[i*3+1]=(Math.random()-0.5)*24;pp[i*3+2]=(Math.random()-0.5)*30;}
@@ -556,7 +554,7 @@
     if(!reduced){
       const phase=t*FREQ*Math.PI*2;
       const flap=Math.sin(phase)*AMP;
-      /* the fold leads the flap slightly — span shortens on the upstroke, opens on the down */
+      /* the fold leads the flap slightly, span shortens on the upstroke, opens on the down */
       const fold=(0.5-0.5*Math.cos(phase))*0.5;
       wings.forEach(w=>{
         w.shoulder.rotation.z=flap*-w.side;

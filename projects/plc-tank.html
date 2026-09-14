@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Three IEC 61131-3 PLC applications in CODESYS V3.5 commissioned against Factory I/O 3D plant simulations over OPC DA/UA — analog scaling for a process tank, a seal-in motor starter, and a sequential product-sorting station. By Prajjwal Dutta.">
-<title>Ladder &amp; FBD Plant Control — CODESYS × Factory I/O — Prajjwal Dutta</title>
+<meta name="description" content="Three IEC 61131-3 programs I wrote in CODESYS V3.5 and commissioned against Factory I/O 3D plants over OPC DA/UA: analog scaling for a process tank, a seal-in motor starter, and a product sorting station.">
+<title>Ladder &amp; FBD Plant Control · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,6 +109,20 @@
   tr.hl td{color:var(--cyan);}
   .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
   .tscroll{overflow-x:auto;}
+  .rig-flow{display:flex;align-items:stretch;margin:1.6rem 0;font-family:var(--mono);}
+  .rig-flow .node{flex:1 1 0;min-width:0;border:1px solid var(--line);border-radius:10px;
+    background:rgba(14,24,48,0.6);padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.25rem;}
+  .rig-flow .node b{color:var(--cyan);font-weight:500;font-size:0.8rem;letter-spacing:0.05em;}
+  .rig-flow .node span{color:var(--muted);font-size:0.68rem;line-height:1.4;}
+  .rig-flow .link{flex:0 0 6rem;position:relative;display:flex;align-items:center;justify-content:center;}
+  .rig-flow .link::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:var(--amber);opacity:0.55;}
+  .rig-flow .link span{position:relative;background:var(--deep);color:var(--amber);font-size:0.56rem;
+    letter-spacing:0.05em;line-height:1.35;text-align:center;padding:0.2rem 0.35rem;}
+  @media(max-width:680px){
+    .rig-flow{flex-direction:column;}
+    .rig-flow .link{flex-basis:3rem;}
+    .rig-flow .link::before{left:50%;right:auto;top:0;bottom:0;width:1px;height:auto;}
+  }
 
   .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
   .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
@@ -132,7 +146,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#projects">← Back to portfolio</a>
+  <a class="back" href="../index.html#projects">Back to portfolio</a>
 </nav>
 
 <main>
@@ -140,14 +154,13 @@
     <div class="eyebrow reveal"><span>Industrial Automation · 2026</span><span>CODESYS V3.5 SP22 · Factory I/O v2.5.10</span></div>
     <h1 class="reveal">Three Control Problems, One Simulated Plant</h1>
     <p class="sub reveal">
-      Discrete latching, sequential material handling, and analog signal conditioning — three
-      IEC 61131-3 applications written in CODESYS and commissioned against Factory I/O
-      3D plant models over an OPC DA/UA link. The PLC never touches the simulator directly,
-      exactly the arrangement used when a real controller is brought up against an HMI/SCADA
-      layer. The headline project is a process tank whose entire job is analog signal
-      conditioning: mapping raw transmitter counts into engineering units, and proving the
-      transfer functions numerically against the running plant before any control law is
-      layered on top.
+      A latch, a sorting line and a tank. I wrote three IEC 61131-3 programs in CODESYS and
+      commissioned each one against a 3D plant in Factory I/O over an OPC DA/UA link. The PLC never
+      talks to the simulator directly, which is exactly how it works when a real controller is
+      brought up against an HMI or SCADA layer. The main project is a process tank where the whole
+      job is analog signal conditioning: turning raw transmitter counts into engineering units, and
+      proving those conversions with numbers from the running plant before any control law goes on
+      top.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/PLC-Simulation" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -158,48 +171,50 @@
       </a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>3</b><span>projects · LD · LD · FBD</span></div>
-      <div class="metric"><b>0 – 300</b><span>display span · 0–10 raw</span></div>
+      <div class="metric"><b>3</b><span>projects in LD, LD and FBD</span></div>
+      <div class="metric"><b>0 to 300</b><span>display span from a 0 to 10 raw signal</span></div>
       <div class="metric"><b>6 pts</b><span>scaling verified live</span></div>
-      <div class="metric"><b>0</b><span>range faults · Error1–3</span></div>
+      <div class="metric"><b>0</b><span>range faults on Error1 to 3</span></div>
     </div>
   </header>
 
   <figure class="reveal">
     <img src="../assets/plc/p07-overview.jpg" alt="The CODESYS Function Block Diagram program in online monitoring on the left, with live values in orange boxes on each pin, beside the Factory I/O 3D scene on the right showing a tall cylindrical tank filled with blue liquid, a graduated level column, and a control cabinet." loading="lazy" decoding="async">
-    <figcaption><span class="n">FIG 01</span>The commissioning view — FBD program in online monitoring (left) beside the Factory I/O tank scene (right). Every pin carries its live value, so the scaling can be read straight off the running system.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The commissioning view, with the FBD program in online monitoring on the left and the Factory I/O tank on the right. Every pin shows its live value, so you can read the scaling straight off the running system.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Rig</div>
-    <h2 class="reveal">The PLC never talks to the plant.</h2>
+    <h2 class="reveal">The PLC never talks to the plant directly.</h2>
     <p class="reveal">
-      All three projects share one toolchain. The program runs in the <strong>CODESYS soft-PLC
-      runtime</strong>; <strong>Factory I/O</strong> hosts the 3D plant model and exposes every
-      sensor and actuator as an OPC tag; an <strong>OPC DA/UA server</strong> sits between them.
-      CODESYS publishes the variables of <code>PLC_PRG</code> through a <em>symbol
-      configuration</em> object, the OPC server browses that configuration, and Factory I/O
-      binds each simulated device to one of the resulting items. The PLC therefore sees the
-      plant purely as a set of tags — the same abstraction it would have over a real fieldbus.
+      All three projects use the same toolchain. The program runs in the <strong>CODESYS soft-PLC
+      runtime</strong>, <strong>Factory I/O</strong> holds the 3D plant and exposes every sensor and
+      actuator as an OPC tag, and an <strong>OPC DA/UA server</strong> sits in between. CODESYS
+      publishes the variables in <code>PLC_PRG</code> through a <em>symbol configuration</em> object,
+      the OPC server browses it, and Factory I/O ties each simulated device to one of those items.
+      So the PLC only ever sees the plant as a list of tags, just as it would over a real fieldbus.
     </p>
-    <div class="law reveal"><span class="c">┌──────────────────┐   OPC item    ┌──────────────────┐   OPC item    ┌──────────────────┐
-│  CODESYS V3.5    │◄─────────────►│   OPC DA/UA      │◄─────────────►│  Factory I/O     │
-│  soft-PLC        │  read/write   │  Channel.Device  │  read/write   │  3D plant model  │
-│  LD / FBD logic  │               │                  │               │  sensors, drives │
-└──────────────────┘               └──────────────────┘               └──────────────────┘</span></div>
+    <div class="rig-flow reveal" role="img" aria-label="CODESYS V3.5 soft-PLC exchanges OPC items with an OPC DA/UA server, which exchanges OPC items with the Factory I/O 3D plant model.">
+      <div class="node"><b>CODESYS V3.5</b><span>soft-PLC</span><span>LD and FBD logic</span></div>
+      <div class="link" aria-hidden="true"><span>OPC items<br>read and write</span></div>
+      <div class="node"><b>OPC DA/UA</b><span>Channel.Device</span></div>
+      <div class="link" aria-hidden="true"><span>OPC items<br>read and write</span></div>
+      <div class="node"><b>Factory I/O</b><span>3D plant model</span><span>sensors and drives</span></div>
+    </div>
     <p class="reveal">
-      That link matters more than it looks. The OPC round trip adds latency on top of the PLC
-      scan, visible in the recordings as a small lag between a tag changing in the watch table
-      and the corresponding motion in the 3D scene. The logic is written to tolerate it —
-      state lives in latches and counters rather than being inferred from an instantaneous
-      sensor combination, which is the difference between a program that works at one conveyor
-      speed and one that works at any.
+      That link matters more than it looks. The OPC round trip adds delay on top of the PLC scan,
+      and you can see it in the recordings as a small lag between a tag changing in the watch table
+      and the matching motion in the 3D scene. I wrote the logic to live with that. State is kept in
+      latches and counters instead of being worked out from whatever the sensors happen to read at
+      that instant, and that's the difference between a program that works at one conveyor speed
+      and one that works at any speed.
     </p>
     <p class="reveal">
-      That is also the argument for simulating the plant at all. Ladder logic that compiles is
-      easy; ladder logic that behaves against real actuator travel times, sensor debounce and
-      material inertia is not. A race between a diverter command and a photo-eye — the bug that
-      only appears at speed — surfaces during development instead of during commissioning.
+      It's also the reason to simulate the plant in the first place. Getting ladder logic to compile
+      is easy. Getting it to behave with real actuator travel times, sensor debounce and the weight
+      of moving parts is not. A race between a diverter command and a photo-eye, the kind of bug that
+      only shows up at speed, turns up while you're still developing instead of on commissioning
+      day.
     </p>
     <div class="tscroll reveal">
       <table>
@@ -217,13 +232,13 @@
 
   <section>
     <div class="sec-label reveal">Project 07 · The Tank</div>
-    <h2 class="reveal">Four networks, no Boolean logic at all.</h2>
+    <h2 class="reveal">Four networks and not a single bit of Boolean logic.</h2>
     <p class="reveal">
-      Two operator potentiometers drive the fill and discharge valves; the level and flow
-      transmitters are scaled into engineering units and shown on two panel displays. Every
-      signal is analog, so the work is entirely in <strong>scaling</strong> — <code>MOVE</code>,
-      three <code>FC_Scaling</code> instances, and two <code>TO_INT</code> conversions across
-      four FBD networks.
+      Two potentiometers let the operator set the fill and discharge valves, and the level and flow
+      transmitters are scaled into engineering units and shown on two panel displays. Every signal
+      is analog, so all the work is in the <strong>scaling</strong>: one <code>MOVE</code>, three
+      <code>FC_Scaling</code> blocks and two <code>TO_INT</code> conversions spread across four FBD
+      networks.
     </p>
 
     <figure class="reveal">
@@ -232,12 +247,12 @@
         aria-label="Screen recording of the tank project: the four FBD networks in CODESYS online monitoring on the left with live values on every pin, beside the Factory I/O scene where the tank fills and the two panel displays track the graduated level column.">
         <source src="../media/plc-tank.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 01</span>The run, end to end. Both displays track the graduated column as the level moves; watch <code>Tank1_DischargeValve</code> reach 10 when the centre-detent pot hits its full-clockwise stop at <code>Pot2_Discharge</code> = 5.</figcaption>
+      <figcaption><span class="n">VID 01</span>The whole run. Both displays follow the graduated column as the level moves. Watch <code>Tank1_DischargeValve</code> reach 10 when the centre-detent pot hits its full clockwise stop at <code>Pot2_Discharge</code> = 5.</figcaption>
     </figure>
 
     <figure class="reveal">
       <img src="../assets/plc/p07-fbd.jpg" alt="Four Function Block Diagram networks in CODESYS online monitoring: a MOVE block passing Pot1_Fill to Tank1_FillValve, an FC_Scaling block mapping Pot2_Discharge from minus five to plus five onto zero to ten, and two further FC_Scaling blocks feeding TO_INT conversions for the level and flow displays. Every pin shows a live value in an orange box." loading="lazy" decoding="async">
-      <figcaption><span class="n">FIG 02</span>Networks 1–4 in online monitoring. Network 1 passes the fill demand straight through; network 2 rescales the bipolar discharge demand; networks 3 and 4 convert raw transmitter signals into engineering units for the displays. <code>Error1</code>–<code>Error3</code> all read FALSE.</figcaption>
+      <figcaption><span class="n">FIG 02</span>Networks 1 to 4 in online monitoring. Network 1 passes the fill demand straight through, network 2 rescales the two-sided discharge demand, and networks 3 and 4 turn raw transmitter signals into engineering units for the displays. <code>Error1</code> to <code>Error3</code> all read FALSE.</figcaption>
     </figure>
 
     <div class="tscroll reveal">
@@ -245,34 +260,35 @@
         <thead><tr><th>#</th><th>Function</th><th>Input range</th><th>Output range</th><th>Destination</th></tr></thead>
         <tbody>
           <tr><td>1</td><td>MOVE</td><td>Pot1_Fill</td><td>pass-through</td><td>Tank1_FillValve</td></tr>
-          <tr><td>2</td><td>FC_Scaling</td><td>−5 … +5</td><td>0 … 10</td><td>Tank1_DischargeValve</td></tr>
-          <tr><td>3</td><td>FC_Scaling → TO_INT</td><td>0 … 10</td><td>0 … 300</td><td>Display1_WaterLevel</td></tr>
-          <tr><td>4</td><td>FC_Scaling → TO_INT</td><td>0 … 10</td><td>0 … 30</td><td>Display2_FlowRate</td></tr>
+          <tr><td>2</td><td>FC_Scaling</td><td>−5 to +5</td><td>0 to 10</td><td>Tank1_DischargeValve</td></tr>
+          <tr><td>3</td><td>FC_Scaling, then TO_INT</td><td>0 to 10</td><td>0 to 300</td><td>Display1_WaterLevel</td></tr>
+          <tr><td>4</td><td>FC_Scaling, then TO_INT</td><td>0 to 10</td><td>0 to 30</td><td>Display2_FlowRate</td></tr>
         </tbody>
       </table>
     </div>
 
     <h3 class="reveal">Why network 2 is the interesting one</h3>
     <p class="reveal">
-      The discharge potentiometer is a <strong>centre-detent</strong> device: it reads −5 at one
-      stop and +5 at the other. The valve, like every valve, only travels one way — 0 to 10.
-      <code>FC_Scaling</code> maps the bipolar span onto the unipolar one:
+      The discharge potentiometer has a <strong>centre detent</strong>, so it reads −5 at one end and
+      +5 at the other. The valve, like every valve, only goes one way, from 0 to 10.
+      <code>FC_Scaling</code> maps the two-sided range onto the one-sided one:
     </p>
     <div class="law reveal">Tank1_DischargeValve = <span class="a">(</span>Pot2_Discharge − (−5)<span class="a">)</span> / <span class="a">(</span>5 − (−5)<span class="a">)</span> × <span class="a">(</span>10 − 0<span class="a">)</span> + 0
 <span class="c">
-live in FIG 02:   Pot2_Discharge = 3.91  →  (3.91 + 5) / 10 × 10  =  8.91  ✓</span></div>
+live in FIG 02:   Pot2_Discharge = 3.91,  so  (3.91 + 5) / 10 × 10  =  8.91,  which matches</span></div>
     <p class="reveal">
-      Networks 3 and 4 run the other direction — raw 0 … 10 transmitter signal into the units
-      printed on the tank's gauge board — then <code>TO_INT</code> converts to the display's
-      integer type. That conversion <strong>rounds</strong> rather than truncates, which the
-      sampled values make plain: a flow of 18.7 shows as 19, and a level of 0.0997 shows as 0.
+      Networks 3 and 4 go the other way. They take the raw 0 to 10 transmitter signal and turn it
+      into the units printed on the tank's gauge board, and then <code>TO_INT</code> converts that to
+      the display's integer type. That conversion <strong>rounds</strong> instead of chopping off the
+      decimals, and the sampled values show it clearly: a flow of 18.7 displays as 19, and a level of
+      0.0997 displays as 0.
     </p>
 
     <h3 class="reveal">Verifying the transfer functions against the plant</h3>
     <p class="reveal">
-      Scaling parameters are easy to get wrong and impossible to spot by inspection, so both
-      transfer functions were checked numerically against live values sampled from the online
-      view at three points across the run:
+      Scaling parameters are easy to get wrong and impossible to catch just by looking, so I checked
+      both transfer functions with numbers, sampling live values from the online view at three points
+      during the run:
     </p>
     <div class="tscroll reveal">
       <table>
@@ -293,37 +309,37 @@ live in FIG 02:   Pot2_Discharge = 3.91  →  (3.91 + 5) / 10 × 10  =  8.91  �
           <tr class="hl"><td>6.22</td><td>18.66</td><td>18.7</td><td>19</td></tr>
         </tbody>
       </table>
-      <p class="tnote">Both transfer functions match to within display rounding across the full span. The highlighted rows are where the INT conversion is visible.</p>
+      <p class="tnote">Both transfer functions match within display rounding across the whole range. The highlighted rows are where you can see the INT conversion at work.</p>
     </div>
     <p class="reveal">
-      Each <code>FC_Scaling</code> instance also drives an <code>Input_Error</code> output.
-      <code>Error1</code>, <code>Error2</code> and <code>Error3</code> read FALSE throughout the
-      recording, confirming that no transmitter ever left its declared span — the range check
-      is part of the evidence, not an afterthought.
+      Each <code>FC_Scaling</code> block also drives an <code>Input_Error</code> output.
+      <code>Error1</code>, <code>Error2</code> and <code>Error3</code> stay FALSE for the whole
+      recording, which confirms no transmitter ever left its declared range. I count that range check
+      as part of the evidence, not an afterthought.
     </p>
 
     <div class="fig-grid">
       <figure class="reveal">
         <img src="../assets/plc/p07-tank-empty.jpg" alt="The Factory I/O process tank at the start of the run, empty, with the graduated level column reading near zero." loading="lazy" decoding="async">
-        <figcaption><span class="n">FIG 03</span>Start of run — tank empty, column at zero.</figcaption>
+        <figcaption><span class="n">FIG 03</span>The start of the run, with the tank empty and the column at zero.</figcaption>
       </figure>
       <figure class="reveal">
         <img src="../assets/plc/p07-tank-full.jpg" alt="The same Factory I/O process tank filled with blue liquid, the graduated level column reading high, and the two panel displays showing the scaled level and flow values." loading="lazy" decoding="async">
-        <figcaption><span class="n">FIG 04</span>Filled — graduated column and both panel displays track together.</figcaption>
+        <figcaption><span class="n">FIG 04</span>Filled up, with the graduated column and both panel displays moving together.</figcaption>
       </figure>
     </div>
 
     <div class="callout reveal">
-      <div class="ctitle">Stated plainly</div>
+      <div class="ctitle">To be clear</div>
       <p>
-        <strong>This project is open-loop. There is no PID block, and none is claimed.</strong>
-        The operator closes the loop by watching the displays and turning the potentiometers.
-        That is the right starting point rather than a shortcut: a regulator tuned against a
-        mis-scaled transmitter will look perfectly stable and still hold the wrong setpoint.
-        The obvious extension is to drive <code>Tank1_FillValve</code> from the error between a
-        setpoint and <code>WaterLevel</code>, keeping the discharge valve as a manual
-        disturbance — and the scaling networks would carry over unchanged, which is the whole
-        point of separating signal conditioning from control.
+        <strong>This project is open-loop. There is no PID block, and I'm not claiming one.</strong>
+        The operator closes the loop by watching the displays and turning the potentiometers. I see
+        that as the right place to start, not a shortcut. A regulator tuned on a badly scaled
+        transmitter will look perfectly stable and still hold the wrong setpoint. The natural next
+        step is to drive <code>Tank1_FillValve</code> from the error between a setpoint and
+        <code>WaterLevel</code>, leaving the discharge valve as a manual disturbance. The scaling
+        networks would carry over untouched, which is exactly why signal conditioning and control
+        belong in separate pieces.
       </p>
     </div>
   </section>
@@ -332,9 +348,10 @@ live in FIG 02:   Pot2_Discharge = 3.91  →  (3.91 + 5) / 10 × 10  =  8.91  �
     <div class="sec-label reveal">Project 02 · Seal-In</div>
     <h2 class="reveal">The smallest piece of memory in ladder logic.</h2>
     <p class="reveal">
-      Drive a belt conveyor from a two-button station: a momentary <strong>Start</strong> must
-      latch the drive on, releasing it must not stop the belt, and <strong>Stop</strong> must
-      break the circuit at any time. Six BOOLs, two networks.
+      The job is to run a belt conveyor from a two-button station. A quick press of
+      <strong>Start</strong> has to latch the drive on, letting go must not stop the belt, and
+      <strong>Stop</strong> has to break the circuit at any moment. It takes six BOOLs and two
+      networks.
     </p>
 
     <figure class="reveal">
@@ -343,27 +360,27 @@ live in FIG 02:   Pot2_Discharge = 3.91  →  (3.91 + 5) / 10 × 10  =  8.91  �
         aria-label="Screen recording of the conveyor project: the CODESYS ladder editor in online monitoring above the Factory I/O conveyor scene, with the live OPC tag table listing all six Boolean tags.">
         <source src="../media/plc-conveyor.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 02</span>The run, end to end. The proof is in the tag table: <code>FIO_B</code> reads 0 while <code>FIO_C</code> stays 1. The latch is holding the drive, not the button.</figcaption>
+      <figcaption><span class="n">VID 02</span>The whole run. The proof is in the tag table: <code>FIO_B</code> reads 0 while <code>FIO_C</code> stays 1, so the latch is holding the drive, not the button.</figcaption>
     </figure>
-    <div class="law reveal">C  := <span class="a">NOT</span> A <span class="a">AND</span> (B <span class="a">OR</span> C)                     <span class="c">— seal-in latch</span>
-CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span class="a">NOT</span> AA <span class="a">AND</span> BB)   <span class="c">— exclusive-OR</span></div>
+    <div class="law reveal">C  := <span class="a">NOT</span> A <span class="a">AND</span> (B <span class="a">OR</span> C)                     <span class="c">seal-in latch</span>
+CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span class="a">NOT</span> AA <span class="a">AND</span> BB)   <span class="c">exclusive OR</span></div>
     <p class="reveal">
-      Three things are load-bearing here. The <code>C</code> contact in parallel with
-      <code>B</code> feeds the coil's own state back into the rung, so the latch — not the
-      button — holds the drive. <code>A</code> sits in series <em>ahead</em> of that parallel
-      block, so Stop can never be overridden by holding Start. And <code>A</code> is evaluated
-      through a normally-closed contact, mirroring real wiring practice: a broken wire to the
-      Stop button de-energises the rung rather than disabling the stop function.
+      Three details carry the whole thing. The <code>C</code> contact in parallel with <code>B</code>
+      feeds the coil's own state back into the rung, so it's the latch that holds the drive, not the
+      button. <code>A</code> sits in series <em>before</em> that parallel block, so holding Start can
+      never override Stop. And <code>A</code> is read through a normally closed contact, the way
+      real panels are wired, so a broken wire to the Stop button cuts power to the rung instead of
+      quietly disabling the stop.
     </p>
     <figure class="reveal">
       <img src="../assets/plc/p02-ladder.png" alt="Two ladder networks in CODESYS online monitoring. Blue conductors indicate power flow and filled contacts are conducting; network one is sealed in through contact C, and network two is blocked because both exclusive-OR inputs are true." loading="lazy" decoding="async">
       <figcaption><span class="n">FIG 05</span>Both networks in online monitoring. Blue conductors carry power, filled contacts are conducting. Network 1 is sealed in through <code>C</code>; network 2 is correctly blocked because both XOR inputs are TRUE.</figcaption>
     </figure>
     <p class="reveal">
-      The tag trace is the proof. <code>B</code> reads 0 in every sampled frame — the Start
-      press is momentary — yet <code>C</code> stays at 1 until <code>A</code> is asserted, at
-      which point the rung breaks. Meanwhile <code>CC</code> stays 0 throughout because
-      <code>AA</code> and <code>BB</code> are both 1, which is the correct XOR result.
+      The tag trace proves it. <code>B</code> reads 0 in every sampled frame, because the Start press
+      is only momentary, yet <code>C</code> stays at 1 until <code>A</code> goes high, and then the
+      rung breaks. Meanwhile <code>CC</code> stays 0 the whole time, because <code>AA</code> and
+      <code>BB</code> are both 1, which is the right XOR answer.
     </p>
     <div class="tscroll reveal">
       <table>
@@ -371,29 +388,29 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
         <tbody>
           <tr><td>start</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td><td>idle, belt stopped</td></tr>
           <tr class="hl"><td>after Start</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>latched on, Start already released</td></tr>
-          <tr><td>end</td><td>1</td><td>0</td><td>1→0</td><td>1</td><td>1</td><td>0</td><td>Stop asserted, rung breaks</td></tr>
+          <tr><td>end</td><td>1</td><td>0</td><td>1 then 0</td><td>1</td><td>1</td><td>0</td><td>Stop asserted, rung breaks</td></tr>
         </tbody>
       </table>
     </div>
     <div class="fig-grid">
       <figure class="reveal">
         <img src="../assets/plc/p02-overview.jpg" alt="The full commissioning view for the conveyor project: the CODESYS ladder editor at top left, the Factory I/O conveyor scene, and the live OPC tag table at bottom right." loading="lazy" decoding="async">
-        <figcaption><span class="n">FIG 06</span>Ladder editor, Factory I/O scene, and the live OPC tag table together.</figcaption>
+        <figcaption><span class="n">FIG 06</span>The ladder editor, the Factory I/O scene and the live OPC tag table, all at once.</figcaption>
       </figure>
       <figure class="reveal">
         <img src="../assets/plc/p02-opc-tags.jpg" alt="An OPC quick-client tag table listing each item with its data type, live value, timestamp, quality and update count." loading="lazy" decoding="async">
-        <figcaption><span class="n">FIG 07</span>Rising update counts on <code>A</code> and <code>C</code> confirm the link is live, not cached.</figcaption>
+        <figcaption><span class="n">FIG 07</span>The update counts on <code>A</code> and <code>C</code> keep climbing, which shows the link is live and not cached.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-label reveal">Project 05 · Sequencing</div>
-    <h2 class="reveal">The routing decision cannot be computed from the current sensor vector.</h2>
+    <h2 class="reveal">By the time the box reaches the junction, the sensors have forgotten it.</h2>
     <p class="reveal">
-      A pallet-handling line loads a box, measures its height, routes it down the left or right
-      lane, and tallies throughput on a panel display. Nineteen tags — eighteen BOOL plus a
-      <code>WORD</code> for the display — driving five <code>RS</code> latches and two
+      A pallet line loads a box, measures how tall it is, sends it down the left or right lane, and
+      counts the boxes on a panel display. It runs on nineteen tags, eighteen BOOLs plus a
+      <code>WORD</code> for the display, driving five <code>RS</code> latches and two
       <code>CTUD</code> counters.
     </p>
 
@@ -403,26 +420,25 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
         aria-label="Screen recording of the sorting project: the Factory I/O T-junction station running full sort cycles, with the OPC tag table for all nineteen tags visible top right.">
         <source src="../media/plc-sorting.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">VID 03</span>The run, end to end. Full sort cycles with the counter tallying on the lane exit sensors. <span class="tnote">(This recording has no audio track.)</span></figcaption>
+      <figcaption><span class="n">VID 03</span>The whole run. Full sort cycles, with the counter ticking up on the lane exit sensors. <span class="tnote">(This recording has no audio track.)</span></figcaption>
     </figure>
     <figure class="reveal">
       <img src="../assets/plc/p05-overview.jpg" alt="Overview of the Factory I/O sorting station: an entry conveyor with a pallet loader at top left, a T-junction with two transfer units at the centre, and left and right outfeed lanes." loading="lazy" decoding="async">
-      <figcaption><span class="n">FIG 08</span>The station — entry conveyor with pallet loader, T-junction with two transfer units, and the two outfeed lanes.</figcaption>
+      <figcaption><span class="n">FIG 08</span>The station: an entry conveyor with the pallet loader, a T-junction with two transfer units, and the two outfeed lanes.</figcaption>
     </figure>
     <p class="reveal">
-      The height sensors sit <strong>upstream</strong> of the junction. By the time a pallet
-      reaches the diverter the beams have already cleared, so a live sensor read at the
-      junction would always fail. <code>RS_2</code> latches the classification at the moment of
-      measurement and holds it until the transfer completes — that latch, not the sensor, is
-      what makes the routing independent of conveyor speed.
+      The height sensors sit <strong>before</strong> the junction. By the time a pallet reaches the
+      diverter the beams have already cleared, so reading the sensors at the junction would never
+      work. <code>RS_2</code> latches the result at the moment the box is measured and holds on to it
+      until the transfer is done. It's that latch, not the sensor, that makes the routing work at any
+      conveyor speed.
     </p>
     <p class="reveal">
-      <code>RS</code> is the <strong>reset-dominant</strong> bistable: when Set and Reset are
-      asserted in the same scan, Reset wins. For a sorting station that is the safe polarity —
-      if a stop or emergency condition coincides with a set condition, the state clears rather
-      than latching a diverter on. Counting happens on the lane <strong>exit</strong> sensor
-      rather than the entry, so a pallet that stalls mid-transfer is never credited to the
-      total.
+      <code>RS</code> is the <strong>reset-dominant</strong> bistable, meaning that if Set and Reset
+      both fire in the same scan, Reset wins. That's the safe choice for a sorting station. If a stop
+      or emergency happens at the same moment as a set, the state clears instead of locking a
+      diverter on. I count boxes at the lane <strong>exit</strong> sensor rather than the entry, so a
+      pallet that gets stuck halfway through a transfer never gets added to the total.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
@@ -431,54 +447,53 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
       </figure>
       <figure class="reveal">
         <img src="../assets/plc/p05-control-panel.jpg" alt="The operator control panel with a red mushroom emergency stop, Start and Stop pushbuttons, a Reset button, a mode selector, and a digital display." loading="lazy" decoding="async">
-        <figcaption><span class="n">FIG 10</span>Operator panel — E-stop, Start, Stop, Reset, mode selector, and the counter display.</figcaption>
+        <figcaption><span class="n">FIG 10</span>The operator panel, with the E-stop, Start, Stop, Reset, the mode selector and the counter display.</figcaption>
       </figure>
     </div>
     <figure class="reveal">
       <img src="../assets/plc/p05-opc-tags.jpg" alt="The OPC server tag table showing all nineteen items for the sorting station, each with type, value, quality and update count." loading="lazy" decoding="async">
-      <figcaption><span class="n">FIG 11</span>All 19 items live on the OPC server. Differing update counts separate the signals cycling with each pallet from the static operator inputs.</figcaption>
+      <figcaption><span class="n">FIG 11</span>All 19 items live on the OPC server. The different update counts show which signals change with every pallet and which operator inputs sit still.</figcaption>
     </figure>
     <div class="callout reveal">
-      <div class="ctitle">Scope of the evidence</div>
+      <div class="ctitle">What I can and can't show</div>
       <p>
-        Project 05's logic is documented from its online instance tree and observed behaviour.
-        The full ladder is not reproduced, because it was not shown in the recording — open
-        <code>Proj+05.project</code> in CODESYS for the authoritative source. The
-        <code>.project</code> files are saved in CODESYS's own container format, so they are
-        neither readable as text nor diff-friendly under version control.
+        I've described Project 05's logic from its online instance tree and how it behaved. I haven't
+        reproduced the full ladder here, because it wasn't on screen in the recording. For the real
+        source, open <code>Proj+05.project</code> in CODESYS. The <code>.project</code> files use
+        CODESYS's own container format, so you can't read them as text or diff them in version
+        control.
       </p>
     </div>
   </section>
 
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What these three establish.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What the three taught me together.</h2>
     <div class="tscroll reveal">
       <table>
         <thead><tr><th></th><th>Project 02</th><th>Project 05</th><th>Project 07</th></tr></thead>
         <tbody>
           <tr><td>Language</td><td>Ladder (LD)</td><td>Ladder (LD)</td><td>FBD</td></tr>
-          <tr><td>Problem class</td><td>Discrete + latch</td><td>Sequential handling</td><td>Analog conditioning</td></tr>
-          <tr><td>Signals</td><td>6 BOOL</td><td>18 BOOL + 1 WORD</td><td>6 REAL + 2 INT</td></tr>
+          <tr><td>Problem class</td><td>Discrete with a latch</td><td>Sequential handling</td><td>Analog conditioning</td></tr>
+          <tr><td>Signals</td><td>6 BOOL</td><td>18 BOOL and 1 WORD</td><td>6 REAL and 2 INT</td></tr>
           <tr><td>Key constructs</td><td>Seal-in, NC stop, XOR</td><td>RS ×5, CTUD ×2</td><td>MOVE, FC_Scaling ×3, TO_INT ×2</td></tr>
           <tr><td>Memory strategy</td><td>Coil self-seal</td><td>Reset-dominant bistables</td><td>Stateless per-scan transform</td></tr>
-          <tr><td>Validated by</td><td>Tag trace through latch</td><td>Sort cycles + counter tally</td><td>Numerical transfer-function check</td></tr>
+          <tr><td>Validated by</td><td>Tag trace through the latch</td><td>Sort cycles and counter tally</td><td>Checking the transfer functions with numbers</td></tr>
         </tbody>
       </table>
     </div>
     <p class="reveal">
-      <strong>Latching is the primitive.</strong> Project 02's seal-in and Project 05's
-      <code>RS</code> blocks are the same idea expressed two ways; choosing between them is a
-      readability decision, not a functional one — except for reset dominance, which
-      <code>RS</code> makes explicit and a seal contact leaves implicit in rung ordering.
-      <strong>Sequential logic needs memory placed at the point of measurement</strong>, because
-      a classification made metres upstream cannot be re-derived at the diverter.
-      <strong>Scaling is a first-class concern</strong> — most of the work in an analog loop
-      happens before any control law is applied, and it can and should be verified numerically
-      against live plant values. And <strong>simulation is what closes the loop on
-      correctness</strong>: every claim here is backed by numbers read off the running system,
-      not by a program that merely compiles.
+      Latching is the building block under everything. The seal-in in Project 02 and the
+      <code>RS</code> blocks in Project 05 are the same idea written two ways, and picking one is
+      mostly about readability. The exception is reset dominance, which <code>RS</code> spells out
+      and a seal contact leaves hidden in the order of the rungs. Sequential logic needs its memory
+      right where the measurement happens, because a decision made metres upstream can't be worked out
+      again at the diverter. Scaling deserves as much attention as control. Most of the work in an
+      analog loop happens before any control law runs, and it can and should be checked with numbers
+      from the live plant. And simulation is what lets me say any of this is correct. Everything on
+      this page is backed by numbers read off the running system, not by a program that simply
+      compiles.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">IEC 61131-3</span><span class="tag">CODESYS V3.5</span><span class="tag">Factory I/O</span>
@@ -489,8 +504,8 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   </section>
 
   <div class="pager">
-    <a href="../index.html#projects">← All work</a>
-    <a href="micro820-plc.html">Micro820 CNC tool magazine →</a>
+    <a href="../index.html#projects">All work</a>
+    <a href="micro820-plc.html">Next: the Micro820 tool magazine</a>
   </div>
 </main>
 
@@ -502,13 +517,13 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 
-  /* ================= BACKGROUND: THE PROCESS TANK =================
+  /*  BACKGROUND: THE PROCESS TANK 
      A wireframe vessel filling and draining under the same two operator
      potentiometers the real project has. The scene runs the project's actual
-     transfer functions every frame — FC_Scaling on the bipolar discharge demand,
-     then FC_Scaling + TO_INT for the level and flow readouts — so the numbers
+     transfer functions every frame, FC_Scaling on the bipolar discharge demand,
+     then FC_Scaling + TO_INT for the level and flow readouts, so the numbers
      glowing on the two panel displays are the ones the PLC would compute.
-  ================================================================= */
+   */
   const canvas=document.getElementById('tankscene');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -532,7 +547,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   rig.scale.setScalar(mobile?0.6:0.78);
   scene.add(rig);
 
-  /* ---- the vessel ---- */
+  /*  the vessel  */
   const R=2.1, H=5.2, BASE=FLOOR+0.55;
   const tank=new THREE.Group(); tank.position.set(0,BASE,0); rig.add(tank);
   const shell=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,22,4,true),wire(DEEPBLUE,0.32));
@@ -546,7 +561,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
     leg.position.set(x,-0.28,z); tank.add(leg);
   });
 
-  /* ---- liquid: a disc that rises, plus a wall band so the column reads from any angle ---- */
+  /*  liquid: a disc that rises, plus a wall band so the column reads from any angle  */
   const liquid=new THREE.Mesh(new THREE.CylinderGeometry(R*0.97,R*0.97,0.04,22),
     new THREE.MeshBasicMaterial({color:CYAN,transparent:true,opacity:0.20,side:THREE.DoubleSide}));
   tank.add(liquid);
@@ -554,7 +569,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
     new THREE.MeshBasicMaterial({color:CYAN,transparent:true,opacity:0.07,side:THREE.DoubleSide}));
   tank.add(band);
 
-  /* ---- graduated sight column beside the shell ---- */
+  /*  graduated sight column beside the shell  */
   const colX=R+0.42;
   const colBar=new THREE.Mesh(new THREE.BoxGeometry(0.05,H,0.05),wire(CYAN,0.28));
   colBar.position.set(colX,H/2,0); tank.add(colBar);
@@ -567,7 +582,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   const float=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,6),wire(AMBER,0.7));
   float.position.x=colX; tank.add(float);
 
-  /* ---- valves: fill on top, discharge at the base. Aperture opens with demand. ---- */
+  /*  valves: fill on top, discharge at the base. Aperture opens with demand.  */
   function valve(){
     const g=new THREE.Group();
     const body=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.34,10),wire(AMBER,0.42));
@@ -590,7 +605,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   tank.add(pipe(R+1.5,0.5,R+1.5,0.15));
   tank.add(pipe(R+1.5,0.15,R-0.1,0.15));
 
-  /* ---- flow particles: down the fill spout, out the discharge ---- */
+  /*  flow particles: down the fill spout, out the discharge  */
   function stream(n){
     const p=new Float32Array(n*3);
     const g=new THREE.BufferGeometry();
@@ -602,7 +617,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   const NIN=mobile?26:52, NOUT=mobile?20:40;
   const inflow=stream(NIN), outflow=stream(NOUT);
 
-  /* ---- two panel displays, drawn to a canvas texture ---- */
+  /*  two panel displays, drawn to a canvas texture  */
   function panel(w,h){
     const c=document.createElement('canvas'); c.width=256; c.height=128;
     const tex=new THREE.CanvasTexture(c);
@@ -627,7 +642,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
     d.tex.needsUpdate=true;
   }
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?400:1000;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*54;pp[i*3+1]=(Math.random()-0.5)*24;pp[i*3+2]=(Math.random()-0.5)*28;}
@@ -635,7 +650,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
   scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
 
-  /* ================= the project's own maths =================
+  /*  the project's own maths 
      FC_Scaling is a straight linear map with an out-of-range flag; TO_INT
      rounds to nearest. Both are reproduced exactly as the FBD uses them.    */
   function FC_Scaling(input,iMin,iMax,oMin,oMax){
@@ -645,7 +660,7 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
   }
   const TO_INT = v => Math.round(v);
 
-  let level=0.6;            // tank level, 0 … 10 (what Tank1_LevelMeter reads)
+  let level=0.6;            // tank level, 0 ... 10 (what Tank1_LevelMeter reads)
   let sTarget=0,smooth=0,mx=0;
   addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
   addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
@@ -661,12 +676,12 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
 
     if(!reduced){
       /* the two operator potentiometers, swept slowly out of phase */
-      const Pot1_Fill      = 5 + Math.sin(t*0.21)*5;        // 0 … 10
-      const Pot2_Discharge = Math.sin(t*0.15+2.1)*5;        // −5 … +5, centre detent
+      const Pot1_Fill      = 5 + Math.sin(t*0.21)*5;        // 0 ... 10
+      const Pot2_Discharge = Math.sin(t*0.15+2.1)*5;        // −5 ... +5, centre detent
 
-      /* NETWORK 1 — MOVE: fill demand straight through to the valve */
+      /* NETWORK 1, MOVE: fill demand straight through to the valve */
       const Tank1_FillValve = Pot1_Fill;
-      /* NETWORK 2 — FC_Scaling: bipolar demand onto unipolar valve travel */
+      /* NETWORK 2, FC_Scaling: bipolar demand onto unipolar valve travel */
       const disch = FC_Scaling(Pot2_Discharge,-5,5,0,10);
       const Tank1_DischargeValve = disch.v;
 
@@ -676,13 +691,13 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
       const Tank1_LevelMeter = level;
       const Tank1_FlowMeter  = Math.min(Tank1_FillValve,10);
 
-      /* NETWORKS 3 & 4 — FC_Scaling → TO_INT for the two panel displays */
+      /* NETWORKS 3 & 4, FC_Scaling to TO_INT for the two panel displays */
       const lvl = FC_Scaling(Tank1_LevelMeter,0,10,0,300);
       const flw = FC_Scaling(Tank1_FlowMeter,0,10,0,30);
       const Display1_WaterLevel = TO_INT(lvl.v);
       const Display2_FlowRate   = TO_INT(flw.v);
 
-      /* --- render the process state --- */
+      /*  render the process state  */
       const h=Math.max(level/10*H,0.02);
       liquid.position.y=h;
       band.scale.y=h; band.position.y=h/2;
@@ -712,13 +727,13 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
       outflow.g.attributes.position.needsUpdate=true;
       outflow.pts.material.opacity=0.08+outRate*0.4;
 
-      /* an out-of-range input would light the tick marks amber — it never does */
+      /* an out-of-range input would light the tick marks amber, it never does */
       const bad = lvl.err||flw.err||disch.err;
       ticks.forEach(tk=>{ tk.material.color.setHex(bad?AMBER:tk.material.color.getHex()); });
 
       if(t-Math.floor(t*6)/6 < dt){   // ~6 Hz display refresh, like a real panel
-        draw(disp1,'DISPLAY1_WATERLEVEL',Display1_WaterLevel,'0 – 300');
-        draw(disp2,'DISPLAY2_FLOWRATE',Display2_FlowRate,'0 – 30');
+        draw(disp1,'DISPLAY1_WATERLEVEL',Display1_WaterLevel,'0 TO 300');
+        draw(disp2,'DISPLAY2_FLOWRATE',Display2_FlowRate,'0 TO 30');
       }
     }
 
@@ -730,8 +745,8 @@ CC := (AA <span class="a">AND NOT</span> BB) <span class="a">OR</span> (<span cl
     camera.lookAt(rig.position.x*0.5,BASE+2.2,0);
     renderer.render(scene,camera);
   }
-  draw(disp1,'DISPLAY1_WATERLEVEL',0,'0 – 300');
-  draw(disp2,'DISPLAY2_FLOWRATE',0,'0 – 30');
+  draw(disp1,'DISPLAY1_WATERLEVEL',0,'0 TO 300');
+  draw(disp2,'DISPLAY2_FLOWRATE',0,'0 TO 30');
   animate();
 })();
 </script>

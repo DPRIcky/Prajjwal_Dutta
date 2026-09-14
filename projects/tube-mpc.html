@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Tube-MPC lateral path tracking with MATLAB/Simulink–CarSim co-simulation. Robust control project by Prajjwal Dutta.">
-<title>Tube-MPC Path Tracking — Prajjwal Dutta</title>
+<meta name="description" content="How Vamsi and I built a Tube-MPC lateral controller in Simulink and then made it hold a CarSim vehicle on its line at 54 km/h.">
+<title>Tube-MPC Path Tracking · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,7 +128,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -136,10 +136,11 @@
     <div class="eyebrow reveal"><span>EGR 560 · Vehicle Dynamics &amp; Control · Spring 2026</span><span>with Vamsi Sai Korlapati</span></div>
     <h1 class="reveal">Tube-MPC Lateral Path Tracking with CarSim Co-Simulation</h1>
     <p class="sub reveal">
-      A robust lateral controller for automated driving that survives what breaks nominal
-      controllers: disturbance, model mismatch, and actuator saturation. Nominal MPC plans the
-      tube center; a discrete LQR ancillary loop pulls the real vehicle back toward it — first
-      proven in Simulink, then validated end-to-end against a high-fidelity CarSim vehicle.
+      Vamsi and I wanted a steering controller that keeps working when the things that usually
+      break controllers show up: disturbances, a model that doesn't match the car, and a steering
+      actuator that runs out of travel. Our answer was Tube-MPC. A nominal MPC plans the center of
+      a tube, and a discrete LQR loop keeps pulling the real vehicle back inside it. We got it
+      working in Simulink first, then took it all the way to a high-fidelity CarSim vehicle.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/EGR-560-Project-2026/Carsim-tubemp-matlab-cosimulation/tree/main/MPC%20Controller%20example" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -163,137 +164,140 @@
       aria-label="Animated CarSim VS Visualizer run: the vehicle tracks a curved road under Tube-MPC control while nine live plots of tracking error, trajectory, steering, and lateral acceleration update in real time.">
       <source src="../media/tube-mpc-carsim.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>Final closed-loop CarSim run (live capture) — the vehicle holds the centerline through curves at 54 km/h while live plots log tracking error, trajectory, steering, and lateral acceleration.</figcaption>
+    <figcaption><span class="n">FIG 01</span>The final closed-loop CarSim run, captured live. The car holds the centerline through the curves at 54 km/h while the plots log tracking error, trajectory, steering and lateral acceleration.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Problem</div>
-    <h2 class="reveal">Nominal controllers are optimists.</h2>
+    <h2 class="reveal">A controller tuned on a clean model is an optimist.</h2>
     <p class="reveal">
-      A controller tuned on a clean linear bicycle model tracks that model beautifully — and can
-      fall apart on a real vehicle with nonlinear tires, different mass properties, crosswind,
-      and a steering actuator that saturates. In our benchmarks, an unconstrained LQR under
-      sustained sinusoidal disturbance hit <strong>30.4% steering saturation and diverged
-      outright</strong>. The project asks: how do you keep MPC's interpretability while adding a
-      formal robustness margin?
+      Tune a controller on a tidy linear bicycle model and it will track that model beautifully.
+      Put it on a car with nonlinear tires, different mass, a crosswind and a steering actuator
+      that saturates, and it can fall apart. We saw exactly that in our own benchmarks: an
+      unconstrained LQR under a steady sinusoidal disturbance spent <strong>30.4% of the run in
+      steering saturation and then diverged</strong>. So the question we set ourselves was how to
+      keep MPC easy to reason about while giving it a real margin against the unexpected.
     </p>
     <p class="reveal">
-      Tube-MPC answers by separating planning from correction. The MPC only has to steer a
-      disturbance-free <em>nominal</em> model; a fast ancillary feedback loop handles the gap
-      between that nominal trajectory and reality, keeping the true state inside a bounded
-      "tube" around the plan.
+      Tube-MPC gets there by splitting the job in two. The MPC only has to steer a
+      <em>nominal</em> model that never gets disturbed. A fast feedback loop underneath it deals
+      with the gap between that plan and what the car is really doing, and keeps the true state
+      inside a bounded "tube" around the plan.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Architecture</div>
-    <h2 class="reveal">One law, two loops.</h2>
+    <h2 class="reveal">The whole controller fits in three lines.</h2>
     <div class="law reveal">
       u<sub>k</sub> = v<sub>k</sub> + sat( tube_on · <span class="a">K</span> · e<sub>k</sub> )<br>
-      e<sub>k</sub> = x<sub>k</sub> − z<sub>k</sub> &nbsp;<span class="c">// tube error: sampled CarSim state − nominal state</span><br>
-      z<sub>k+1</sub> = A<sub>d</sub> z<sub>k</sub> + B<sub>d</sub> v<sub>k</sub> &nbsp;<span class="c">// discrete nominal model propagates the tube center</span><br>
-      <span class="a">K</span> = [−0.1285 &nbsp;−2.8146 &nbsp;−0.3521 &nbsp;−0.3329] &nbsp;<span class="c">// discrete LQR gain, closed-loop |λ| &lt; 1</span>
+      e<sub>k</sub> = x<sub>k</sub> − z<sub>k</sub> &nbsp;<span class="c">tube error, the sampled CarSim state minus the nominal state</span><br>
+      z<sub>k+1</sub> = A<sub>d</sub> z<sub>k</sub> + B<sub>d</sub> v<sub>k</sub> &nbsp;<span class="c">the discrete nominal model carries the tube center forward</span><br>
+      <span class="a">K</span> = [−0.1285 &nbsp;−2.8146 &nbsp;−0.3521 &nbsp;−0.3329] &nbsp;<span class="c">discrete LQR gain, closed-loop |λ| &lt; 1</span>
     </div>
     <p class="reveal">
-      The state is the four-vector [e<sub>y</sub>, e<sub>ψ</sub>, v<sub>y</sub>, r] — lateral
-      error, heading error, lateral velocity, yaw rate. The MPC block outputs the nominal
-      steering v<sub>k</sub>; a discrete nominal model generates the tube center z<sub>k</sub>;
-      the sampled plant (or CarSim) state x<sub>k</sub> is compared against it; and the LQR gain
-      K applies the correction. Critically, the correction is <strong>saturated before it
-      touches the steering interface</strong> — the raw ancillary term peaked at 87.8 in the
-      final run, and unbounded injection would have destabilized the high-fidelity vehicle.
+      The state has four parts, [e<sub>y</sub>, e<sub>ψ</sub>, v<sub>y</sub>, r]: lateral error,
+      heading error, lateral velocity and yaw rate. The MPC block puts out the nominal steering
+      v<sub>k</sub>, the nominal model turns that into the tube center z<sub>k</sub>, we compare
+      the sampled state x<sub>k</sub> from the plant or CarSim against it, and the LQR gain K
+      applies the correction. The detail that saved us was <strong>saturating that correction
+      before it reaches the steering interface</strong>. In the final run the raw correction
+      peaked at 87.8, and feeding that straight in would have thrown the high-fidelity car off
+      the road.
     </p>
     <figure class="reveal">
       <a href="../assets/tubempc/carsim_simulink_model_dark.png" target="_blank" rel="noopener">
         <img class="diagram" src="../assets/tubempc/carsim_simulink_model_dark.png" alt="Simulink block diagram of the Tube-MPC CarSim co-simulation model showing MPC block, nominal model, tube error computation, ancillary gain, saturation, and CarSim S-Function.">
       </a>
-      <figcaption><span class="n">FIG 02</span>CarSim-wired Simulink model — MPC, discrete nominal model, sampled-state construction, ancillary gain K, correction saturation, and steering-wheel conversion into the CarSim S-Function.</figcaption>
+      <figcaption><span class="n">FIG 02</span>The Simulink model wired to CarSim. From left to right: the MPC, the discrete nominal model, where the sampled state gets built, the ancillary gain K, the correction saturation, and the steering wheel conversion into the CarSim S-Function.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Phase 1 · Fair Benchmark</div>
-    <h2 class="reveal">LQR vs MPC vs Tube-MPC — same model, same disturbance.</h2>
+    <h2 class="reveal">LQR, MPC and Tube-MPC on the same model and the same disturbance.</h2>
     <p class="reveal">
-      All three controllers ran on one common discrete bicycle model (T<sub>s</sub> = 0.02 s),
-      in a nominal case and under a sustained sinusoidal disturbance on the lateral channels.
+      Before trusting any of it, we wanted a fair fight. All three controllers ran on the same
+      discrete bicycle model (T<sub>s</sub> = 0.02 s), once with nothing going wrong and once
+      with a steady sinusoidal disturbance pushing on the lateral channels.
     </p>
     <table class="reveal">
       <thead><tr><th>Controller · Disturbed</th><th>RMS e<sub>y</sub></th><th>Peak |e<sub>y</sub>|</th><th>Saturation</th></tr></thead>
       <tbody>
-        <tr><td>LQR</td><td>diverged</td><td>—</td><td>30.4%</td></tr>
+        <tr><td>LQR</td><td>diverged</td><td>n/a</td><td>30.4%</td></tr>
         <tr><td>Constrained MPC (N<sub>p</sub>=20)</td><td>0.0386 m</td><td>0.1021 m</td><td>0.00%</td></tr>
         <tr class="hl"><td>Tube-MPC</td><td>0.0208 m</td><td>0.0489 m</td><td>0.00%</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">Nominal case: MPC and Tube-MPC both reached 0.0016 m RMS — 36% better than LQR's 0.0025 m. Verified run, April 2026.</p>
+    <p class="tnote reveal">With no disturbance, MPC and Tube-MPC both reached 0.0016 m RMS, which is 36% better than LQR's 0.0025 m. Verified run, April 2026.</p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/tubempc/controller_comparison.png" target="_blank" rel="noopener">
           <img src="../assets/tubempc/controller_comparison.png" alt="Four plots comparing LQR, MPC, and Tube-MPC lateral and heading error in nominal and disturbed cases; LQR diverges under disturbance while Tube-MPC halves MPC's error.">
         </a>
-        <figcaption><span class="n">FIG 03</span>Nominal vs disturbed: LQR diverges at saturation; Tube-MPC halves MPC's peak error.</figcaption>
+        <figcaption><span class="n">FIG 03</span>Nominal on the left, disturbed on the right. LQR diverges once it saturates, and Tube-MPC cuts MPC's peak error in half.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/tubempc/trajectory_xy.png" target="_blank" rel="noopener">
           <img src="../assets/tubempc/trajectory_xy.png" alt="XY trajectory plot of the three controllers following the reference path.">
         </a>
-        <figcaption><span class="n">FIG 04</span>XY trajectories against the reference path across controllers.</figcaption>
+        <figcaption><span class="n">FIG 04</span>Where each controller actually drove, against the reference path.</figcaption>
       </figure>
     </div>
     <p class="reveal">
-      The single most dramatic number came from the tube-on / tube-off ablation on the Simulink
-      plant: with ancillary feedback disabled, max sampled error under disturbance was
-      <strong>18.80 m</strong>; enabling the tube collapsed it to <strong>0.0318 m — a 591×
-      reduction</strong> from a four-element gain vector.
+      The number I still like best came from simply switching the tube on and off on the
+      Simulink plant. With the feedback loop disabled, the worst error under disturbance was
+      <strong>18.80 m</strong>. Turning the tube back on brought it down to <strong>0.0318 m, a
+      591× reduction</strong>, and all it took was a gain vector with four numbers in it.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Phase 2 · CarSim Validation</div>
-    <h2 class="reveal">Surviving contact with a real vehicle model.</h2>
+    <h2 class="reveal">Then we gave it a proper car.</h2>
     <p class="reveal">
-      Phase 2 swapped the simplified plant for a CarSim external-driver co-simulation while
-      preserving the exact Tube-MPC signal flow. This is where implementation reality lives:
-      unit conversion, steering-ratio and yaw-frame mapping, sampled four-state vector
-      construction from CarSim outputs, and correction saturation. The final 30 s run at
-      54 km/h completed closed-loop with <strong>bounded tube errors (e₁ max 0.455, e₃ max
-      0.324)</strong>, max steering-wheel demand of 45.8°, and a fully reproducible results
-      package — saved MAT runs, summary_metrics.csv, plot scripts, and the visualizer animation.
+      In the second phase we swapped the simple plant for a CarSim external-driver
+      co-simulation and kept the Tube-MPC signal flow exactly as it was. This is where most of
+      the real work turned out to be: unit conversions, the steering ratio, mapping the yaw
+      frame, building the four-state vector out of CarSim's outputs, and getting the saturation
+      in the right place. The final 30 s run at 54 km/h finished closed-loop with <strong>the tube
+      errors staying bounded (e₁ max 0.455, e₃ max 0.324)</strong> and a peak steering wheel
+      demand of 45.8°. We saved everything needed to reproduce it: the MAT runs,
+      summary_metrics.csv, the plot scripts and the visualizer animation.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/tubempc/lateral_error.jpg" target="_blank" rel="noopener">
           <img src="../assets/tubempc/lateral_error.jpg" alt="Lateral path error over the 30 second CarSim run, bounded throughout.">
         </a>
-        <figcaption><span class="n">FIG 05</span>Lateral/path error over the 30 s CarSim run — bounded throughout.</figcaption>
+        <figcaption><span class="n">FIG 05</span>Lateral path error over the 30 s CarSim run. It stays bounded the whole way.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/tubempc/actual_vs_nominal.jpg" target="_blank" rel="noopener">
           <img src="../assets/tubempc/actual_vs_nominal.jpg" alt="Sampled actual CarSim state versus nominal model state for state 1; the gap between traces is the tube error.">
         </a>
-        <figcaption><span class="n">FIG 06</span>Actual vs nominal state 1 — the gap between traces is the tube error fed to K.</figcaption>
+        <figcaption><span class="n">FIG 06</span>Actual against nominal for state 1. The gap between the two traces is the tube error that K acts on.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/tubempc/raw_vs_saturated.jpg" target="_blank" rel="noopener">
           <img src="../assets/tubempc/raw_vs_saturated.jpg" alt="Raw ancillary correction compared with the saturated correction actually injected into the steering path.">
         </a>
-        <figcaption><span class="n">FIG 07</span>Raw vs saturated correction — theory can shout; the actuator interface only hears a bounded command.</figcaption>
+        <figcaption><span class="n">FIG 07</span>The raw correction next to the saturated one. The math can ask for a lot, but the steering only ever receives a bounded command.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Robustness is structural, not tuned.</strong> Tube-MPC's advantage came from
-      architecture — separating nominal planning from error correction — not from cranking
-      weights. <strong>Constraints are the difference between degradation and divergence:</strong>
-      the same disturbance that LQR could not survive left both constrained controllers stable.
-      And <strong>sim-to-high-fidelity transfer is an engineering discipline of its own</strong> —
-      signal frames, unit conversions, and saturation placement mattered as much as the control
-      law once CarSim entered the loop.
+      The robustness came from how the controller was put together, not from how hard we turned
+      the weights. Splitting planning from correction did more than any amount of tuning.
+      Constraints also turned out to decide whether a controller degrades gracefully or falls
+      over: the disturbance LQR couldn't handle left both constrained controllers perfectly
+      stable. And moving from a simple simulation to a high-fidelity one is its own kind of
+      engineering. Once CarSim was in the loop, signal frames, unit conversions and where the
+      saturation sat mattered just as much as the control law did.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">Tube-MPC</span><span class="tag">Discrete LQR</span><span class="tag">quadprog MPC</span>
@@ -303,8 +307,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -316,7 +320,7 @@
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  /* Background: the tube itself — nominal trajectory (center line), a translucent
+  /* Background: the tube itself, nominal trajectory (center line), a translucent
      wireframe tube around it, and an "actual vehicle" weaving inside but never leaving. */
   const canvas=document.getElementById('tubescene');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});

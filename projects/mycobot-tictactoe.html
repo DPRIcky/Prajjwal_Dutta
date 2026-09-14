@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Tic-Tac-Toe robot on a MyCobot 280M5 — ArUco-calibrated eye-to-hand vision, color-segmentation board state, alpha-beta game AI, suction-pump picks, plus a MATLAB digital twin writing letters in sim and hardware simultaneously. By Prajjwal Dutta.">
-<title>Tic-Tac-Toe Robot — MyCobot 280M5 — Prajjwal Dutta</title>
+<meta name="description" content="How I taught a MyCobot 280M5 to play tic-tac-toe against a person with ArUco-calibrated vision, color segmentation, alpha-beta search and a suction pump, plus a MATLAB digital twin that writes letters in sync with the real arm.">
+<title>Tic-Tac-Toe Robot on a MyCobot 280M5 · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -148,7 +148,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -156,12 +156,12 @@
     <div class="eyebrow reveal"><span>Manipulation + CV · Fall 2023</span><span>MyCobot 280M5</span></div>
     <h1 class="reveal">Tic-Tac-Toe Against a Robot That Watches the Board</h1>
     <p class="sub reveal">
-      Two demonstrations on one desktop cobot. First, a tic-tac-toe player: an eye-to-hand
-      camera calibrated with ArUco markers reads the board, color segmentation maps each
-      block to a cell, alpha-beta search picks the strongest reply, and a suction-pump end
-      effector places the move. Second, a MATLAB digital twin: a URDF model and Simulink
-      inverse kinematics write letters in simulation and on the physical arm at the same
-      time, streamed joint-by-joint over serial.
+      I got two things working on one small desktop arm. The first is a tic-tac-toe opponent. A
+      camera calibrated with ArUco markers watches the board, color segmentation figures out
+      which block sits in which cell, alpha-beta search picks the best reply, and a suction pump
+      puts the robot's piece down. The second is a MATLAB digital twin, where a URDF model and
+      Simulink inverse kinematics write letters in simulation and on the real arm at the same
+      moment, with the joint angles streamed over serial.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/Tic-Tac-Toe-with-Mycobot280M5" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -173,9 +173,9 @@
     </div>
     <div class="metrics reveal">
       <div class="metric"><b>3×3</b><span>vision-mapped board</span></div>
-      <div class="metric"><b>α–β</b><span>game-tree search</span></div>
+      <div class="metric"><b>α/β</b><span>game-tree search</span></div>
       <div class="metric"><b>6-DoF</b><span>MyCobot 280M5</span></div>
-      <div class="metric"><b>2-in-1</b><span>gameplay + digital twin</span></div>
+      <div class="metric"><b>2-in-1</b><span>gameplay and digital twin</span></div>
     </div>
   </header>
 
@@ -185,24 +185,23 @@
       aria-label="Gameplay capture: a human places colored blocks on the 3-by-3 camera zone while the MyCobot 280M5 picks its own blocks with the suction pump and plays its counter-moves.">
       <source src="../media/mycobot-tictactoe.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>Full game, live capture — the human plays blue, the robot watches the board, thinks, and answers with the suction pump. Green is the robot's O.</figcaption>
+    <figcaption><span class="n">FIG 01</span>A full game, captured live. The person plays blue, and the robot watches the board, thinks, and answers with the suction pump. Green is the robot's O.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Idea</div>
-    <h2 class="reveal">Make a $700 arm see, decide, and play — not just move.</h2>
+    <h2 class="reveal">I wanted a $700 arm to see, decide and play.</h2>
     <p class="reveal">
-      Most desktop-cobot demos replay taught waypoints. The goal here was to close the whole
-      loop on an Elephant Robotics <strong>MyCobot 280M5</strong>: perception in, decision in
-      the middle, motion out — with a human in the loop as the opponent. Tic-tac-toe is the
-      right size of problem: small enough to solve exactly, rich enough to force real
-      board-state estimation, coordinate mapping, and pick-and-place precision on every turn.
+      Most desktop cobot demos just replay waypoints someone taught them. I wanted the whole loop
+      on an Elephant Robotics <strong>MyCobot 280M5</strong>: see the world, make a decision, then
+      move, with a real person sitting across as the opponent. Tic-tac-toe turned out to be the
+      perfect size. It's small enough to solve exactly, but every turn still needs a real read of
+      the board, a mapping from camera to table, and a precise pick and place.
     </p>
     <p class="reveal">
-      The same platform then got a second act: a <strong>digital twin</strong> that writes
-      letters. MATLAB generates the trajectory, a URDF model executes it in simulation, and
-      the identical joint angles stream over serial to the physical arm — both pens moving
-      together.
+      After that, the same arm got a second project: a <strong>digital twin</strong> that writes
+      letters. MATLAB plans the path, a URDF model follows it in simulation, and the exact same
+      joint angles go over serial to the real arm, so both pens move together.
     </p>
   </section>
 
@@ -210,61 +209,61 @@
     <div class="sec-label reveal">Perception</div>
     <h2 class="reveal">Two ArUco markers turn pixels into millimeters.</h2>
     <p class="reveal">
-      The camera sits eye-to-hand above the play area, covering a <strong>3×3 grid</strong>
-      flanked by labeled staging bins. Two <strong>ArUco markers</strong> at opposite corners
-      of the camera zone anchor the calibration: with their known real-world positions, every
-      pixel maps to a board coordinate, and every detected block lands in the correct cell.
-      Color does the rest — the pipeline segments each block by hue, with
-      <strong>blue mapped to the human's X and green to the robot's O</strong>.
+      The camera is mounted above the play area, looking down at a <strong>3×3 grid</strong> with
+      labeled bins for spare blocks on either side. Two <strong>ArUco markers</strong> at opposite
+      corners of the camera's view anchor the calibration. Because I know where they are in the
+      real world, every pixel maps to a spot on the board and every block it spots lands in the
+      right cell. Color handles the rest. Each block is sorted by hue, with <strong>blue as the
+      person's X and green as the robot's O</strong>.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/mycobot/board_with_aruco.jpg" target="_blank" rel="noopener">
           <img src="../assets/mycobot/board_with_aruco.jpg" alt="Overhead camera view of the empty play area: a white camera zone bordered by two ArUco markers at opposite corners, with staging bins labeled Bin A through Bin D around it.">
         </a>
-        <figcaption><span class="n">FIG 02</span>Calibration view — two corner ArUco markers pin the camera zone to real coordinates; bins A–D stage the blocks.</figcaption>
+        <figcaption><span class="n">FIG 02</span>The calibration view. Two ArUco markers in the corners tie the camera's view to real coordinates, and bins A to D hold the spare blocks.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/mycobot/board_with_cubes.jpg" target="_blank" rel="noopener">
           <img src="../assets/mycobot/board_with_cubes.jpg" alt="Overhead camera view of the board populated with colored cubes arranged in the 3-by-3 grid: blue, green, and red blocks filling the cells.">
         </a>
-        <figcaption><span class="n">FIG 03</span>Board-state input — colored cubes on the 3×3 grid, as the segmentation pipeline sees them.</figcaption>
+        <figcaption><span class="n">FIG 03</span>What the robot reads: colored cubes on the 3×3 grid, exactly as the segmentation sees them.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-label reveal">Strategy</div>
-    <h2 class="reveal">The robot doesn't guess. It searches.</h2>
+    <h2 class="reveal">The robot never guesses its move. It searches for it.</h2>
     <div class="law reveal">
-      best = max<sub>move</sub> min<sub>reply</sub> value(board) &nbsp;<span class="c">// minimax over the full game tree</span><br>
-      prune when <span class="a">α ≥ β</span> &nbsp;<span class="c">// alpha-beta: skip branches the opponent would never allow</span>
+      best = max<sub>move</sub> min<sub>reply</sub> value(board) &nbsp;<span class="c">minimax over the whole game tree</span><br>
+      prune when <span class="a">α ≥ β</span> &nbsp;<span class="c">alpha-beta skips branches the opponent would never allow</span>
     </div>
     <p class="reveal">
-      Once the board state is read, an <strong>alpha-beta pruned minimax search</strong>
-      evaluates the remaining game tree and returns the strongest reply — the robot plays
-      strategically rather than picking the first open cell, and stays competitive even
-      moving second. On a 3×3 board the search is exact: the robot never blunders; the best
-      a human can force is a draw.
+      Once it has read the board, a <strong>minimax search with alpha-beta pruning</strong>
+      looks through the rest of the game tree and returns the strongest reply. So the robot
+      actually plays with a strategy instead of grabbing the first empty cell, and it holds its
+      own even when it moves second. On a 3×3 board the search is exact, so the robot never makes
+      a mistake. The best a person can do is force a draw.
     </p>
     <p class="reveal">
-      The chosen cell then becomes a motion target: the arm's inverse kinematics convert the
-      cell's real-world coordinates into joint angles, the <strong>single-head suction
-      pump</strong> lifts a green block from staging, and the move lands on the board. Camera
-      stream and robot motion give the player immediate feedback; a terminal prompt is the
-      only interface.
+      The chosen cell then becomes somewhere to move. Inverse kinematics turns the cell's
+      real-world position into joint angles, the <strong>single-head suction pump</strong> picks up
+      a green block from the bin, and the move lands on the board. The player sees the result
+      right away from the camera feed and the arm itself, and the only other interface is a
+      prompt in the terminal.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Digital Twin</div>
-    <h2 class="reveal">One trajectory, two robots — one of them real.</h2>
+    <h2 class="reveal">One path, two robots, and only one of them is real.</h2>
     <p class="reveal">
-      The second demonstration rebuilds the MyCobot as a <strong>URDF rigid-body model</strong>
-      in MATLAB with the Robotics System Toolbox. A MATLAB app takes a letter, converts its
-      shape to waypoints, runs a <strong>Simulink inverse-kinematics trajectory model</strong>,
-      and streams the resulting joint angles over serial — the simulated arm and the physical
-      arm execute the same motion simultaneously, finishing with the letter Z drawn by both.
+      For the second project I rebuilt the MyCobot as a <strong>URDF rigid-body model</strong> in
+      MATLAB using the Robotics System Toolbox. A MATLAB app takes a letter, turns its shape into
+      waypoints, runs them through a <strong>Simulink inverse kinematics model</strong>, and sends
+      the joint angles out over serial. The simulated arm and the real arm make the same motion
+      at the same time, and they finish by both drawing the letter Z.
     </p>
     <figure class="reveal">
       <video autoplay muted loop playsinline preload="metadata"
@@ -272,27 +271,27 @@
         aria-label="Digital twin capture: the physical MyCobot writing on paper in a picture-in-picture view while the MATLAB Simscape model of the same arm executes the identical motion.">
         <source src="../media/mycobot-digitaltwin.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">FIG 04</span>Alphabet-writing digital twin — the MATLAB model and the physical arm trace the same strokes from the same joint stream.</figcaption>
+      <figcaption><span class="n">FIG 04</span>The alphabet-writing digital twin. The MATLAB model and the physical arm trace the same strokes from the same stream of joint angles.</figcaption>
     </figure>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/mycobot/angles_to_send.jpg" target="_blank" rel="noopener">
           <img src="../assets/mycobot/angles_to_send.jpg" alt="MATLAB app with six joint-angle sliders and forward and inverse kinematics toggles, next to a terminal printing the six joint angles received back from the cobot.">
         </a>
-        <figcaption><span class="n">FIG 05</span>The twin's control panel — six joint sliders, FK/IK toggles, and the cobot echoing back the joint angles it received.</figcaption>
+        <figcaption><span class="n">FIG 05</span>The twin's control panel, with six joint sliders, switches for forward and inverse kinematics, and the cobot reporting back the angles it received.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/mycobot/sim_hw_sync.jpg" target="_blank" rel="noopener">
           <img src="../assets/mycobot/sim_hw_sync.jpg" alt="Side-by-side of the physical MyCobot workstation with overhead camera and laptop, and the MATLAB Mechanics Explorer rendering of the URDF arm in the matching pose.">
         </a>
-        <figcaption><span class="n">FIG 06</span>Sim and hardware in the same pose — the URDF model mirrors the bench robot as angles stream over serial.</figcaption>
+        <figcaption><span class="n">FIG 06</span>Simulation and hardware in the same pose. The URDF model copies the real robot as the angles come in over serial.</figcaption>
       </figure>
     </div>
     <figure class="reveal">
       <a href="../assets/mycobot/letter_z.jpg" target="_blank" rel="noopener">
         <img src="../assets/mycobot/letter_z.jpg" alt="MATLAB letter-digitization figure showing the rigid-body arm model tracing a Z, with a picture-in-picture of the real MyCobot writing the same Z on paper with a pen.">
       </a>
-      <figcaption><span class="n">FIG 07</span>The finale — Z written in simulation and on paper at the same time, from one waypoint set.</figcaption>
+      <figcaption><span class="n">FIG 07</span>The finish, a Z written in simulation and on paper at the same time from a single set of waypoints.</figcaption>
     </figure>
   </section>
 
@@ -307,23 +306,23 @@
           <span class="ytm" aria-hidden="true">YouTube</span>
         </button>
       </div>
-      <figcaption><span class="n">VID 01</span>Tic-tac-toe + color recognition — the full pipeline classifying blocks and playing, live.</figcaption>
+      <figcaption><span class="n">VID 01</span>Tic-tac-toe and color recognition, with the whole pipeline sorting blocks and playing live.</figcaption>
     </figure>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Perception is the hard 80%.</strong> The game AI is a textbook algorithm; making
-      a camera reliably tell a blue cube from a green one across lighting changes, and land
-      it in the right cell every time, is where the engineering lived — two ArUco markers
-      bought more robustness than any amount of color tuning. <strong>A digital twin is a
-      communication protocol, not a render:</strong> the letter-writing demo works because
-      sim and hardware consume the identical joint stream, so what you see in MATLAB is what
-      the serial port actually said. And <strong>interaction sells autonomy</strong> — the
-      same IK and serial plumbing powers both demos, but the one where a human loses at
-      tic-tac-toe is the one people remember.
+      Perception was most of the work. The game logic is a textbook algorithm. Getting a camera
+      to reliably tell a blue cube from a green one as the lighting changes, and put it in the
+      right cell every single time, is where the real engineering went, and two ArUco markers did
+      more for reliability than any amount of color tuning. I also stopped thinking of a digital
+      twin as a pretty render. It's really a shared stream of commands. The letter demo works
+      because the simulation and the hardware read exactly the same joint angles, so what you see
+      in MATLAB is what actually went down the serial cable. And people connect with robots they
+      can play with. Both demos run on the same IK and serial code, but the one where a person
+      can't beat the robot at tic-tac-toe is the one everyone remembers.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">Python</span><span class="tag">OpenCV</span><span class="tag">ArUco</span>
@@ -334,8 +333,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -365,7 +364,7 @@
     });
   });
 
-  /* Background: the game itself — a wireframe 6-DoF arm at the edge of a glowing 3×3 board
+  /* Background: the game itself, a wireframe 6-DoF arm at the edge of a glowing 3×3 board
      picks cubes from a staging bin and places them; cyan O-rings are the robot's moves,
      amber X's fade in as the human replies. An eye-to-hand camera pod hangs overhead,
      its frustum pinned to the board corners. The game plays to a draw, resets, repeats. */
@@ -385,7 +384,7 @@
   grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
   scene.add(grid);
 
-  /* ---- 3x3 board ---- */
+  /*  3x3 board  */
   const CELL=1.3, BOARD=CELL*3;
   const boardGrp=new THREE.Group();
   boardGrp.position.set(0,FLOOR+0.02,-1);
@@ -403,7 +402,7 @@
     boardGrp.position.y,
     boardGrp.position.z+(Math.floor(i/3)-1)*CELL);
 
-  /* ---- staging bin ---- */
+  /*  staging bin  */
   const stage=new THREE.Vector3(2.6,FLOOR+0.02,-3.3);
   const binGeo=new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-0.6,0,-0.6),new THREE.Vector3(0.6,0,-0.6),
@@ -411,7 +410,7 @@
   const bin=new THREE.Line(binGeo,new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.4}));
   bin.position.copy(stage); scene.add(bin);
 
-  /* ---- arm: base yaw + 2-link IK in the vertical plane ---- */
+  /*  arm: base yaw + 2-link IK in the vertical plane  */
   /* reach check: farthest cell corner is ~4.7 from the shoulder, links give 5.0 */
   const L1=2.6,L2=2.4;
   const armBase=new THREE.Group();
@@ -459,8 +458,8 @@
   const tip=new THREE.Vector3();
   function tipWorld(){ tip.set(0,0,0); wrist.localToWorld(tip); return tip; }
 
-  /* ---- marks: a placed cube with its symbol hovering on top —
-     cyan cube + O-ring for the robot, amber cube + X-bars for the human ---- */
+  /*  marks: a placed cube with its symbol hovering on top , 
+     cyan cube + O-ring for the robot, amber cube + X-bars for the human  */
   function makeO(){
     const o=new THREE.Mesh(new THREE.TorusGeometry(0.32,0.05,6,20),wire(CYAN));
     o.rotation.x=Math.PI/2; return o;
@@ -489,7 +488,7 @@
     scene.add(grp); marks.push(grp);
   }
 
-  /* ---- eye-to-hand camera pod + frustum ---- */
+  /*  eye-to-hand camera pod + frustum  */
   const pod=new THREE.Group();
   pod.position.set(0,FLOOR+6.2,-1);
   pod.add(new THREE.Mesh(new THREE.BoxGeometry(0.5,0.3,0.3),wire(DEEPBLUE)));
@@ -510,7 +509,7 @@
     frusPos[i*6+5]=boardGrp.position.z+c[1]*BOARD/2;
   });
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?450:1100;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
@@ -518,10 +517,10 @@
   pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
   scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
 
-  /* NOTE: don't scale the arm or board on mobile — cellPos()/IK work in world
+  /* NOTE: don't scale the arm or board on mobile, cellPos()/IK work in world
      units, so scaling the meshes would break pick-and-place alignment. */
 
-  /* ---- game script: X (human, fades in) then O (robot, arm places) — a draw ---- */
+  /*  game script: X (human, fades in) then O (robot, arm places), a draw  */
   const script=[
     {type:'X',cell:0},{type:'O',cell:4},{type:'X',cell:8},{type:'O',cell:2},
     {type:'X',cell:6},{type:'O',cell:3},{type:'X',cell:5},{type:'O',cell:1},{type:'X',cell:7}
@@ -563,7 +562,7 @@
           armTarget.set(home.x+Math.sin(t*0.6)*0.25,home.y+Math.sin(t*0.9)*0.15,home.z+Math.cos(t*0.5)*0.25);
           if(mt>1.6&&placedThrough<idx){ placeMark(mv.cell,'X'); placedThrough=idx; }
         }else{
-          /* robot move — exact keyframed waypoints:
+          /* robot move, exact keyframed waypoints:
              approach > dip > dwell-grab > lift > carry arc > dip > dwell-release > retract */
           const cp=cellPos(mv.cell);
           sHi.set(stage.x,stage.y+HOVER,stage.z);

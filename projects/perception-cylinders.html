@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="OAK-D cylinder perception pipeline — a ROS 2 package that box-filters, voxel-downsamples, RANSAC-removes the floor plane, Euclidean-clusters, fits cylinders from point normals, and labels them by HSV hue. By Prajjwal Dutta.">
-<title>OAK-D Cylinder Perception Pipeline — Prajjwal Dutta</title>
+<meta name="description" content="The ROS 2 perception package I wrote to find colored cylinders in OAK-D point clouds: crop, downsample, remove the floor with RANSAC, cluster, fit cylinders from surface normals and label them by hue.">
+<title>OAK-D Cylinder Perception Pipeline · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,7 +135,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="ros2-autonomy.html">← ROS 2 autonomy stack</a>
+  <a class="back" href="ros2-autonomy.html">Back to the ROS 2 autonomy stack</a>
 </nav>
 
 <main>
@@ -143,12 +143,13 @@
     <div class="eyebrow reveal"><span>Perception · Spring 2026</span><span>ASU · RAS 598</span></div>
     <h1 class="reveal">Ten Stages From a Million Raw Points to "That's a Green Cylinder"</h1>
     <p class="sub reveal">
-      A ROS 2 perception package that turns OAK-D RGB-D point clouds into labeled object
-      detections. It subscribes to <code>/oakd/points</code>, crops and downsamples the cloud,
-      estimates per-point surface normals, RANSACs away the floor, clusters what's left, fits
-      <strong>cylinder models from point-normal geometry</strong>, classifies each one by HSV
-      hue, and publishes RViz markers — with every intermediate stage exposed as its own debug
-      cloud so a failure can be seen rather than guessed at.
+      I wanted a robot to look at a messy RGB-D point cloud and say, with some confidence,
+      "there's a green cylinder over there." This ROS 2 package is how I got it to. It listens
+      on <code>/oakd/points</code>, crops and thins the cloud, works out a surface normal for
+      every point, uses RANSAC to throw away the floor, clusters whatever is left, fits
+      <strong>cylinders using the geometry of the normals</strong>, names each one by its hue,
+      and publishes markers to RViz. Along the way every stage publishes its own debug cloud,
+      so when something broke I could see it instead of guessing.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/DPRIcky/perception-cylinder-pipeline" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
@@ -159,7 +160,7 @@
       <div class="metric"><b>10</b><span>pipeline stages</span></div>
       <div class="metric"><b>6</b><span>debug cloud topics</span></div>
       <div class="metric"><b>26</b><span>centralized tuning params</span></div>
-      <div class="metric"><b>50–200 ms</b><span>per frame</span></div>
+      <div class="metric"><b>50 to 200 ms</b><span>per frame</span></div>
     </div>
   </header>
 
@@ -169,34 +170,34 @@
       aria-label="Cylinder detections in RViz across three rosbags, with colored markers tracking the cylinders through the scene.">
       <source src="../media/perception-cylinders.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>Detections across all three rosbags — colored <code>CYLINDER</code> markers published to <code>/viz/detections</code>, one per fitted object.</figcaption>
+    <figcaption><span class="n">FIG 01</span>Detections across all three rosbags. Each fitted object gets its own colored <code>CYLINDER</code> marker on <code>/viz/detections</code>.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Chain</div>
-    <h2 class="reveal">One callback, ten stages, no hand-waving in the middle.</h2>
+    <h2 class="reveal">Everything happens inside one callback.</h2>
     <p class="reveal">
-      The whole pipeline is a linear synchronous chain inside a single
-      <code>pointcloud_callback()</code> — one cloud processed to completion before the next is
-      touched. No threading, no frame buffering. That's a deliberate constraint: it makes the
-      per-frame behavior reproducible, and it means every stage can publish what it produced.
+      The whole pipeline runs straight through inside a single <code>pointcloud_callback()</code>.
+      One cloud is finished completely before the next one is touched, with no threads and no
+      frame buffer. I kept it that simple on purpose. It meant every frame behaved the same way
+      each time I replayed it, and it let every stage publish exactly what it had produced.
     </p>
     <ol class="stages reveal">
-      <li><b>Parse PointCloud2</b> — unpack xyz with aligned RGB from packed float32 <em>—</em></li>
-      <li><b>Validity check</b> — drop NaN / infinite points <em>/stage_valid</em></li>
-      <li><b>Box filter</b> — keep only the region of interest <em>/stage_box</em></li>
-      <li><b>Voxel downsample</b> — uniform grid averaging <em>/stage_downsample</em></li>
-      <li><b>Normal estimation</b> — k-NN neighborhood + SVD per point <em>—</em></li>
-      <li><b>Plane RANSAC</b> — find and remove the dominant floor plane <em>/stage_no_plane</em></li>
-      <li><b>Euclidean clustering</b> — cKDTree radius grouping <em>/stage_clusters</em></li>
-      <li><b>Cylinder RANSAC</b> — fit a cylinder per cluster <em>/stage_cylinders</em></li>
-      <li><b>Semantic labeling</b> — RGB → HSV hue band → red / green / blue / unknown <em>—</em></li>
-      <li><b>Publish markers</b> — colored CYLINDER markers <em>/viz/detections</em></li>
+      <li><b>Parse PointCloud2.</b> Unpack xyz and the matching RGB from packed float32 <em>internal</em></li>
+      <li><b>Validity check.</b> Drop NaN and infinite points <em>/stage_valid</em></li>
+      <li><b>Box filter.</b> Keep only the region I care about <em>/stage_box</em></li>
+      <li><b>Voxel downsample.</b> Average the points on a uniform grid <em>/stage_downsample</em></li>
+      <li><b>Normal estimation.</b> k-NN neighborhood and SVD for every point <em>internal</em></li>
+      <li><b>Plane RANSAC.</b> Find the dominant floor plane and remove it <em>/stage_no_plane</em></li>
+      <li><b>Euclidean clustering.</b> Group points by radius with a cKDTree <em>/stage_clusters</em></li>
+      <li><b>Cylinder RANSAC.</b> Fit one cylinder per cluster <em>/stage_cylinders</em></li>
+      <li><b>Semantic labeling.</b> Convert RGB to HSV and sort the hue into red, green, blue or unknown <em>internal</em></li>
+      <li><b>Publish markers.</b> Colored CYLINDER markers <em>/viz/detections</em></li>
     </ol>
     <p class="reveal">
-      Six of those stages publish a <code>PointCloud2</code> of their own output. When a
-      detection is wrong, you don't reason about it — you open RViz, walk the stages, and watch
-      where the points stopped making sense.
+      Six of those stages publish a <code>PointCloud2</code> of their own output. So when a
+      detection came out wrong, I didn't have to theorize about why. I opened RViz, stepped
+      through the stages, and watched for the moment the points stopped making sense.
     </p>
   </section>
 
@@ -204,33 +205,32 @@
     <div class="sec-label reveal">Geometry</div>
     <h2 class="reveal">A cylinder axis is just the cross product of two normals.</h2>
     <p class="reveal">
-      The interesting stage is cylinder fitting, because it doesn't sample points — it samples
-      <strong>normals</strong>. Per-point surface normals come first: for each point, take its
-      <strong>k nearest neighbors</strong>, build the local covariance, and run
-      <strong>SVD</strong> — the smallest singular vector is the surface normal. With normals in
-      hand, cylinder RANSAC follows from a geometric fact: on an ideal cylinder, every surface
-      normal is perpendicular to the axis. So sampling <strong>two normals</strong> and taking
-      their <strong>cross product</strong> gives a candidate axis directly, no least-squares
-      needed.
+      Cylinder fitting is the most interesting stage, because it samples <strong>normals</strong>
+      instead of points. The normals come first. For each point I take its <strong>k nearest
+      neighbors</strong>, build their covariance and run <strong>SVD</strong>, and the smallest
+      singular vector is the surface normal. After that, one geometric fact does most of the
+      work: on a perfect cylinder, every surface normal is perpendicular to the axis. Pick
+      <strong>two normals</strong>, take their <strong>cross product</strong>, and you have a
+      candidate axis straight away, with no least squares involved.
     </p>
     <div class="law reveal">
-      n̂ᵢ = smallest singular vector of cov(k-NN)  <span class="c">// per-point normal, k = normal_search_k</span><br>
-      <span class="a">â</span> = n̂₁ × n̂₂ <span class="c">// candidate cylinder axis from two sampled normals</span><br>
-      inlier ⇔ d⊥(p,<span class="a">â</span>) ∈ [ r − thresh , r + thresh ] <span class="c">// perpendicular distance inside the radius band</span>
+      n̂ᵢ = smallest singular vector of cov(k-NN)  <span class="c">normal at each point, k = normal_search_k</span><br>
+      <span class="a">â</span> = n̂₁ × n̂₂ <span class="c">a candidate axis from two sampled normals</span><br>
+      inlier ⇔ d⊥(p,<span class="a">â</span>) ∈ [ r − thresh , r + thresh ] <span class="c">perpendicular distance falls inside the radius band</span>
     </div>
     <p class="reveal">
-      Each candidate axis is scored by counting points whose perpendicular distance falls inside
-      the radius band, the best model wins, and a fit is only accepted above
-      <code>min_cylinder_inliers</code>. Fitting runs <strong>per cluster independently</strong>,
-      which is what lets one frame produce several detections instead of one compromise model.
+      I score each candidate axis by counting the points whose perpendicular distance lands in
+      the radius band. The best one wins, as long as it clears <code>min_cylinder_inliers</code>.
+      Because the fit runs <strong>separately for each cluster</strong>, one frame can give
+      several detections instead of one blurry compromise.
     </p>
     <p class="reveal">
-      Color comes last and deliberately in <strong>HSV, not RGB</strong>: the inlier points'
-      average color is converted and classified by hue angle alone, so a cylinder that's
-      brightly lit and one in shadow land in the same band. Red wraps
-      (<strong>0–30°</strong> and <strong>330–360°</strong>), green takes
-      <strong>60–180°</strong>, blue <strong>180–270°</strong>, and anything else is honestly
-      reported as <code>unknown</code> rather than forced into a guess.
+      Color comes last, and I did it in <strong>HSV rather than RGB</strong> on purpose. I
+      average the color of the inlier points, convert it, and classify by hue angle alone, so a
+      brightly lit cylinder and one in shadow end up in the same band. Red wraps around the
+      circle (<strong>0 to 30°</strong> and <strong>330 to 360°</strong>), green covers
+      <strong>60 to 180°</strong> and blue <strong>180 to 270°</strong>. Anything else gets
+      called <code>unknown</code>, because I'd rather the robot admit it isn't sure than guess.
     </p>
     <table class="reveal">
       <thead><tr><th>Stage</th><th>Method</th><th>Key parameters</th></tr></thead>
@@ -244,58 +244,59 @@
         <tr><td>Labeling</td><td>HSV hue bands</td><td>hue band boundaries</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">All 26 parameters live in one PipelineConfig dataclass — tuning never means editing algorithm code.</p>
+    <p class="tnote reveal">All 26 parameters live in one PipelineConfig dataclass, so tuning never means touching the algorithm code.</p>
   </section>
 
   <section>
     <div class="sec-label reveal">Detections</div>
-    <h2 class="reveal">Three bags, three scenes, same parameters.</h2>
+    <h2 class="reveal">Three different scenes, one set of parameters.</h2>
     <p class="reveal">
-      The pipeline was validated against three recorded RGB-D bags. Markers are republished
-      every callback using a <strong>two-message strategy</strong> — a <code>DELETEALL</code>
-      marker first, then the new detections — which is the fix for RViz's duplicate-marker
-      warnings when detection counts change between frames.
+      I tested the pipeline on three recorded RGB-D bags. RViz complains about duplicate markers
+      whenever the number of detections changes from one frame to the next, so every callback
+      sends <strong>two messages</strong>: a <code>DELETEALL</code> marker first, then the fresh
+      detections.
     </p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/perception/rosbag-0.jpg" target="_blank" rel="noopener">
           <img src="../assets/perception/rosbag-0.jpg" alt="RViz view of rosbag 0 with the processed point cloud and a fitted cylinder marker.">
         </a>
-        <figcaption><span class="n">FIG 02</span>rosbag_0 — pipeline stages and fitted detections side by side in RViz.</figcaption>
+        <figcaption><span class="n">FIG 02</span>rosbag_0, with the pipeline stages and the fitted detections side by side in RViz.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/perception/rosbag-1.jpg" target="_blank" rel="noopener">
           <img src="../assets/perception/rosbag-1.jpg" alt="RViz view of rosbag 1 with clustered points and cylinder markers.">
         </a>
-        <figcaption><span class="n">FIG 03</span>rosbag_1 — clusters surviving plane removal, each fitted independently.</figcaption>
+        <figcaption><span class="n">FIG 03</span>rosbag_1. These are the clusters left after the floor is removed, each one fitted on its own.</figcaption>
       </figure>
     </div>
     <figure class="reveal">
       <a href="../assets/perception/rosbag-2.jpg" target="_blank" rel="noopener">
         <img src="../assets/perception/rosbag-2.jpg" alt="RViz view of rosbag 2 showing multiple detected cylinders with semantic color markers.">
       </a>
-      <figcaption><span class="n">FIG 04</span>rosbag_2 — the hardest of the three; the third cylinder is where the tuning order in the README earns its keep.</figcaption>
+      <figcaption><span class="n">FIG 04</span>rosbag_2 was the hardest of the three. The third cylinder is where the tuning order in my README really earns its keep.</figcaption>
     </figure>
     <p class="reveal">
-      When a marginal cylinder drops out, the fix is ordered rather than random: raise
-      <code>cluster_dist_thresh</code> first so the object stops fragmenting into two clusters,
-      then loosen <code>cyl_radius_thresh</code>, and only then lower
-      <code>min_cylinder_inliers</code> to accept a thinner but valid fit. Doing it in that
-      order changes one failure mode at a time.
+      When a borderline cylinder disappears, I don't twiddle knobs at random. First I raise
+      <code>cluster_dist_thresh</code> so the object stops splitting into two clusters. Then I
+      loosen <code>cyl_radius_thresh</code>. Only after that do I lower
+      <code>min_cylinder_inliers</code> to accept a thinner fit that's still valid. Going in
+      that order means I'm only ever changing one way it can fail at a time.
     </p>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Publish your intermediate state.</strong> Six debug clouds cost almost nothing and
-      convert perception debugging from inference into observation — the difference between "the
-      detection failed" and "the plane RANSAC ate the object because it was nearly coplanar with
-      the floor." <strong>Pick the representation that makes the math easy:</strong> fitting
-      cylinders to raw points is an optimization problem, but fitting them to <em>normals</em>
-      makes the axis a cross product. <strong>And classify in the space where the thing you care
-      about is one number</strong> — hue survives lighting changes that RGB thresholds don't.
+      Publishing the intermediate results paid off more than anything else I did. Six debug clouds cost
+      almost nothing, and they changed debugging from guesswork into just looking. It's the
+      difference between "the detection failed" and "the plane RANSAC swallowed the object
+      because it sat almost flat against the floor." I also learned to pick the representation
+      that makes the math easy. Fitting a cylinder to raw points is an optimization problem, but
+      fitting it to <em>normals</em> turns the axis into a cross product. And it pays to
+      classify in whatever space makes the thing you care about a single number. Hue holds up
+      under lighting changes that would break RGB thresholds.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">ROS 2</span><span class="tag">rclpy</span><span class="tag">OAK-D RGB-D</span>
@@ -306,8 +307,8 @@
   </section>
 
   <div class="pager">
-    <a href="ros2-autonomy.html">← Autonomy stack</a>
-    <a href="bayes-localization.html">Next: Bayes filter localization →</a>
+    <a href="ros2-autonomy.html">Back to the autonomy stack</a>
+    <a href="bayes-localization.html">Next: Bayes filter localization</a>
   </div>
 </main>
 
@@ -320,8 +321,8 @@
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
   /* Background: the pipeline running on a synthetic scene. A raw cloud (floor + three colored
-     cylinders + out-of-ROI clutter) is walked through the real stage order — crop, downsample,
-     plane removal, clustering, cylinder fit — then reset and run again. Points are colored per
+     cylinders + out-of-ROI clutter) is walked through the real stage order, crop, downsample,
+     plane removal, clustering, cylinder fit, then reset and run again. Points are colored per
      stage; fitted cylinders appear as wireframes with their semantic color. */
   const canvas=document.getElementById('pcscene');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
@@ -331,13 +332,13 @@
   const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
   const mobile=innerWidth<700;
 
-  const C_DIM=new THREE.Color(0x16243f);      // "removed" — fades into the background
+  const C_DIM=new THREE.Color(0x16243f);      // "removed", fades into the background
   const C_RAW=new THREE.Color(0x35608f);      // unprocessed points
   const C_FLOOR=new THREE.Color(0x2a4a7a);
   const CYL_COLORS=[new THREE.Color(0xe8544f),new THREE.Color(0x63d97a),new THREE.Color(0x4f9de8)];
   const CLUSTER=new THREE.Color(0x4fd8e8);
 
-  /* ---- synthetic scene: floor plane, three cylinders, clutter outside the ROI ---- */
+  /*  synthetic scene: floor plane, three cylinders, clutter outside the ROI  */
   const CYL=[{x:-1.9,z:-0.4,r:0.42,h:1.5},{x:0.35,z:0.6,r:0.38,h:1.3},{x:2.2,z:-0.7,r:0.45,h:1.6}];
   const N_FLOOR=mobile?900:2000, N_CYL=mobile?170:340, N_CLUTTER=mobile?200:420;
   const pos=[],kind=[];                        // kind: 0 clutter, 1 floor, 2+ cylinder index
@@ -351,7 +352,7 @@
       pos.push(c.x+Math.cos(a)*rr,y,c.z+Math.sin(a)*rr); kind.push(2+ci);
     }
   });
-  for(let i=0;i<N_CLUTTER;i++){                // outside the ROI box — the box filter kills these
+  for(let i=0;i<N_CLUTTER;i++){                // outside the ROI box, the box filter kills these
     const side=Math.random()<0.5?-1:1;
     pos.push(side*(4.6+Math.random()*3),Math.random()*3-0.2,(Math.random()-0.5)*9); kind.push(0);
   }
@@ -367,7 +368,7 @@
   const keptByVoxel=new Uint8Array(N);
   for(let i=0;i<N;i++) keptByVoxel[i]=(i%3!==0)?1:0;
 
-  /* ---- fitted cylinder wireframes (appear at the fit stage) ---- */
+  /*  fitted cylinder wireframes (appear at the fit stage)  */
   const fits=CYL.map((c,ci)=>{
     const m=new THREE.Mesh(new THREE.CylinderGeometry(c.r,c.r,c.h,14,1,true),
       new THREE.MeshBasicMaterial({color:CYL_COLORS[ci],wireframe:true,transparent:true,opacity:0}));
@@ -379,7 +380,7 @@
     return {mesh:m,axis};
   });
 
-  /* ---- ROI box: drawn while the box-filter stage is active ---- */
+  /*  ROI box: drawn while the box-filter stage is active  */
   const roi=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(9.2,3.4,5.8)),
     new THREE.LineBasicMaterial({color:0xf5a35c,transparent:true,opacity:0}));
   roi.position.y=1.2; scene.add(roi);
@@ -387,7 +388,7 @@
   const grid=new THREE.GridHelper(26,26,0x1c3a66,0x11223f);
   grid.material.transparent=true; grid.material.opacity=0.25; scene.add(grid);
 
-  /* ---- stage timeline (seconds), mirroring the real pipeline order ---- */
+  /*  stage timeline (seconds), mirroring the real pipeline order  */
   const STAGES=[
     {name:'raw',      t:2.4},
     {name:'box',      t:2.4},

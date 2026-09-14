@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="SmartFollower &amp; Tracker — a TurtleBot 4 human-following system: ArUco 6-DoF pose estimation, Kalman vs particle filter tracking, FSM-supervised following with LiDAR safety. Ground robotics project by Prajjwal Dutta.">
-<title>TurtleBot 4 Human-Following System — Prajjwal Dutta</title>
+<meta name="description" content="SmartFollower &amp; Tracker, the TurtleBot 4 our team taught to follow a person: ArUco 6-DoF pose, a Kalman filter raced against a particle filter, and a three-state supervisor with a LiDAR safety guard.">
+<title>TurtleBot 4 Human-Following System · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -151,7 +151,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -159,21 +159,21 @@
     <div class="eyebrow reveal"><span>Ground Robotics · Spring 2026</span><span>with Tatwik Meesala &amp; Lu Yan Tan</span></div>
     <h1 class="reveal">SmartFollower &amp; Tracker: A TurtleBot 4 That Keeps You in Frame</h1>
     <p class="sub reveal">
-      A human-following system for GPS-denied warehouse environments: an OAK-D camera detects
-      an ArUco board carried by the target, solvePnP recovers its 6-DoF pose, and a tracking
-      filter — Kalman and 300-particle implementations, benchmarked head-to-head on the same
-      hardware run — feeds velocity commands through a three-state FOLLOW / PREDICTED / LOST
-      supervisor with a LiDAR safety guard. Built sim-first in Gazebo, then validated on a
-      physical TurtleBot 4.
+      Tatwik, Lu Yan and I built a robot that follows a person around a warehouse where GPS
+      doesn't work. An OAK-D camera spots an ArUco board the person carries, solvePnP works out
+      its 6-DoF pose, and a tracking filter turns that into velocity commands. We wrote two
+      filters, a Kalman filter and a 300-particle filter, and raced them against each other on the
+      same hardware run. On top sits a three-state FOLLOW, PREDICTED and LOST supervisor with a
+      LiDAR safety guard. We got it all working in Gazebo first and then on a real TurtleBot 4.
     </p>
     <div class="actions reveal">
       <a class="icon-link" href="https://github.com/Mobile-Robots-UGV" target="_blank" rel="noopener" aria-label="GitHub organization" title="GitHub Repos">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       </a>
-      <a class="btn alt" href="https://mobile-robots-ugv.github.io/" target="_blank" rel="noopener">Project Site ↗</a>
+      <a class="btn alt" href="https://mobile-robots-ugv.github.io/" target="_blank" rel="noopener">Project site</a>
     </div>
     <div class="metrics reveal">
-      <div class="metric"><b>0.04 m</b><span>mean tracking error · KF</span></div>
+      <div class="metric"><b>0.04 m</b><span>mean tracking error, KF</span></div>
       <div class="metric"><b>20 Hz</b><span>tracking pipeline</span></div>
       <div class="metric"><b>6-DoF</b><span>ArUco board pose</span></div>
       <div class="metric"><b>0.65 m</b><span>follow distance setpoint</span></div>
@@ -186,102 +186,102 @@
       aria-label="Hardware demonstration: a person carrying an ArUco board walks through a lab while the TurtleBot 4 follows; side panels show the live board-detection debug image, the RViz occupancy map with the robot pose, and streaming ROS 2 node logs.">
       <source src="../media/sft-hardware-demo.mp4" type="video/mp4">
     </video>
-    <figcaption><span class="n">FIG 01</span>Hardware run (live capture) — the TurtleBot 4 follows a walking target holding the ArUco board, while the detection debug view, RViz SLAM map, and node logs stream alongside.</figcaption>
+    <figcaption><span class="n">FIG 01</span>A hardware run, captured live. The TurtleBot 4 follows a person walking with the ArUco board, while the detection debug view, the RViz SLAM map and the node logs stream alongside.</figcaption>
   </figure>
 
   <section>
     <div class="sec-label reveal">The Mission</div>
-    <h2 class="reveal">Follow the inspector. Don't hit anything. Don't lose them.</h2>
+    <h2 class="reveal">Follow the inspector, don't hit anything, and don't lose them.</h2>
     <p class="reveal">
-      The scenario is warehouse anomaly investigation: a mobile robot that can
-      <strong>detect, track, and safely follow a designated object of interest</strong> through
-      a dynamic, GPS-denied logistics floor — aisles, staging areas, packaging zones — while
-      circumventing obstacles and logging time-stamped evidence for later reconstruction.
-      The environment fights back with everything indoor robotics hates: occlusions, lighting
-      variability, narrow passages, and people who move like people.
+      We imagined someone investigating a problem on a warehouse floor. The robot has to
+      <strong>find, track and safely follow a chosen target</strong> through a busy space with no
+      GPS, past aisles, staging areas and packing zones, steering around obstacles and saving
+      time-stamped evidence so the trip can be reconstructed later. That setting throws
+      everything indoor robots dislike at you: things blocking the view, changing light, narrow
+      gaps, and people who move the way people do.
     </p>
     <p class="reveal">
-      The team wrote the requirements as numbers before writing any code: target acquisition
-      in <strong>≤ 3 s</strong>, tracking continuity <strong>≥ 90%</strong> over five-minute
-      runs containing at least three occlusion events, re-acquisition within seconds of a
-      loss, a regulated follow distance, and <strong>zero collisions</strong> — ever.
+      Before writing any code, we wrote the requirements down as numbers. Find the target in
+      <strong>3 s or less</strong>, keep tracking it <strong>at least 90%</strong> of the time over
+      five-minute runs with three or more occlusions, pick it back up within seconds of losing it,
+      hold a set follow distance, and have <strong>zero collisions</strong>, ever.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Platform</div>
-    <h2 class="reveal">A TurtleBot 4, asked to earn its sensors.</h2>
+    <h2 class="reveal">A TurtleBot 4 that had to put every sensor to work.</h2>
     <p class="reveal">
-      The platform is a <strong>TurtleBot 4</strong> on a Create 3 differential-drive base:
-      wheel encoders and IMU for odometry, a <strong>2D LiDAR</strong> for obstacle detection
-      and mapping, an <strong>OAK-D RGB-D camera</strong> for target identification and
-      depth-based ranging, and a Raspberry Pi doing the thinking. The base's bump, cliff, and
-      wheel-drop sensors form a hardware safety floor beneath everything the software decides.
+      The robot is a <strong>TurtleBot 4</strong> on a Create 3 differential drive base. Wheel
+      encoders and an IMU handle odometry, a <strong>2D LiDAR</strong> finds obstacles and builds
+      the map, an <strong>OAK-D RGB-D camera</strong> identifies the target and measures how far
+      away it is, and a Raspberry Pi does the thinking. Underneath all of the software, the base's
+      bump, cliff and wheel-drop sensors act as a last line of hardware safety.
     </p>
     <div class="law reveal">
-      ẋ = v·cos(θ) &nbsp;&nbsp; ẏ = v·sin(θ) &nbsp;&nbsp; θ̇ = ω &nbsp;<span class="c">// differential-drive model, state [x, y, θ]ᵀ</span><br>
-      u = [v, ω]ᵀ &nbsp;<span class="c">// the only two knobs the controller gets to turn</span>
+      ẋ = v·cos(θ) &nbsp;&nbsp; ẏ = v·sin(θ) &nbsp;&nbsp; θ̇ = ω &nbsp;<span class="c">differential drive model, state [x, y, θ]ᵀ</span><br>
+      u = [v, ω]ᵀ &nbsp;<span class="c">the only two knobs the controller gets to turn</span>
     </div>
     <p class="reveal">
-      The target carries an <strong>ArUco fiducial board</strong> (DICT_5X5_100 dictionary,
-      2.25 cm markers) rather than relying on appearance-based person detection — a deliberate
-      trade: fiducials give robust identity and metric relative pose under exactly the
-      occlusion and lighting variability the warehouse setting guarantees.
+      The person carries an <strong>ArUco fiducial board</strong> (DICT_5X5_100 dictionary, 2.25 cm
+      markers) instead of the robot trying to recognize what a person looks like. We chose that on
+      purpose. A fiducial tells you exactly who the target is and gives a measured pose, even with
+      the kind of occlusions and lighting changes a warehouse is guaranteed to have.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Architecture</div>
-    <h2 class="reveal">Three nodes: see, believe, act.</h2>
+    <h2 class="reveal">Three nodes, to see, to believe and to act.</h2>
     <p class="reveal">
-      The ROS 2 pipeline runs at 20 Hz across three custom nodes. A <strong>perception
-      node</strong> detects the ArUco board with adaptive thresholding and corner validation,
-      then solves for full 6-DoF pose. A <strong>tracking node</strong> maintains a filtered
-      estimate of where the target is — and where it's going — even between detections. A
-      <strong>control node</strong> turns the tracked state into velocity commands, with a
-      LiDAR safety guard that can veto anything the follow law proposes.
+      The ROS 2 pipeline runs at 20 Hz across three nodes we wrote. A <strong>perception
+      node</strong> finds the ArUco board using adaptive thresholding and checks its corners, then
+      solves for the full 6-DoF pose. A <strong>tracking node</strong> keeps a filtered estimate of
+      where the target is, and where it's heading, even between detections. A <strong>control
+      node</strong> turns that estimate into velocity commands, and a LiDAR safety guard can
+      overrule anything the follow law asks for.
     </p>
     <figure class="reveal">
       <a href="../assets/turtlebot4/rqt_graph.png" target="_blank" rel="noopener">
         <img class="diagram" src="../assets/turtlebot4/rqt_graph.png" alt="rqt_graph of the ROS 2 computational graph: the aruco_detector node publishes board_detected and detected_aruco_pose to the goal_generator node, which publishes target_goal_pose to the coordinator node; camera_tf feeds static transforms to the TF listener.">
       </a>
-      <figcaption><span class="n">FIG 02</span>Live rqt_graph — detector → goal generator → coordinator, with camera extrinsics flowing through TF so every pose lands in the right frame.</figcaption>
+      <figcaption><span class="n">FIG 02</span>The live rqt_graph. The detector feeds the goal generator, which feeds the coordinator, and the camera extrinsics flow through TF so every pose ends up in the right frame.</figcaption>
     </figure>
     <div class="law reveal">
-      t = [x, y, z]ᵀ = solvePnP(corners, board geometry) &nbsp;<span class="c">// pixels → meters, one function that must never lie</span><br>
-      <span class="c">// z: forward distance to target &nbsp; x: lateral offset — the two numbers that drive the robot</span>
+      t = [x, y, z]ᵀ = solvePnP(corners, board geometry) &nbsp;<span class="c">pixels into meters, one function that can never be wrong</span><br>
+      <span class="c">z is the distance ahead to the target and x is the sideways offset, the two numbers that drive the robot</span>
     </div>
   </section>
 
   <section>
-    <div class="sec-label reveal">Tracking · KF vs PF</div>
+    <div class="sec-label reveal">Tracking · KF and PF</div>
     <h2 class="reveal">Two filters walk into a warehouse.</h2>
     <p class="reveal">
-      The camera loses the board constantly — a shoulder turn, a shelf edge, a lighting flare —
-      so the tracker is what actually holds the system together. The team built
-      <strong>two interchangeable estimators behind the same interface</strong> and raced them.
-      The <strong>Kalman filter</strong> carries state [x, z, v<sub>x</sub>, v<sub>z</sub>]ᵀ
-      under a constant-velocity model: predict forward with velocity, correct with each new
+      The camera loses the board all the time, when someone turns a shoulder, passes a shelf edge
+      or walks through a glare, so the tracker is what really holds everything together. We built
+      <strong>two estimators that plug into the same interface</strong> and raced them. The
+      <strong>Kalman filter</strong> keeps the state [x, z, v<sub>x</sub>, v<sub>z</sub>]ᵀ under a
+      constant velocity model, predicting forward with the velocity and correcting with each new
       measurement, weighted by the Kalman gain. The <strong>particle filter</strong> scatters
-      <strong>300 hypotheses</strong> with Gaussian process noise, weights them by measurement
-      likelihood, and systematically resamples — more expressive for nonlinear motion, and far
-      hungrier for tuning.
+      <strong>300 guesses</strong> with Gaussian process noise, weights them by how well they match
+      the measurement, and resamples. It can handle nonlinear motion better, but it needs a lot
+      more tuning.
     </p>
     <p class="reveal">
-      Both expose the same predict-correct API — <strong>update()</strong> on each measurement,
-      <strong>peek(dt)</strong> for a single-step forecast, <strong>rollout(dt, n)</strong> for
-      visualizing predicted paths — so the control node genuinely cannot tell which one is
-      running. That's what made the benchmark honest.
+      Both offer the same predict and correct calls: <strong>update()</strong> for each
+      measurement, <strong>peek(dt)</strong> for a one-step forecast, and <strong>rollout(dt,
+      n)</strong> to draw predicted paths. The control node really can't tell which one is running,
+      and that's what kept the comparison fair.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Control &amp; Supervision</div>
-    <h2 class="reveal">Follow at 0.65 m. Trust decays in three seconds.</h2>
+    <h2 class="reveal">Follow at 0.65 m, and stop trusting a guess after three seconds.</h2>
     <div class="law reveal">
-      v = clip( <span class="a">K_lin</span>·(z − d_target), −v_max, +v_max ) &nbsp;<span class="c">// forward: close the range gap</span><br>
-      ω = clip( −<span class="a">K_ang</span>·x, −ω_max, +ω_max ) &nbsp;<span class="c">// heading: center the target</span><br>
-      <span class="c">// deadbands: |x| &lt; 0.08 m, |z − d_target| &lt; 0.05 m → hold, don't twitch</span>
+      v = clip( <span class="a">K_lin</span>·(z − d_target), −v_max, +v_max ) &nbsp;<span class="c">forward, to close the distance</span><br>
+      ω = clip( −<span class="a">K_ang</span>·x, −ω_max, +ω_max ) &nbsp;<span class="c">heading, to keep the target centered</span><br>
+      <span class="c">dead zones: when |x| &lt; 0.08 m and |z − d_target| &lt; 0.05 m, hold still instead of twitching</span>
     </div>
     <table class="reveal">
       <thead><tr><th>Parameter</th><th>Symbol</th><th>Value</th></tr></thead>
@@ -294,25 +294,25 @@
       </tbody>
     </table>
     <p class="reveal">
-      Above the control law sits a <strong>three-state supervisor</strong>. While the board is
-      visible — <strong>MEASURED</strong> — the robot follows at full authority. Lose it, and
-      the system drops to <strong>PREDICTED</strong>: for up to three seconds it follows the
-      filter's forecast at reduced speed, coasting through the occlusion on physics rather
-      than sight. Past three seconds it declares <strong>LOST</strong> and stops — a robot
-      that keeps driving on a stale guess is a robot that finds the one obstacle the spec
-      said it never could. The LiDAR guard runs underneath all three states.
+      A <strong>three-state supervisor</strong> sits above the control law. While the board is in
+      view the state is <strong>MEASURED</strong> and the robot follows normally. When the board
+      disappears it drops to <strong>PREDICTED</strong>, and for up to three seconds it follows the
+      filter's forecast at a slower speed, coasting through the gap on physics instead of sight.
+      After three seconds it calls the target <strong>LOST</strong> and stops. A robot that keeps
+      driving on an old guess is exactly the robot that finds the one obstacle it was never
+      supposed to hit. The LiDAR guard runs under all three states.
     </p>
   </section>
 
   <section>
     <div class="sec-label reveal">Sim First</div>
-    <h2 class="reveal">Break it in Gazebo, where crashes are free.</h2>
+    <h2 class="reveal">Break it in Gazebo, where crashes cost nothing.</h2>
     <p class="reveal">
-      The full pipeline ran in <strong>Gazebo simulation</strong> before it ever touched
-      hardware — a leader TurtleBot carrying the board through a walled test room while the
-      follower tracked it, with RViz mirroring the occupancy grid, laser scan, and camera
-      view. Same nodes, same topics, same parameters: the sim-to-real port was a camera
-      calibration and a TF tree, not a rewrite.
+      The whole pipeline ran in <strong>Gazebo</strong> before it ever went near the hardware. A
+      leader TurtleBot carried the board around a walled test room while the follower tracked it,
+      and RViz showed the occupancy grid, laser scan and camera view. Because the nodes, topics and
+      parameters were identical, moving to the real robot took a camera calibration and a TF tree,
+      not a rewrite.
     </p>
     <figure class="reveal">
       <video autoplay muted loop playsinline preload="metadata"
@@ -320,60 +320,61 @@
         aria-label="Gazebo simulation: a leader TurtleBot carrying an ArUco board drives through a walled room while the follower TurtleBot pursues it; RViz shows the occupancy map, laser scan, and the follower's camera view.">
         <source src="../media/sft-simulation-demo.mp4" type="video/mp4">
       </video>
-      <figcaption><span class="n">FIG 03</span>Gazebo pipeline verification — leader-follower pursuit in the simulated test room, with RViz tracking the map, scan, and goal poses in real time.</figcaption>
+      <figcaption><span class="n">FIG 03</span>Checking the pipeline in Gazebo. Leader and follower chase each other around the simulated test room, with RViz tracking the map, scan and goal poses as it happens.</figcaption>
     </figure>
   </section>
 
   <section>
     <div class="sec-label reveal">Results</div>
-    <h2 class="reveal">The Kalman filter didn't just win. The particle filter left the map.</h2>
+    <h2 class="reveal">The Kalman filter won, and the particle filter wandered off the map.</h2>
     <p class="reveal">
-      Both backends replayed the <strong>same recorded 20 Hz hardware run</strong> — identical
-      detections, identical timing — so the only variable was the filter. The KF held
-      near-zero error for the entire trial. The PF tracked cleanly for about twelve seconds,
-      then diverged: its lateral estimate began oscillating across ±1.5 m and its forward
-      estimate railed against the 3.0 m safety clamp for the rest of the run.
+      Both filters replayed the <strong>same recorded 20 Hz hardware run</strong>, with exactly the
+      same detections at exactly the same times, so the filter was the only thing that changed.
+      The KF stayed close to zero error the whole way through. The PF tracked well for about
+      twelve seconds and then fell apart. Its sideways estimate started swinging across ±1.5 m, and
+      its forward estimate sat pinned against the 3.0 m safety limit for the rest of the run.
     </p>
     <table class="reveal">
       <thead><tr><th>Metric</th><th>Kalman filter</th><th>Particle filter</th></tr></thead>
       <tbody>
         <tr class="hl"><td>Mean error vs measurement</td><td>~0.04 m</td><td>~0.12 m</td></tr>
         <tr><td>Max error spike</td><td>~0.5 m</td><td>~2.7 m</td></tr>
-        <tr><td>Divergence</td><td>none</td><td>after ~12 s, to trial end</td></tr>
+        <tr><td>Divergence</td><td>none</td><td>after ~12 s, until the end</td></tr>
         <tr><td>Velocity commands</td><td>stable throughout</td><td>degrade post-divergence</td></tr>
       </tbody>
     </table>
-    <p class="tnote reveal">Head-to-head replay of one recorded hardware session; both filters consumed identical measurement streams.</p>
+    <p class="tnote reveal">Both filters replayed one recorded hardware session and received exactly the same measurements.</p>
     <div class="fig-grid">
       <figure class="reveal">
         <a href="../assets/turtlebot4/status_timeline.png" target="_blank" rel="noopener">
           <img src="../assets/turtlebot4/status_timeline.png" alt="Tracker status timeline over a 41-second trial: both KF and PF backends alternate between measured and predicted states, with brief lost events near the start and around 25 seconds.">
         </a>
-        <figcaption><span class="n">FIG 04</span>Supervisor state timeline — both filters ride the MEASURED/PREDICTED boundary as the board flickers in and out of view.</figcaption>
+        <figcaption><span class="n">FIG 04</span>The supervisor's states over time. Both filters flip between MEASURED and PREDICTED as the board flickers in and out of view.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/turtlebot4/tracked_pose_timeseries.png" target="_blank" rel="noopener">
           <img src="../assets/turtlebot4/tracked_pose_timeseries.png" alt="Tracked lateral and forward position versus time: the KF estimate stays glued to the gray measurement dots, while the PF estimate diverges after about 12 seconds, oscillating to minus 1.5 meters laterally and railing at the 3 meter forward clamp.">
         </a>
-        <figcaption><span class="n">FIG 05</span>Tracked pose vs raw measurements — the KF (blue) hugs the gray measurement track; the PF (orange) departs at ~12 s and never returns.</figcaption>
+        <figcaption><span class="n">FIG 05</span>Tracked pose against the raw measurements. The KF in blue hugs the gray measurements, while the PF in orange leaves at about 12 s and never comes back.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/turtlebot4/measurement_error.png" target="_blank" rel="noopener">
           <img src="../assets/turtlebot4/measurement_error.png" alt="Error to measurement versus time: KF error stays near zero with one 0.5 meter spike; PF error spikes repeatedly to between 2 and 2.7 meters after 12 seconds.">
         </a>
-        <figcaption><span class="n">FIG 06</span>Measured-state error — KF stays pinned near zero; PF spikes grow to 2.7 m as the particle set collapses onto the wrong hypothesis.</figcaption>
+        <figcaption><span class="n">FIG 06</span>Error against the measurement. The KF stays near zero, and the PF's spikes grow to 2.7 m as its particles pile onto the wrong guess.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/turtlebot4/cmd_vel.png" target="_blank" rel="noopener">
           <img src="../assets/turtlebot4/cmd_vel.png" alt="Commanded linear and angular velocity versus time for both filter backends: KF commands are smooth and bounded, while PF commands chatter against the saturation limits after divergence.">
         </a>
-        <figcaption><span class="n">FIG 07</span>Commanded velocities — garbage in, garbage out: once the PF estimate diverges, its commands chatter against the saturation limits.</figcaption>
+        <figcaption><span class="n">FIG 07</span>Commanded velocities. Garbage in, garbage out: once the PF estimate goes wrong, its commands rattle against the saturation limits.</figcaption>
       </figure>
     </div>
     <p class="reveal">
-      The verdict was unambiguous: for a human-speed target, the constant-velocity assumption
-      is nearly exact, and the <strong>Kalman filter is the right tool</strong> — numerically
-      sound, cheap, and stable. The PF's flexibility bought nothing here but variance.
+      The answer was clear. A person walks at a speed where the constant velocity assumption is
+      almost exactly right, so the <strong>Kalman filter is the right tool</strong>. It's
+      numerically solid, cheap and stable. All the particle filter's extra flexibility bought us
+      here was more variance.
     </p>
   </section>
 
@@ -381,9 +382,9 @@
     <div class="sec-label reveal">Demonstrations</div>
     <h2 class="reveal">Watch it work.</h2>
     <p class="reveal">
-      From first state-machine switching tests to the full hardware follow — the complete
-      demo trail, in order. Full documentation lives on the
-      <a class="btn alt" style="padding:0.3rem 0.8rem;border-radius:6px;" href="https://mobile-robots-ugv.github.io/" target="_blank" rel="noopener">team project site ↗</a>
+      Every demo we recorded, in order, from the first tests of the state machine switching to the
+      full follow on hardware. The complete documentation lives on the
+      <a class="btn alt" style="padding:0.3rem 0.8rem;border-radius:6px;" href="https://mobile-robots-ugv.github.io/" target="_blank" rel="noopener">team project site</a>
     </p>
     <div class="video-grid">
       <figure class="yt reveal">
@@ -394,7 +395,7 @@
             <span class="ytm" aria-hidden="true">YouTube</span>
           </button>
         </div>
-        <figcaption><span class="n">VID 01</span>Final hardware demo — full-stack following on the physical TurtleBot 4.</figcaption>
+        <figcaption><span class="n">VID 01</span>The final hardware demo, with the whole stack following a person on the real TurtleBot 4.</figcaption>
       </figure>
       <figure class="yt reveal">
         <div class="frame">
@@ -404,7 +405,7 @@
             <span class="ytm" aria-hidden="true">YouTube</span>
           </button>
         </div>
-        <figcaption><span class="n">VID 02</span>Simulation pipeline — Gazebo leader-follower run with live RViz.</figcaption>
+        <figcaption><span class="n">VID 02</span>The simulation pipeline, a leader and follower run in Gazebo with RViz live.</figcaption>
       </figure>
       <figure class="yt reveal">
         <div class="frame">
@@ -414,7 +415,7 @@
             <span class="ytm" aria-hidden="true">YouTube</span>
           </button>
         </div>
-        <figcaption><span class="n">VID 03</span>ArUco tracking + FOLLOW/LOST/SEARCH state switching.</figcaption>
+        <figcaption><span class="n">VID 03</span>ArUco tracking, switching between the FOLLOW, LOST and SEARCH states.</figcaption>
       </figure>
       <figure class="yt reveal">
         <div class="frame">
@@ -424,7 +425,7 @@
             <span class="ytm" aria-hidden="true">YouTube</span>
           </button>
         </div>
-        <figcaption><span class="n">VID 04</span>Mid-point hardware target follower — first closed loop on the robot.</figcaption>
+        <figcaption><span class="n">VID 04</span>The midpoint hardware follower, the first time the loop closed on the real robot.</figcaption>
       </figure>
       <figure class="yt reveal">
         <div class="frame">
@@ -434,23 +435,23 @@
             <span class="ytm" aria-hidden="true">YouTube</span>
           </button>
         </div>
-        <figcaption><span class="n">VID 05</span>Target tracking + prediction — the filter forecasting through occlusion in sim.</figcaption>
+        <figcaption><span class="n">VID 05</span>Target tracking and prediction, with the filter forecasting through occlusions in simulation.</figcaption>
       </figure>
     </div>
   </section>
 
   <section>
-    <div class="sec-label reveal">Takeaways</div>
-    <h2 class="reveal">What this project proves.</h2>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
     <p class="reveal">
-      <strong>Benchmark filters behind one interface, or you're benchmarking your glue
-      code.</strong> Because KF and PF were drop-in swaps on identical replayed data, the
-      12-second divergence was indisputably the filter's — no confound survived.
-      <strong>Match the model to the motion:</strong> a human walking is a constant-velocity
-      process, and 300 particles of extra generality lost to four state variables of the
-      right assumption. And <strong>degrade on a timer, not on hope</strong> — three seconds
-      of prediction, then stop. The state machine's honesty about what the robot doesn't know
-      is what kept the zero-collision record intact.
+      If you want to compare filters, put them behind one interface, or you end up comparing your
+      glue code instead. Because the KF and PF swapped in and out on the same replayed data, the
+      divergence at twelve seconds could only be the filter's fault. Match the model to the way
+      things really move. A person walking is close to constant velocity, and 300 particles of
+      extra generality lost to four state variables built on the right assumption. And let a
+      system give up on a timer instead of on hope. Three seconds of prediction, then stop. The
+      state machine admitting what the robot doesn't know is what kept our record at
+      zero collisions.
     </p>
     <div class="proj-stack reveal">
       <span class="tag">ROS 2</span><span class="tag">TurtleBot 4</span><span class="tag">OAK-D</span>
@@ -460,8 +461,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="../index.html#contact">Get in touch →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
   </div>
 </main>
 
@@ -491,11 +492,11 @@
     });
   });
 
-  /* Background: the tracking problem itself — an ArUco board wanders the floor, a wireframe
+  /* Background: the tracking problem itself, an ArUco board wanders the floor, a wireframe
      TurtleBot pursues it at follow distance, a camera frustum locks onto the board, a
      particle cloud (PF) breathes around the target while a cyan trail (KF estimate) hugs it.
      A pillar periodically occludes the line of sight: the frustum fades and the particle
-     cloud swells — MEASURED to PREDICTED, rendered literally. */
+     cloud swells, MEASURED to PREDICTED, rendered literally. */
   const canvas=document.getElementById('sftscene');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -512,7 +513,7 @@
   grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.5;
   scene.add(grid);
 
-  /* ---- target: ArUco board on a pole, wandering the floor ---- */
+  /*  target: ArUco board on a pole, wandering the floor  */
   const target=new THREE.Group();
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.5,5),wire(DEEPBLUE));
   pole.position.y=0.75; target.add(pole);
@@ -536,7 +537,7 @@
   target.position.y=FLOOR;
   scene.add(target);
 
-  /* ---- follower: wireframe TurtleBot ---- */
+  /*  follower: wireframe TurtleBot  */
   const bot=new THREE.Group();
   const base=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.55,0.26,14),wire(DEEPBLUE));
   base.position.y=0.2; bot.add(base);
@@ -554,7 +555,7 @@
   bot.scale.setScalar(mobile?0.85:1.0);
   scene.add(bot);
 
-  /* ---- LiDAR sweep ring ---- */
+  /*  LiDAR sweep ring  */
   const ringPts=[];
   for(let i=0;i<=48;i++){const a=i/48*Math.PI*2;ringPts.push(new THREE.Vector3(Math.cos(a)*2.2,0.02,Math.sin(a)*2.2));}
   const ring=new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts),
@@ -565,12 +566,12 @@
     new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3}));
   bot.add(sweep);
 
-  /* ---- occlusion pillar ---- */
+  /*  occlusion pillar  */
   const pillar=new THREE.Mesh(new THREE.BoxGeometry(1.1,3.4,1.1),wire(DEEPBLUE));
   pillar.position.set(3.2,FLOOR+1.7,-2.2);
   scene.add(pillar);
 
-  /* ---- particle cloud (PF) around the target ---- */
+  /*  particle cloud (PF) around the target  */
   const PN=mobile?70:150;
   const pOff=[];
   for(let i=0;i<PN;i++){pOff.push({r:0.25+Math.random()*0.65,a:Math.random()*Math.PI*2,w:0.4+Math.random()*1.2,ph:Math.random()*Math.PI*2,h:0.4+Math.random()*1.6});}
@@ -580,7 +581,7 @@
   const pfPts=new THREE.Points(pfGeo,new THREE.PointsMaterial({color:AMBER,size:0.07,transparent:true,opacity:0.55}));
   scene.add(pfPts);
 
-  /* ---- KF estimate marker + trail ---- */
+  /*  KF estimate marker + trail  */
   const kfMark=new THREE.Mesh(new THREE.OctahedronGeometry(0.12),wire(CYAN));
   scene.add(kfMark);
   const TN=70;
@@ -591,14 +592,14 @@
   scene.add(trail);
   let trailInit=false;
 
-  /* ---- camera frustum: cam pod -> board corners ---- */
+  /*  camera frustum: cam pod -> board corners  */
   const frusGeo=new THREE.BufferGeometry();
   const frusPos=new Float32Array(8*3);
   frusGeo.setAttribute('position',new THREE.BufferAttribute(frusPos,3));
   const frusMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.2});
   scene.add(new THREE.LineSegments(frusGeo,frusMat));
 
-  /* ---- ambient dust ---- */
+  /*  ambient dust  */
   const PC=mobile?450:1100;
   const pp=new Float32Array(PC*3);
   for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}

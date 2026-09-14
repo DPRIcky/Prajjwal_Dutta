@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="A three-part ROS 2 mobile autonomy stack — OAK-D cylinder perception, a 3D discrete Bayes filter for localization, and energy-aware A* planning with a Turn-Go-Turn controller. ASU RAS 598. By Prajjwal Dutta.">
-<title>ROS 2 Autonomy Stack — Perception, Localization &amp; Planning — Prajjwal Dutta</title>
+<meta name="description" content="The three ROS 2 packages I wrote for RAS 598 at ASU: OAK-D cylinder perception, a 3D discrete Bayes filter for localization, and energy-aware A* planning with a Turn-Go-Turn controller.">
+<title>ROS 2 Autonomy Stack · Prajjwal Dutta</title>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,7 +128,7 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">← Back to portfolio</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
 </nav>
 
 <main>
@@ -136,13 +136,12 @@
     <div class="eyebrow reveal"><span>ROS 2 Autonomy · Spring 2026</span><span>ASU · RAS 598</span></div>
     <h1 class="reveal">Three Halves of an Autonomous Robot</h1>
     <p class="sub reveal">
-      A mobile robot has to answer three questions in a loop: <em>what's out there</em>,
-      <em>where am I</em>, and <em>how do I get there without wasting energy</em>. This is a
-      ROS 2 stack that answers each one from scratch — no <code>nav2</code>, no
-      <code>pcl_ros</code>, no <code>amcl</code> — built as three independent packages against
-      the same simulated cave world. Every algorithm below is hand-implemented: RANSAC on point
-      normals, a histogram filter over half a million belief cells, A* with Bresenham
-      line-of-sight pruning.
+      Every mobile robot keeps asking itself three things: <em>what's out there</em>,
+      <em>where am I</em>, and <em>how do I get there without wasting energy</em>. In RAS 598 I
+      answered each one myself, without leaning on <code>nav2</code>, <code>pcl_ros</code> or
+      <code>amcl</code>. The result is three separate ROS 2 packages. I wrote every algorithm in
+      them by hand: RANSAC on point normals, a histogram filter over nearly half a million belief
+      cells, and A* with Bresenham line-of-sight pruning.
     </p>
     <div class="metrics reveal">
       <div class="metric"><b>3</b><span>standalone ROS 2 packages</span></div>
@@ -154,10 +153,10 @@
 
   <section>
     <div class="sec-label reveal">The Stack</div>
-    <h2 class="reveal">Pick one.</h2>
+    <h2 class="reveal">Start wherever you like.</h2>
     <p class="reveal">
-      Each package stands alone with its own repository, its own simulation setup, and its own
-      results. They're presented in the order a robot actually uses them.
+      Each package has its own repository, its own simulation setup and its own results. I've
+      put them in the order a robot would actually use them.
     </p>
 
     <div class="subs">
@@ -167,17 +166,17 @@
             poster="../assets/perception/perception-cylinders-poster.jpg" aria-hidden="true" tabindex="-1">
             <source src="../media/perception-cylinders.mp4" type="video/mp4">
           </video>
-          <span class="num">01 / Perception</span>
+          <span class="num">01 · Perception</span>
         </div>
         <div class="body">
-          <h3>OAK-D Cylinder Perception Pipeline<span class="arrow">→</span></h3>
+          <h3>OAK-D Cylinder Perception Pipeline<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></h3>
           <p>
-            RGB-D point clouds into labeled objects across ten stages: box filter, voxel
-            downsample, k-NN + SVD normals, RANSAC plane removal, Euclidean clustering,
-            cylinder fitting from normal cross products, and HSV semantic labeling — with every
-            stage published as its own debug cloud.
+            Ten stages that turn raw RGB-D point clouds into labeled objects: a box filter, voxel
+            downsampling, k-NN and SVD normals, RANSAC plane removal, Euclidean clustering,
+            cylinder fitting from cross products of normals, and HSV color labels. Every stage
+            publishes its own debug cloud so I could see exactly where things went wrong.
           </p>
-          <div class="kpis"><span class="kpi">10 stages</span><span class="kpi">6 debug topics</span><span class="kpi">50–200 ms/frame</span></div>
+          <div class="kpis"><span class="kpi">10 stages</span><span class="kpi">6 debug topics</span><span class="kpi">50 to 200 ms/frame</span></div>
           <span class="repo">github.com/DPRIcky/perception-cylinder-pipeline</span>
         </div>
       </a>
@@ -188,15 +187,15 @@
             poster="../assets/bayes/bayes-localization-poster.jpg" aria-hidden="true" tabindex="-1">
             <source src="../media/bayes-localization.mp4" type="video/mp4">
           </video>
-          <span class="num">02 / Localization</span>
+          <span class="num">02 · Localization</span>
         </div>
         <div class="body">
-          <h3>3D Discrete Bayes Filter Localization<span class="arrow">→</span></h3>
+          <h3>3D Discrete Bayes Filter Localization<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></h3>
           <p>
-            A histogram filter holding the full posterior over (x, y, θ) as an 80×80×72 array,
-            predicted by Turn-Go-Turn odometry decomposition with Gaussian diffusion and
-            corrected by range–bearing landmark likelihoods — converging within 0.6 m after two
-            or three sightings, and failing instructively when kidnapped.
+            A histogram filter that keeps the whole posterior over (x, y, θ) in an 80×80×72 array.
+            It predicts by breaking odometry into turn, go and turn again with Gaussian blur, and
+            corrects with range and bearing to landmarks. Two or three sightings get it within
+            0.6 m, and when I kidnapped the robot it failed in a way that taught me something.
           </p>
           <div class="kpis"><span class="kpi">460,800 cells</span><span class="kpi">0.6 m convergence</span><span class="kpi">σ_r 0.5 m · σ_b 15°</span></div>
           <span class="repo">github.com/DPRIcky/bayes-filter-robot-localization</span>
@@ -209,17 +208,17 @@
             poster="../assets/energy/energy-planner-poster.jpg" aria-hidden="true" tabindex="-1">
             <source src="../media/energy-planner.mp4" type="video/mp4">
           </video>
-          <span class="num">03 / Planning</span>
+          <span class="num">03 · Planning</span>
         </div>
         <div class="body">
-          <h3>Energy-Aware A* Motion Planning<span class="arrow">→</span></h3>
+          <h3>Energy-Aware A* Motion Planning<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></h3>
           <p>
-            A* on an intelligently downsampled 80×80 grid, greedy pruning with Bresenham
-            line-of-sight, diagonal corner checks, and a Turn-Go-Turn controller tuned for
-            energy rather than speed — 67× faster planning, 89.8% fewer waypoints, ~90% energy
-            saved, and 34 unit tests proving each layer.
+            A* on a carefully downsampled 80×80 grid, greedy pruning with Bresenham line of sight,
+            corner checks on diagonals, and a Turn-Go-Turn controller tuned to save energy rather
+            than time. Planning got 67× faster, the path lost 89.8% of its waypoints, the robot
+            used about 90% less energy, and 34 unit tests cover every layer.
           </p>
-          <div class="kpis"><span class="kpi">67× faster</span><span class="kpi">108 → 11 waypoints</span><span class="kpi">~90% energy saved</span></div>
+          <div class="kpis"><span class="kpi">67× faster</span><span class="kpi">108 down to 11 waypoints</span><span class="kpi">about 90% energy saved</span></div>
           <span class="repo">github.com/DPRIcky/ros2-energy-planner</span>
         </div>
       </a>
@@ -228,19 +227,20 @@
 
   <section>
     <div class="sec-label reveal">Common Ground</div>
-    <h2 class="reveal">One world, three problems.</h2>
+    <h2 class="reveal">The same cave, seen three ways.</h2>
     <p class="reveal">
-      Localization and planning share the same testbed — a <strong>16 × 16 m cave</strong> in
-      the Stage simulator, the same 0.2 m grid resolution, and the same Turn-Go-Turn motion
-      decomposition, which appears in one package as a <em>motion model</em> for prediction and
-      in the other as a <em>controller</em> for execution. That symmetry is the most useful
-      thing these three projects taught together: the same decomposition of movement serves both
-      to guess where you ended up and to decide how to get somewhere.
+      Localization and planning run in the same place: a <strong>16 × 16 m cave</strong> in the
+      Stage simulator, at the same 0.2 m grid resolution. They also share the Turn-Go-Turn way of
+      breaking up motion. In one package it's the <em>motion model</em> that predicts where the
+      robot went, and in the other it's the <em>controller</em> that decides how to move. That
+      was the most useful thing I learned from doing all three. The same idea helps you guess where
+      you ended up and helps you plan how to get somewhere.
     </p>
     <p class="reveal">
-      The perception package works in sensor space instead — OAK-D RGB-D frames replayed from
-      recorded rosbags — but shares the discipline: publish the intermediate state, tune from a
-      single config, and verify against something other than a screenshot.
+      Perception lives in sensor space instead, working on OAK-D RGB-D frames played back from
+      recorded rosbags. The habits carried over though. I published every intermediate result,
+      kept all the tuning in one config file, and checked the output against something more
+      solid than a screenshot.
     </p>
     <table class="reveal">
       <thead><tr><th></th><th>Perception</th><th>Localization</th><th>Planning</th></tr></thead>
@@ -261,8 +261,8 @@
   </section>
 
   <div class="pager">
-    <a href="../index.html#work">← All work</a>
-    <a href="perception-cylinders.html">Start with perception →</a>
+    <a href="../index.html#work">All work</a>
+    <a href="perception-cylinders.html">Start with perception</a>
   </div>
 </main>
 
@@ -290,7 +290,7 @@
   const grid=new THREE.GridHelper(32,32,0x1c3a66,0x11223f);
   grid.material.transparent=true; grid.material.opacity=0.26; scene.add(grid);
 
-  /* ---- obstacles: a sparse cave of wireframe blocks ---- */
+  /*  obstacles: a sparse cave of wireframe blocks  */
   const OBS=[[-9,-5,4,2.4],[-2.5,-8,3,2],[5,-4,3.6,3],[-7,4,3,2.6],[1.5,5.5,4.2,2.2],[8,3,2.6,3.4]];
   OBS.forEach(([x,z,w,d])=>{
     const m=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,1.5,d)),
@@ -298,7 +298,7 @@
     m.position.set(x,0.75,z); scene.add(m);
   });
 
-  /* ---- 01 perception: colored cylinders that light up when the sensor cone sweeps them ---- */
+  /*  01 perception: colored cylinders that light up when the sensor cone sweeps them  */
   const CYLS=[{x:-4.5,z:-2.2,c:RED},{x:2.0,z:-6.0,c:GREEN},{x:6.5,z:1.5,c:0x4f9de8},
               {x:-6.0,z:6.5,c:GREEN},{x:0.5,z:2.0,c:RED}];
   const cyls=CYLS.map(c=>{
@@ -306,7 +306,7 @@
     m.position.set(c.x,0.6,c.z); scene.add(m); return m;
   });
 
-  /* ---- 03 planning: a pruned path the robot drives ---- */
+  /*  03 planning: a pruned path the robot drives  */
   const WP=[new THREE.Vector3(-11,0,-9),new THREE.Vector3(-11,0,0),new THREE.Vector3(-4,0,2.5),
             new THREE.Vector3(-1,0,-3),new THREE.Vector3(6,0,-8),new THREE.Vector3(11,0,-2),
             new THREE.Vector3(9,0,8),new THREE.Vector3(-2,0,9),new THREE.Vector3(-9,0,9)];
@@ -318,14 +318,14 @@
     d.position.set(p.x,0.13,p.z); scene.add(d);
   });
 
-  /* ---- the robot + its sensor cone ---- */
+  /*  the robot + its sensor cone  */
   const robot=new THREE.Group(); scene.add(robot);
   robot.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.55,0.24,0.68),wire(AMBER,0.85)),
     {position:new THREE.Vector3(0,0.2,0)}));
   const cone=new THREE.Mesh(new THREE.ConeGeometry(1.5,3.4,4,1,true),wire(CYAN,0.16));
   cone.rotation.x=-Math.PI/2; cone.position.set(0,0.35,1.7); robot.add(cone);
 
-  /* ---- 02 localization: the belief cloud trailing the true pose ---- */
+  /*  02 localization: the belief cloud trailing the true pose  */
   const NB=mobile?260:560;
   const bPos=new Float32Array(NB*3);
   const bGeo=new THREE.BufferGeometry();
@@ -336,7 +336,7 @@
   for(let i=0;i<NB;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random());
     seeds.push({ux:Math.cos(a)*r,uy:Math.sin(a)*r,p:Math.random()*6.28});}
 
-  /* ---- drive ---- */
+  /*  drive  */
   const legLen=WP.map((p,i)=>p.distanceTo(WP[(i+1)%WP.length]));
   let leg=0,legT=0,heading=0;
   const est=new THREE.Vector3().copy(WP[0]);
