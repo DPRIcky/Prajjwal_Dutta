@@ -76,6 +76,7 @@
     letter-spacing:-0.015em;margin-bottom:1.1rem;}
   p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
   strong{color:var(--text);font-weight:600;}
+  p a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
   code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
   em.q{font-style:italic;color:var(--text);}
 
@@ -361,7 +362,8 @@
       graph breaks, you lose vehicles. I kept the planar single-integrator version small on
       purpose, so the pieces I built here, the barrier formulation, the MST connectivity
       structure, the KKT analysis and the solver benchmarks, carry over to harder vehicle models
-      without being rebuilt.
+      without being rebuilt. The research version of this idea, with a six-byte spanning tree protocol
+      and BlueROV2 fleets in HoloOcean, became <a href="flow-fleet-connectivity.html">my IROS 2026 paper</a>.
     </p>
     <p class="reveal">
       The report lists where I want to take it next. I'd like to follow how the <strong>set of

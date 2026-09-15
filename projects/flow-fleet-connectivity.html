@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="My IROS 2026 research: keeping a drifting underwater robot fleet connected with a six-byte δ-BFS pruning protocol and a CLF-CBF-QP safety filter on the tree edges, validated with BlueROV2 fleets in HoloOcean.">
+<title>Connectivity in Flow-Driven Robot Fleets · Prajjwal Dutta</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5; --red:#e8544f;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #fleetscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.7) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+  .nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
+    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+  .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
+  .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
+    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+  .nav-mark:hover .mark-icon .mark-node{r:5;}
+  @media (prefers-reduced-motion:reduce){
+    .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
+    .nav-mark:hover .mark-icon{transform:none;}
+  }
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;
+    padding:0.6rem 1.2rem;transition:border-color .25s,color .25s,transform .25s;}
+  .btn:hover,.btn:focus-visible{color:var(--cyan);border-color:var(--cyan);transform:translateY(-2px);}
+  .badge{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--amber);border:1px solid rgba(245,163,92,0.45);border-radius:999px;padding:0.45rem 0.95rem;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  .sec-label .num{color:var(--amber);margin-right:0.2em;}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  h3{font-family:var(--display);font-weight:500;font-size:1.15rem;margin:2.2rem 0 0.8rem;color:var(--text);}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  p a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
+  strong{color:var(--text);font-weight:600;}
+  code{font-family:var(--mono);font-size:0.86em;color:var(--cyan);}
+  em.q{font-style:italic;color:var(--text);}
+  ul.plain{list-style:none;margin:0.4rem 0 1.2rem;max-width:72ch;}
+  ul.plain li{position:relative;padding-left:1.3rem;color:var(--muted);font-size:0.95rem;margin-bottom:0.7rem;}
+  ul.plain li::before{content:'';position:absolute;left:0;top:0.72em;width:6px;height:6px;border-radius:50%;background:var(--cyan);opacity:0.7;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.72);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+  .law .big{font-size:1.05em;}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;}
+  figure.pale img{background:#fff;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  figcaption a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,216,232,0.35);}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  tr.bad td{color:#e89a8f;}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+  .scroll-x{overflow-x:auto;}
+
+  /* two-layer architecture */
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.6rem 0;}
+  .layer{border:1px solid var(--line);border-radius:12px;background:rgba(6,10,20,0.7);padding:1.2rem 1.3rem;position:relative;}
+  .layer .tag-l{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);}
+  .layer h4{font-family:var(--display);font-weight:500;font-size:1.1rem;margin:0.35rem 0 0.5rem;color:var(--text);}
+  .layer p{font-size:0.86rem;margin:0;}
+  .layer .io{margin-top:0.9rem;font-family:var(--mono);font-size:0.66rem;color:var(--cyan);letter-spacing:0.04em;line-height:1.7;}
+  .layer.g{border-color:rgba(232,84,79,0.4);}
+  .layer.c{border-color:rgba(79,216,232,0.35);}
+  @media(max-width:720px){.layers{grid-template-columns:1fr;}}
+
+  /* δ-BFS epoch lab */
+  .lab{border:1px solid rgba(79,216,232,0.28);border-radius:14px;background:rgba(6,10,20,0.82);margin:2rem 0;overflow:hidden;}
+  .lab-head{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:0.85rem 1.2rem;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:0.66rem;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--muted);}
+  .lab-head b{color:var(--cyan);font-weight:500;}
+  .lab-body{display:grid;grid-template-columns:1.35fr 1fr;gap:0;}
+  @media(max-width:760px){.lab-body{grid-template-columns:1fr;}}
+  .lab-viz{padding:0.8rem;border-right:1px solid var(--line);}
+  @media(max-width:760px){.lab-viz{border-right:0;border-bottom:1px solid var(--line);}}
+  .lab-viz svg{width:100%;height:auto;display:block;}
+  .lab-side{padding:1rem 1.2rem;display:flex;flex-direction:column;gap:0.85rem;}
+  .lab-row{display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;}
+  .lab-lbl{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);min-width:4.6rem;}
+  .pill{font-family:var(--mono);font-size:0.64rem;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--text);background:transparent;border:1px solid var(--line);border-radius:999px;
+    padding:0.45rem 0.95rem;cursor:pointer;transition:border-color .2s,color .2s,background .2s;}
+  .pill:hover{border-color:var(--cyan);color:var(--cyan);}
+  .pill.key{border-color:rgba(79,216,232,0.6);color:var(--cyan);}
+  .pill[disabled]{opacity:0.4;cursor:default;}
+  input[type=range]{flex:1;min-width:120px;accent-color:#4fd8e8;}
+  .val{font-family:var(--mono);font-size:0.72rem;color:var(--amber);min-width:3.2rem;text-align:right;}
+  .readout{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .readout div{background:rgba(6,10,20,0.9);padding:0.5rem 0.65rem;font-family:var(--mono);}
+  .readout span{display:block;font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+  .readout b{font-weight:500;font-size:0.9rem;color:var(--text);}
+  .verdict{font-family:var(--mono);font-size:0.72rem;line-height:1.6;padding:0.65rem 0.8rem;border-radius:8px;
+    border:1px solid rgba(79,216,232,0.35);color:var(--cyan);background:rgba(79,216,232,0.05);}
+  .verdict.no{border-color:rgba(232,84,79,0.45);color:#f0a097;background:rgba(232,84,79,0.06);}
+  .verdict.idle{border-color:var(--line);color:var(--muted);background:transparent;}
+  .hint{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.05em;color:#5d6d88;padding:0 1.2rem 1rem;line-height:1.7;}
+  .hint b{color:var(--muted);font-weight:400;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+  .credit{margin-top:2rem;border-left:2px solid var(--amber);background:rgba(245,163,92,0.05);padding:1rem 1.2rem;border-radius:0 10px 10px 0;}
+  .credit p{margin:0;font-size:0.86rem;}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;margin-top:5rem;
+    border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="fleetscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
+  <a class="back" href="../index.html#research">Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>Research · IROS 2026</span><span>ASU AMASS Lab · with Geoff Hollinger &amp; Xi Yu</span></div>
+    <h1 class="reveal">Keeping a Drifting Robot Fleet Connected on Six Bytes a Message</h1>
+    <p class="sub reveal">
+      Picture a team of underwater robots released together into the ocean. There is no GPS, the
+      acoustic links between them are short, slow and lossy, and the currents carry the whole
+      fleet wherever they want. I want the robots to let that drift spread them out so they can
+      cover more water, then gather toward whatever one of them finds, and never lose the chain
+      of communication that ties the team together. This is the research behind my first-author paper
+      accepted at <strong>IROS 2026</strong>. It splits the job into two layers. A
+      <strong>distributed δ-BFS protocol</strong> trims the communication graph down to a
+      spanning tree using constant six-byte broadcasts, and a <strong>CLF-CBF-QP safety
+      filter</strong> keeps only those tree links in range while the robots avoid each other and
+      head for a goal. I tested all of it with BlueROV2 fleets in the 3D HoloOcean simulator,
+      under ocean-like currents and a channel I made bad on purpose.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="https://github.com/DPRIcky/Distributed-Control-and-Communication-Framework-for-Connectivity-in-Flow-Driven-Robot-Fleets" target="_blank" rel="noopener" aria-label="GitHub repository" title="GitHub Repo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+      <a class="icon-link" href="../assets/iros/IROS2026_Dutta_Hollinger_Yu.pdf" target="_blank" rel="noopener" aria-label="IROS 2026 paper PDF" title="IROS 2026 Paper (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+      <a class="btn" href="https://scholar.google.com/citations?view_op=view_citation&amp;hl=en&amp;user=ZDtbedQAAAAJ&amp;citation_for_view=ZDtbedQAAAAJ:2osOgNQ5qMEC" target="_blank" rel="noopener">Google Scholar</a>
+      <span class="badge">IROS 2026 · First author</span>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>6 B</b><span>payload per broadcast</span></div>
+      <div class="metric"><b>36.6×</b><span>faster convergence at N = 20</span></div>
+      <div class="metric"><b>151×</b><span>less payload at N = 20</span></div>
+      <div class="metric"><b>100%</b><span>spanning tree success, N − 1 edges</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="metadata"
+      poster="../assets/iros/hero-poster.jpg"
+      aria-label="Ten BlueROV2 vehicles in the HoloOcean simulator drifting under currents, with red lines marking the communication links the δ-BFS tree keeps, while the fleet closes on a black wireframe goal cube. An inset plots the full communication graph beside the pruned tree.">
+      <source src="../media/iros-hero-10.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">VID 01</span>Ten BlueROV2 vehicles in HoloOcean on a bursty Gilbert and Elliott channel, played at 2×. The red lines are the only links the fleet bothers to keep, nine of them for ten robots. The inset draws the full communication graph next to the pruned tree as the robots drift and close on the goal cube.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">01</span>The Problem</div>
+    <h2 class="reveal">Let the ocean spread the fleet out, but never let it pull the team apart.</h2>
+    <p class="reveal">
+      This work comes out of a bigger effort on exploring remote places under the water and under
+      ice with teams of robots, where a mothership carries smaller passenger vehicles out and lets
+      them go. Down there <strong>localization may not exist</strong>, <strong>communication is
+      short range, patchy and starved of bandwidth</strong>, and <strong>currents and eddies decide
+      how the robots move</strong> far more than their own thrusters do, because onboard energy
+      is precious.
+    </p>
+    <p class="reveal">
+      So the plan I work with is coverage first and reconfiguration second. Release the robots
+      together, let the flow carry them apart so the team senses a bigger patch of water, and
+      only spend thrust when someone is about to drift out of bounds or out of contact. When one
+      robot spots a target, the whole team turns toward it <strong>without breaking the chain of
+      communication</strong>. Two questions sit underneath that plan. How do you keep the whole
+      network connected while the drift keeps changing who is next to whom? And how do you steer
+      the team to a goal using only what each robot knows locally, over links you can't trust?
+    </p>
+    <p class="reveal">
+      The existing tools each get part of the way there, and none of them fit this setting:
+    </p>
+    <div class="scroll-x reveal">
+      <table>
+        <thead><tr><th>Approach</th><th>Why it struggles underwater</th></tr></thead>
+        <tbody>
+          <tr><td>Spectral connectivity through the Fiedler value</td><td>needs global information or a central computer, and is expensive to keep updated online</td></tr>
+          <tr><td>Distributed pairwise CBFs on every neighbor</td><td>costs too much communication and control effort in dense graphs where neighbors keep changing</td></tr>
+          <tr><td>A minimum spanning tree plus local CBFs</td><td>the sparse idea is right, but an exact distributed MST (GHS, Awerbuch) needs a lot of messages and coordination</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reveal">
+      That last row is where my thinking changed. For this problem the tree <strong>doesn't need
+      to be optimal</strong>. It needs to be something the robots can actually build with the
+      tiny, unreliable channel they have. Once I stopped chasing the best tree and started
+      chasing a tree I could afford, the design fell into place.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">02</span>The Idea</div>
+    <h2 class="reveal">Two layers that each do one job.</h2>
+    <p class="reveal">
+      The framework runs a graph layer and a control layer side by side. At discrete epochs the
+      graph layer rebuilds a sparse coordination structure from one-hop messages and ignores every
+      other link. Between epochs the control layer keeps the robots safe and moving, and holds
+      only the kept links within range. The disk graph keeps changing as the fleet drifts, but the
+      range constraints stop a kept link from snapping before the next rebuild.
+    </p>
+    <div class="layers reveal">
+      <div class="layer g">
+        <span class="tag-l">Graph layer · at epochs t<sub>k</sub></span>
+        <h4>δ-BFS topology pruning</h4>
+        <p>Every robot broadcasts its hop count to a root, then picks one parent a hop closer. When the epoch settles, the kept links form a spanning tree.</p>
+        <div class="io">in: one-hop neighbors within R<sub>max</sub><br>message: (id, δ, seq), 6 bytes<br>out: one parent per robot, N − 1 edges</div>
+      </div>
+      <div class="layer c">
+        <span class="tag-l">Control layer · between epochs</span>
+        <h4>CLF-CBF-QP safety filter</h4>
+        <p>Each robot solves a small QP that bends a goal-seeking command just enough to avoid collisions and keep its own tree links in range.</p>
+        <div class="io">in: kept edges and nearby robots<br>constraints: range on tree edges, collision on a short-range set<br>out: thrust u<sub>i</sub></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">03</span>The Physics</div>
+    <h2 class="reveal">The fleet drifts as a group and spreads out around its own center.</h2>
+    <p class="reveal">
+      I model the robots the way oceanographers model anything carried by water. The center of the
+      group rides the background flow, and each robot wanders randomly around that moving center
+      because of turbulence too small to resolve. That drift and diffusion is also what real
+      underwater robots have been observed to do.
+    </p>
+    <div class="law reveal">
+      dx<sub>i</sub> = ( <span class="a">f<sub>flow</sub>(x<sub>i</sub>, t)</span> + v<sub>i</sub> ) dt + <span class="a">σ<sub>diff</sub> dW<sub>i</sub></span> &nbsp;<span class="c">drift with the current, plus Brownian spreading</span><br>
+      v̇<sub>i</sub> = u<sub>i</sub> − γ v<sub>i</sub> &nbsp;<span class="c">thrust, with damping</span><br>
+      ‖f<sub>flow</sub>(x, t) − f<sub>flow</sub>(y, t)‖ ≤ L<sub>f</sub> ‖x − y‖ &nbsp;<span class="c">smooth but not uniform, so neighbors drift apart</span>
+    </div>
+    <p class="reveal">
+      In simulation I integrate that with Euler and Maruyama steps, so the random spreading is part
+      of the state and not an afterthought. For designing the controller I use a simpler
+      control-affine model with a bounded disturbance. Because the flow is evaluated at each
+      robot's own position, it does not cancel out between two robots unless the current is
+      perfectly uniform, and that difference is exactly what pulls neighbors apart.
+    </p>
+    <p class="reveal">
+      Three assumptions frame the problem. Robots talk only to neighbors inside a disk of
+      radius R<sub>max</sub>, each has a unique ID, and the graph starts out connected. There is
+      a real gap between the collision distance and the communication range, and each robot has
+      more thrust than the disturbance plus the worst flow difference across R<sub>max</sub>. And
+      a robot never sees its neighbor's control instantly, only a copy that is at most τ̄ old, so
+      the controller has to allow for that staleness.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">04</span>Layer 1 · δ-BFS</div>
+    <h2 class="reveal">Every robot only has to know how far it is from the root.</h2>
+    <figure class="reveal">
+      <video controls muted playsinline preload="none"
+        poster="../assets/iros/layer1-poster.jpg"
+        aria-label="Layer 1 render: on the left, a 3D plot of the dense communication graph between the BlueROV2 vehicles; on the right, the pruned spanning tree in red after each δ-BFS epoch, with a HoloOcean camera inset in the corner.">
+        <source src="../media/iros-layer1-pruning.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 02</span>Layer 1 on its own, with fifteen robots. The left plot is every link they could use, and the right plot is the fourteen-edge tree the δ-BFS epoch keeps. The HoloOcean view in the corner is the same moment in the simulator. Silent.</figcaption>
+    </figure>
+    <p class="reveal">
+      At the start of each epoch one robot, the root, sets its hop count <strong>δ = 0</strong>
+      and everyone else starts at infinity. In every run the root is the robot with the smallest
+      ID, and it stays fixed. Each robot keeps broadcasting the same tiny tuple, its ID, its
+      current δ and a sequence counter, to whoever is in range. Whenever it hears a neighbor, it
+      updates its own hop count:
+    </p>
+    <div class="law reveal">
+      <span class="big">δ<sub>i</sub> := min{ δ<sub>i</sub> , δ<sub>j</sub> + 1 }</span> &nbsp;<span class="c">an online, unweighted Bellman Ford search over a graph that keeps moving</span><br>
+      p(i) ∈ arg min<sub>j ∈ N<sub>i</sub></sub> δ<sub>j</sub> &nbsp; with &nbsp; δ<sub>p(i)</sub> = δ<sub>i</sub> − 1 &nbsp;<span class="c">pick one parent a hop closer, smallest ID wins a tie</span><br>
+      E<sub>topo</sub> = { (i, p(i)) : i ≠ r } &nbsp;<span class="c">at most one outgoing edge per robot, a spanning tree once the epoch settles</span>
+    </div>
+    <p class="reveal">
+      When the epoch ends, either at T<sub>prune</sub> or earlier once nobody's δ has changed for
+      T<sub>stable</sub>, each robot looks at the neighbors exactly one hop closer to the root and
+      keeps a link to the one with the smallest ID. That's it. No robot ever sends its neighbor
+      list, a weight or its state, and the message is the same six bytes whether the team has ten
+      robots or a hundred.
+    </p>
+    <figure class="reveal pale">
+      <a href="../assets/iros/delta-bfs-example.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/delta-bfs-example.jpg" alt="Six-node δ-BFS example. Left: the initial communication graph among nodes 1 to 6 in grey, with node 1 highlighted in orange as the root. Right: the maintained tree after parent selection, with red edges 1 to 2, 1 to 3, 2 to 4, 3 to 5 and 4 to 6, and the pruned links drawn faint and dashed." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 01</span>A six-robot example with robot 1 as the root. The hop counts settle at δ<sub>1</sub> = 0, δ<sub>2</sub> = δ<sub>3</sub> = 1, δ<sub>4</sub> = δ<sub>5</sub> = 2 and δ<sub>6</sub> = 3, so the parents are p(2) = 1, p(3) = 1, p(4) = 2, p(5) = 3 and p(6) = 4. That keeps five red edges, exactly N − 1, and every faint link is dropped.</figcaption>
+    </figure>
+
+    <div class="lab reveal" id="bfsLab">
+      <div class="lab-head"><span>δ-BFS epoch simulator: <b>Algorithm 1, running on a lossy channel</b></span><span id="labClock">t = 0.0 s</span></div>
+      <div class="lab-body">
+        <div class="lab-viz">
+          <svg id="bfsSvg" viewBox="0 0 520 400" role="img" aria-label="Communication graph of twelve robots. Grey lines are links within range, red lines are the tree kept by the δ-BFS epoch, and each robot shows its current hop count.">
+            <g id="bfsEdges"></g><g id="bfsTree"></g><g id="bfsPulses"></g><g id="bfsNodes"></g>
+          </svg>
+        </div>
+        <div class="lab-side">
+          <div class="lab-row">
+            <button class="pill key" id="bfsRun" type="button">Run an epoch</button>
+            <button class="pill" id="bfsNew" type="button">New fleet</button>
+          </div>
+          <div class="lab-row">
+            <span class="lab-lbl">Drop rate</span>
+            <input type="range" id="bfsDrop" min="0" max="0.8" step="0.05" value="0.1" aria-label="Packet drop probability">
+            <span class="val" id="bfsDropVal">0.10</span>
+          </div>
+          <div class="readout">
+            <div><span>Packets sent TX</span><b id="rTx">0</b></div>
+            <div><span>Packets heard RX</span><b id="rRx">0</b></div>
+            <div><span>Dropped</span><b id="rDrop">0</b></div>
+            <div><span>Payload sent</span><b id="rBytes">0 B</b></div>
+            <div><span>Links in range</span><b id="rE">0</b></div>
+            <div><span>Links kept</span><b id="rK">0</b></div>
+          </div>
+          <div class="verdict idle" id="bfsVerdict">Press run to start an epoch. Robot 1 is the root.</div>
+        </div>
+      </div>
+      <div class="hint">
+        <b>Every robot here runs the paper's Algorithm 1 on its own.</b> It broadcasts (id, δ, seq) every 0.4 s with jitter, delivers after a random delay of up to 0.3 s, ignores duplicates and out-of-order packets by sequence number, and stops once its δ has held still for 3 s. Push the drop rate up and watch the epoch slow down, and eventually fail the tree check. When that happens the real fleet keeps its last good tree for one more epoch and tries again.
+      </div>
+    </div>
+
+    <h3 class="reveal">Built to shrug off a bad channel</h3>
+    <ul class="plain reveal">
+      <li><strong>Asynchronous broadcasts with jittered periods</strong>, so no robot needs a shared clock.</li>
+      <li><strong>Sequence counters</strong> throw away duplicates and packets that arrive out of order.</li>
+      <li><strong>Early epoch termination</strong> the moment the hop counts stop changing.</li>
+      <li><strong>A fallback</strong> for epochs that don't converge. Robots keep the last valid tree for one epoch, and if there has never been one, they hold on to every current neighbor link for one epoch and then try pruning again.</li>
+    </ul>
+    <p class="reveal">
+      This came at a cost. A δ-BFS tree ignores edge
+      length and link quality, so it is not a minimum spanning tree. In exchange it costs a constant
+      six-byte payload and converges fast, and over an acoustic channel that trade is well worth making.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">05</span>Layer 2 · Safety Filter</div>
+    <h2 class="reveal">Hold on to your parent, stay out of everyone's way, and head for the goal.</h2>
+    <figure class="reveal">
+      <video controls muted playsinline preload="none"
+        poster="../assets/iros/layer2-poster.jpg"
+        aria-label="Layer 2 render in HoloOcean: BlueROV2 vehicles connected by red tree links steer toward a black wireframe goal cube while a side panel logs TX, RX and dropped packets, with a small plot of the pruned tree in the corner.">
+        <source src="../media/iros-layer2-goal.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 03</span>Layer 2 at work in HoloOcean with fifteen vehicles. The fleet steers into the black goal cube while the safety filter holds every red tree link in range, and the panel on the right logs sends, receives and drops on the channel. Silent.</figcaption>
+    </figure>
+    <p class="reveal">
+      Once an epoch hands over its tree, every robot runs a standard CLF-CBF-QP safety filter. I'm
+      not claiming anything new about the filter itself. The contribution is the layer underneath
+      it that makes the filter cheap. A goal-seeking command comes in, and the QP changes it as
+      little as it can while three conditions hold:
+    </p>
+    <div class="scroll-x reveal">
+      <table>
+        <thead><tr><th>Piece</th><th>Function</th><th>What it enforces</th></tr></thead>
+        <tbody>
+          <tr><td>Goal CLF</td><td>V<sub>i</sub> = ‖x<sub>i</sub> − g‖²</td><td>V̇<sub>i</sub> ≤ −c<sub>V</sub> V<sub>i</sub> + ϵ<sub>i</sub>, allowed to bend through ϵ<sub>i</sub> ≥ 0</td></tr>
+          <tr class="hl"><td>Range CBF, tree edges only</td><td>h<sub>ij</sub> = R<sub>max</sub>² − ‖x<sub>i</sub> − x<sub>j</sub>‖²</td><td>ḣ<sub>ij</sub> + α<sub>h</sub> h<sub>ij</sub> ≥ 0 for every kept edge</td></tr>
+          <tr><td>Collision CBF, short-range set</td><td>h<sup>col</sup><sub>ij</sub> = ‖x<sub>i</sub> − x<sub>j</sub>‖² − d<sub>min</sub>²</td><td>ḣ<sup>col</sup><sub>ij</sub> + α<sub>c</sub> h<sup>col</sup><sub>ij</sub> ≥ 0 for every nearby robot</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="law reveal">
+      <span class="big">u<sub>i</sub>* = arg min ‖u<sub>i</sub> − u<sub>i</sub><sup>nom</sup>‖² + ρ ϵ<sub>i</sub>²</span><br>
+      <span class="c">subject to</span> the goal CLF, the range CBF on each edge (i, p(i)), the collision CBF on each close neighbor, ‖u<sub>i</sub>‖ ≤ u<sub>max</sub>, ϵ<sub>i</sub> ≥ 0
+    </div>
+    <p class="reveal">
+      The key choice is which links get a range constraint. Constraining every robot in sight would
+      make each QP big and force a stream of control-state messages over every link. Constraining
+      only the <strong>N − 1 tree edges</strong> keeps each QP small and cuts that traffic down, and
+      the relative dynamics inside the constraints still account for the flow difference between
+      two robots and the staleness of what each robot last heard from its neighbor. Collision avoidance uses its own short-range set, so it never depends on which links the
+      tree happened to keep.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">06</span>Results</div>
+    <h2 class="reveal">Same success rate, a fraction of the talking.</h2>
+    <p class="reveal">
+      I ran two kinds of experiments. Synthetic stress tests isolate the pruning protocol on random
+      connected graphs and throw drops, delays and asynchronous broadcasts at it while counting every
+      byte. Then the full pipeline runs end to end in HoloOcean. For a fair comparison I picked an
+      <strong>adjacency consensus</strong> baseline, where robots trade their one-hop neighbor lists
+      and only drop a link when a two-hop witness proves it's redundant. That's what practical local
+      pruning looks like, and its payload grows with the neighborhood.
+    </p>
+    <div class="scroll-x reveal">
+      <table>
+        <thead><tr><th>N</th><th>Method</th><th>Success</th><th>Convergence (s)</th><th>Payload (B/s)</th><th>Final edges</th></tr></thead>
+        <tbody>
+          <tr class="hl"><td>10</td><td>δ-BFS</td><td>100%</td><td>5.68 ± 0.20</td><td>465 ± 25</td><td>9</td></tr>
+          <tr><td>10</td><td>Adjacency consensus</td><td>100%</td><td>65.53 ± 36.52</td><td>25,208 ± 2,289</td><td>18</td></tr>
+          <tr class="hl"><td>20</td><td>δ-BFS</td><td>100%</td><td>8.42 ± 1.13</td><td>1,972 ± 96</td><td>19</td></tr>
+          <tr><td>20</td><td>Adjacency consensus</td><td>100%</td><td>208.02 ± 22.33</td><td>297,805 ± 49,986</td><td>27</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tnote reveal">Table I of the paper.</p>
+    <p class="reveal">
+      Both methods build a valid tree every time. δ-BFS gets there <strong>about 11.5× faster</strong>
+      with ten robots and <strong>about 36.6× faster</strong> with twenty, sends <strong>about 54×</strong>
+      and <strong>about 151×</strong> less payload, and ends with exactly N − 1 edges instead of 18
+      and 27. The part I find most encouraging is that the gap <strong>widens as the team
+      grows</strong>, because the baseline's messages grow with every neighbor while mine stay six
+      bytes.
+    </p>
+    <p class="reveal">
+      On a lossy channel with a 10% drop rate, delays of up to 0.5 s and 0.2 s of jitter, an epoch
+      converged in <strong>9.27 s</strong> with ten robots and <strong>9.85 s</strong> with twenty,
+      delivering 95.5 and 239.4 bytes per second of payload. Doubling the team barely moved the
+      convergence time. Those byte counts leave out transport overhead, so they're a lower bound on
+      what the channel really carries.
+    </p>
+
+    <h3 class="reveal">Losing packets in bursts</h3>
+    <p class="reveal">
+      Real acoustic channels don't drop packets politely one at a time. To model that I used a
+      two-state Gilbert and Elliott channel that flips between a good state with a 2% drop rate and
+      a bad state with a 90% drop rate. The mild profile drops about 12% overall and the strong one
+      about 20%, against 10% for independent drops. The real damage comes from the long tail of
+      consecutive losses, since a long outage is exactly what stalls hop counts from spreading
+      through the fleet.
+    </p>
+    <figure class="reveal pale">
+      <a href="../assets/iros/gilbert-elliott.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/gilbert-elliott.jpg" alt="Two panels. Left: complementary CDF of consecutive drop-burst lengths on a log scale for independent loss and two Gilbert-Elliott settings, with the strong setting showing a far heavier tail. Right: diagram of the two-state Good and Bad channel model with its transition probabilities." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 02</span>How bursty loss differs from random loss. On the left, the chance of seeing a run of drops at least a given length, for independent drops and the mild and strong Gilbert and Elliott channels. On the right, the two-state model and the settings I used.</figcaption>
+    </figure>
+
+    <h3 class="reveal">Squeezing the bandwidth until it breaks</h3>
+    <p class="reveal">
+      Next I capped how fast each robot could transmit and put a first-in, first-out queue in front
+      of the radio. As the cap tightens, the 95th percentile queue delay climbs steeply, and then
+      pruning suddenly stops working. With ten robots that cliff sits <strong>between 12 and
+      18 bits per second</strong>, and with twenty <strong>between 18 and 24</strong>. Doubling the
+      team only nudged the breaking point up, and at 30 bps both team sizes still built a tree every
+      single time.
+    </p>
+    <figure class="reveal pale">
+      <a href="../assets/iros/fifo-rate-limit.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/fifo-rate-limit.jpg" alt="Two panels plotted against the transmit rate cap from unlimited down to 6 bps for N equal to 10 and 20. Left: success rate holds at 1.0 until about 24 bps, then drops to zero, with N equal to 10 partially succeeding at 18 bps. Right: 95th percentile queue delay on a log scale rising from about 0.1 ms to over 10 seconds." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 03</span>Pruning under a transmit rate cap. Success on the left and 95th percentile queue delay on the right, for ten and twenty robots. The shaded bands mark where each team size falls off the cliff.</figcaption>
+    </figure>
+    <div class="scroll-x reveal">
+      <table>
+        <thead><tr><th>N</th><th>Cap (bps)</th><th>Regime</th><th>Success</th><th>t<sub>tree</sub> (s)</th><th>Delay p95 (ms)</th><th>rx (B/s)</th></tr></thead>
+        <tbody>
+          <tr><td>10</td><td>no limit</td><td>no limit</td><td>1.00</td><td>2.9 ± 0.2</td><td>0</td><td>185</td></tr>
+          <tr><td>10</td><td>250</td><td>high cap</td><td>1.00</td><td>4.3 ± 0.1</td><td>2,135 ± 359</td><td>169</td></tr>
+          <tr><td>10</td><td>48</td><td>2× above the cliff</td><td>1.00</td><td>11.5 ± 0.7</td><td>12,483 ± 1,336</td><td>38</td></tr>
+          <tr class="hl"><td>10</td><td>30</td><td>above the cliff</td><td>1.00</td><td>18.0 ± 2.0</td><td>15,094 ± 2,288</td><td>18</td></tr>
+          <tr><td>10</td><td>18</td><td>at the cliff, partial</td><td>0.67</td><td>27.8 ± 1.4</td><td>20,700 ± 317</td><td>10</td></tr>
+          <tr class="bad"><td>10</td><td>12</td><td>below the cliff</td><td>0.00</td><td>n/a</td><td>22,939 ± 664</td><td>3</td></tr>
+          <tr><td>20</td><td>no limit</td><td>no limit</td><td>1.00</td><td>3.0 ± 0.1</td><td>0</td><td>546</td></tr>
+          <tr><td>20</td><td>250</td><td>high cap</td><td>1.00</td><td>5.0 ± 0.1</td><td>4,717 ± 274</td><td>405</td></tr>
+          <tr><td>20</td><td>48</td><td>2× above the cliff</td><td>1.00</td><td>15.0 ± 0.5</td><td>15,261 ± 1,891</td><td>67</td></tr>
+          <tr class="hl"><td>20</td><td>30</td><td>above the cliff</td><td>1.00</td><td>20.6 ± 0.8</td><td>19,439 ± 679</td><td>38</td></tr>
+          <tr><td>20</td><td>24</td><td>at the cliff, first success</td><td>1.00</td><td>27.2 ± 0.9</td><td>20,317 ± 584</td><td>27</td></tr>
+          <tr class="bad"><td>20</td><td>18</td><td>below the cliff</td><td>0.00</td><td>n/a</td><td>20,933 ± 591</td><td>13</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tnote reveal">Table II of the paper. T<sub>prune</sub> = 30 s and 10 seeds per row. rx is the delivered pruning payload.</p>
+
+    <h3 class="reveal">Links that get worse with distance</h3>
+    <p class="reveal">
+      Underwater, a packet is more likely to vanish the farther it travels. So in the last stress test
+      the drop probability grows with the distance between two robots. With twenty robots, stronger
+      distance dependence stretched the time to a stable tree from 17.7 s to 20.7 s and then 22.0 s,
+      and cut the delivered throughput from 539 to 443.5 and then 212.4 bytes per second. Success
+      stayed high the whole way.
+    </p>
+    <figure class="reveal pale">
+      <a href="../assets/iros/distance-impairment.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/distance-impairment.jpg" alt="Distance-dependent impairment stress test for twenty robots over five seeds, comparing the independent-loss baseline with weak and strong distance dependence on time to a stable tree and on received throughput." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 04</span>When drops depend on distance. Twenty robots over five seeds, comparing the independent-loss baseline with weak (k = 0.25) and strong (k = 0.90) distance dependence.</figcaption>
+    </figure>
+
+    <h3 class="reveal">Watching the graph thin out</h3>
+    <p class="reveal">
+      Finally I lined all four strategies up in a lightweight simulator starting from the same 17
+      links. Keeping everything holds all 17. The centralized MST oracle drops straight to 9, but only
+      because it cheats with a global view no robot has. My distributed pruning walks the edge count
+      steadily down to <strong>10</strong>, close to a tree, while adjacency consensus stalls at
+      <strong>13</strong>.
+    </p>
+    <figure class="reveal pale">
+      <a href="../assets/iros/edge-count-baselines.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/edge-count-baselines.jpg" alt="Line plot of the number of maintained edges over ten seconds for four strategies. Fully connected stays at 17, centralized MST drops to 9 within about one second, adjacency consensus settles at 13, and distributed pruning steps down to 10." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 05</span>Links kept over time. The centralized MST reaches 9 instantly with global information, distributed pruning settles at 10 using only one-hop messages, and adjacency consensus stays at 13.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">07</span>In HoloOcean</div>
+    <h2 class="reveal">BlueROV2s, real currents, and a channel that keeps losing packets.</h2>
+    <p class="reveal">
+      The stress tests prove the protocol in isolation. The real test was putting everything together
+      inside HoloOcean, an Unreal Engine based marine simulator, with a fleet of BlueROV2 vehicles.
+      Their motion follows the advection and diffusion model, so neighbors keep changing. They run
+      δ-BFS epochs online while packets drop, arrive late and go out of sync, and the safety filter
+      keeps the tree links in range and the vehicles apart as the fleet heads for the goal, the black
+      wireframe cube.
+    </p>
+    <figure class="reveal">
+      <a href="../assets/iros/holoocean-scene.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/holoocean-scene.jpg" alt="HoloOcean underwater scene with several BlueROV2 vehicles spread over a sandy seabed, connected by red line segments showing the maintained tree links, with a black wireframe cube marking the goal." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 06</span>A BlueROV2 fleet in HoloOcean while the current spreads it out. The red segments are the tree links being kept, and the black cube is the goal.</figcaption>
+    </figure>
+    <figure class="reveal pale">
+      <a href="../assets/iros/holoocean-pruning-epoch.jpg" target="_blank" rel="noopener">
+        <img src="../assets/iros/holoocean-pruning-epoch.jpg" alt="Two 3D plots from one HoloOcean pruning epoch with fifteen robots labelled with their hop counts. Left: the communication graph with 36 grey edges at t equals 10.2 seconds. Right: the pruned tree with 14 red edges, annotated with 605 transmissions, 547 receptions and 58 drops, and a passed tree check." loading="lazy" decoding="async">
+      </a>
+      <figcaption><span class="n">FIG 07</span>One pruning epoch inside HoloOcean, with 15 robots, R<sub>max</sub> = 2.0 m and a 10% drop rate. At t = 10.2 s the fleet is 1.67 m from the goal and can hear 36 links. The epoch keeps 14, which is N − 1 and about a 61% cut, after 605 sends, 547 receives and 58 drops, and the tree check passes.</figcaption>
+    </figure>
+    <figure class="reveal">
+      <video controls muted playsinline preload="none"
+        poster="../assets/iros/scale25-poster.jpg"
+        aria-label="Twenty-five BlueROV2 vehicles in HoloOcean seen from close to the seabed, linked by red tree edges as they move toward a black wireframe goal cube, with the communication graph and pruned tree plotted in the lower corner.">
+        <source src="../media/iros-scale-25.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 04</span>The same protocol and controller scaled up to twenty-five vehicles. The status panel starts with the tree still building and settles on 24 kept edges out of more than 80 in range, rebuilt online as neighbors come and go. Silent.</figcaption>
+    </figure>
+    <figure class="reveal">
+      <video controls muted playsinline preload="none"
+        poster="../assets/iros/submission-poster.jpg"
+        aria-label="The IROS 2026 video: captioned segments walk through Layer 1, δ-BFS topology pruning from a dense disk graph to a sparse tree, Layer 2, the safety filter keeping the backbone connected under unreliable communication, and a run scaled up to 35 robots.">
+        <source src="../media/iros-submission.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 05</span>The video that went with the IROS 2026 paper. It walks through Layer 1 pruning, Layer 2 holding the backbone together on an unreliable channel, and a run scaled up to 35 robots. Silent.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">08</span>How It Grew</div>
+    <h2 class="reveal">The paper changed its mind a few times before it was right.</h2>
+    <p class="reveal">
+      This didn't arrive in one piece. Looking back at the drafts, the biggest shift was moving away
+      from proving something elegant about trees and toward proving something useful about bytes.
+    </p>
+    <div class="scroll-x reveal">
+      <table>
+        <thead><tr><th>Stage</th><th>What the paper argued</th></tr></thead>
+        <tbody>
+          <tr><td>ACC 2026 submission</td><td>An earlier version of the distributed connectivity and control idea. The reviews shaped how I planned the IROS version.</td></tr>
+          <tr><td>IROS first draft</td><td>Robots prune non-critical edges from a fully connected start, and the structure converges toward a minimum spanning tree.</td></tr>
+          <tr><td>Second draft</td><td>Pruning rebuilt around messages between neighbors and a spanning tree for coordination, with the focus on fewer edges and low control effort.</td></tr>
+          <tr><td>Third draft</td><td>Recast as a two-layer system with an explicit communication budget, bytes per message and delivered bandwidth, plus drops, delays, churn and the HoloOcean BlueROV2 runs.</td></tr>
+          <tr><td>Fourth draft</td><td>The guarantee made precise: a tree forms when the epoch converges, measured by success rate and convergence time.</td></tr>
+          <tr class="hl"><td>Final IROS paper</td><td>The mission restated as coverage-driven exploration and target discovery, with the bursty-loss, rate-cap and distance-dependent stress tests and the head-to-head against adjacency consensus.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal"><span class="num">09</span>Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
+    <p class="reveal">
+      The most useful question I learned to ask was not "what's the best structure?" but "what can the
+      robots actually afford to build?" An optimal tree that needs a flood of messages is worthless
+      over an acoustic modem, while a good-enough tree built from six-byte broadcasts gets the job done
+      and gets better relative to the alternatives as the team grows. I also learned to count bytes
+      instead of describing communication as cheap or expensive. Measuring delivered payload, queue
+      delay and the exact bandwidth cliff turned a claim into something a reviewer could check. And
+      splitting the problem into a graph layer and a control layer made each half simple enough to
+      reason about, with the tree telling the safety filter exactly which few links are worth
+      protecting.
+    </p>
+    <p class="reveal">
+      There's plenty I haven't done yet. The byte counts leave out protocol and transport overhead, so
+      they're a lower bound. The channel is modeled at the message level, with drops, delays, bursts and
+      rate caps, not as a full acoustic modem with a real MAC layer. The root is fixed as the robot with
+      the smallest ID, so what happens when the root dies and a new one has to be elected is still open.
+      And the tree is unweighted, so it doesn't prefer shorter or stronger links. Next I want to bring in
+      higher-fidelity modem and network models, run larger teams on longer missions with many
+      reconfigurations, and eventually take this onto real robots in real currents.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">Multi-Robot Systems</span><span class="tag">Distributed Algorithms</span><span class="tag">δ-BFS Spanning Trees</span>
+      <span class="tag">CLF-CBF-QP</span><span class="tag">Connectivity Maintenance</span><span class="tag">Advection-Diffusion Models</span>
+      <span class="tag">Underwater Communication</span><span class="tag">HoloOcean</span><span class="tag">BlueROV2</span>
+      <span class="tag">Python</span><span class="tag">Monte Carlo Stress Tests</span>
+    </div>
+    <div class="credit reveal">
+      <p>
+        <strong>Prajjwal Dutta</strong>, School of Manufacturing Systems and Networks, Arizona State University;
+        <strong>Geoff Hollinger</strong>, Department of Mechanical, Industrial, and Manufacturing Engineering, Oregon State University;
+        <strong>Xi Yu</strong>, School of Manufacturing Systems and Networks, Arizona State University.
+        IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) 2026.
+        This work was supported by NSF Awards 2322055 and 2529791. The simulator is HoloOcean
+        (<a href="https://github.com/byu-holoocean/HoloOcean" target="_blank" rel="noopener">byu-holoocean/HoloOcean</a>).
+      </p>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#research">All work</a>
+    <a href="clf-cbf-qp.html">Next: CLF-CBF-QP solver study</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+
+<script>
+/* δ-BFS epoch simulator. A faithful, per-robot run of Algorithm 1 from the paper:
+   jittered asynchronous broadcasts of <id, δ, seq>, random delay, Bernoulli drops,
+   sequence-number suppression, per-robot stop rule (t < T_prune and t - t_upd < T_stable),
+   then parent selection among neighbors with δ_j = δ_i - 1, smallest ID first. */
+(function(){
+  const svg=document.getElementById('bfsSvg'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg';
+  const gE=document.getElementById('bfsEdges'), gT=document.getElementById('bfsTree'),
+        gP=document.getElementById('bfsPulses'), gN=document.getElementById('bfsNodes');
+  const W=520,H=400,N=12,R=150, PERIOD=0.4, JIT=0.2, TAU=0.3, T_STABLE=3.0, T_PRUNE=20, BYTES=6;
+  const $=id=>document.getElementById(id);
+  const drop=$('bfsDrop'), dropVal=$('bfsDropVal'), verdict=$('bfsVerdict'), clockEl=$('labClock');
+  let nodes=[], adj=[], edges=[], sim=null, raf=0;
+
+  function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+  function connected(ad){const seen=new Set([0]),q=[0];while(q.length){const u=q.shift();for(const v of ad[u])if(!seen.has(v)){seen.add(v);q.push(v);}}return seen.size===ad.length;}
+
+  function newFleet(){
+    for(let tries=0;tries<400;tries++){
+      nodes=[];
+      for(let i=0;i<N;i++){
+        let p,ok=false;
+        for(let k=0;k<60&&!ok;k++){p={x:40+Math.random()*(W-80),y:36+Math.random()*(H-72)};ok=nodes.every(q=>Math.hypot(p.x-q.x,p.y-q.y)>52);}
+        nodes.push(p);
+      }
+      adj=nodes.map(()=>[]); edges=[];
+      for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)if(Math.hypot(nodes[i].x-nodes[j].x,nodes[i].y-nodes[j].y)<=R){adj[i].push(j);adj[j].push(i);edges.push([i,j]);}
+      const hops=depth();
+      if(connected(adj)&&edges.length>=N+4&&hops>=3) break;
+    }
+    sim=null; drawStatic(); drawNodes(null); gT.innerHTML=''; gP.innerHTML='';
+    setReadout(0,0,0); $('rE').textContent=edges.length; $('rK').textContent='n/a';
+    clockEl.textContent='t = 0.0 s';
+    verdict.className='verdict idle'; verdict.textContent='A new fleet of '+N+' robots with '+edges.length+' links in range. Robot 1 is the root. Press run.';
+  }
+  function depth(){const d=Array(N).fill(Infinity);d[0]=0;const q=[0];while(q.length){const u=q.shift();for(const v of adj[u])if(d[v]===Infinity){d[v]=d[u]+1;q.push(v);}}return Math.max(...d.filter(x=>x<Infinity));}
+
+  function drawStatic(){
+    gE.innerHTML='';
+    edges.forEach(([i,j])=>el('line',{x1:nodes[i].x,y1:nodes[i].y,x2:nodes[j].x,y2:nodes[j].y,stroke:'#3a5580','stroke-width':1.2,'stroke-opacity':0.55},gE));
+  }
+  function drawNodes(state){
+    gN.innerHTML='';
+    nodes.forEach((p,i)=>{
+      const g=el('g',{},gN);
+      const d=state?state.delta[i]:(i===0?0:Infinity);
+      const reached=d<Infinity, root=i===0;
+      el('circle',{cx:p.x,cy:p.y,r:15,fill:root?'#f5a35c':(reached?'#12314f':'#0e1830'),stroke:root?'#f5a35c':(reached?'#4fd8e8':'#56688a'),'stroke-width':1.6},g);
+      el('text',{x:p.x,y:p.y+4,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':11,fill:root?'#0a1226':'#dfe8f4','font-weight':500},g).textContent=i+1;
+      el('text',{x:p.x+17,y:p.y-13,'font-family':'IBM Plex Mono, monospace','font-size':10,fill:reached?'#4fd8e8':'#6b7c99'},g).textContent='δ '+(reached?d:'∞');
+    });
+  }
+  function setReadout(tx,rx,dr){$('rTx').textContent=tx;$('rRx').textContent=rx;$('rDrop').textContent=dr;$('rBytes').textContent=(tx*BYTES).toLocaleString()+' B';}
+
+  function run(){
+    cancelAnimationFrame(raf); gT.innerHTML=''; gP.innerHTML='';
+    const p=parseFloat(drop.value);
+    const S={t:0,p,tx:0,rx:0,dr:0,msgs:[],
+      delta:Array(N).fill(Infinity), seq:Array(N).fill(0), tupd:Array(N).fill(0),
+      known:nodes.map(()=>({})), last:nodes.map(()=>({})),
+      next:nodes.map(()=>Math.random()*PERIOD), active:Array(N).fill(true)};
+    S.delta[0]=0; sim=S;
+    $('bfsRun').disabled=true; $('bfsNew').disabled=true;
+    verdict.className='verdict idle'; verdict.textContent='Epoch running. Hop counts spread out from the root one broadcast at a time.';
+    let prev=performance.now();
+    const step=()=>{
+      const now=performance.now(); let wall=Math.min((now-prev)/1000,0.05); prev=now;
+      const speed=reducedMotion?20:1;
+      let simdt=wall*speed;
+      while(simdt>0){
+        const h=Math.min(simdt,0.02); simdt-=h; S.t+=h;
+        for(let i=0;i<N;i++){
+          if(!S.active[i]) continue;
+          if(!(S.t<T_PRUNE && (S.t-S.tupd[i])<T_STABLE)){ S.active[i]=false; continue; }
+          if(S.t>=S.next[i]){
+            S.next[i]=S.t+PERIOD*(1+(Math.random()*2-1)*JIT);
+            const sq=S.seq[i]++;
+            for(const j of adj[i]){
+              S.tx++;
+              if(Math.random()<S.p){ S.dr++; S.msgs.push({i,j,t0:S.t,t1:S.t+0.18,drop:true}); }
+              else S.msgs.push({i,j,t0:S.t,t1:S.t+Math.random()*TAU,d:S.delta[i],s:sq});
+            }
+          }
+        }
+        S.msgs=S.msgs.filter(m=>{
+          if(S.t<m.t1) return true;
+          if(m.drop) return false;
+          const j=m.j; S.rx++;
+          if(!S.active[j]) return false;                       // a robot that has finished its epoch stops listening
+          const last=S.last[j][m.i];
+          if(last!==undefined && m.s<=last) return false;       // duplicate or out of order
+          S.last[j][m.i]=m.s; S.known[j][m.i]=m.d;
+          const nd=Math.min(S.delta[j],m.d+1);
+          if(nd<S.delta[j]){ S.delta[j]=nd; S.tupd[j]=S.t; }
+          return false;
+        });
+        if(S.active.every(a=>!a)) break;
+      }
+      /* draw pulses */
+      gP.innerHTML='';
+      for(const m of S.msgs){
+        const a=nodes[m.i],b=nodes[m.j], f=Math.max(0,Math.min(1,(S.t-m.t0)/Math.max(0.05,m.t1-m.t0)));
+        const x=a.x+(b.x-a.x)*(m.drop?f*0.55:f), y=a.y+(b.y-a.y)*(m.drop?f*0.55:f);
+        el('circle',{cx:x,cy:y,r:m.drop?2.4:2.2,fill:m.drop?'#e8544f':'#4fd8e8','fill-opacity':m.drop?(1-f):0.85},gP);
+      }
+      drawNodes(S); setReadout(S.tx,S.rx,S.dr);
+      clockEl.textContent='t = '+S.t.toFixed(1)+' s';
+      if(S.active.every(a=>!a)){ finish(S); return; }
+      raf=requestAnimationFrame(step);
+    };
+    raf=requestAnimationFrame(step);
+  }
+  const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function finish(S){
+    gP.innerHTML='';
+    const kept=[];
+    for(let i=1;i<N;i++){
+      if(S.delta[i]===Infinity) continue;
+      const cand=Object.keys(S.known[i]).map(Number).filter(j=>S.known[i][j]===S.delta[i]-1).sort((a,b)=>a-b);
+      if(cand.length) kept.push([i,cand[0]]);
+    }
+    const ad=nodes.map(()=>[]); kept.forEach(([a,b])=>{ad[a].push(b);ad[b].push(a);});
+    const tree=kept.length===N-1 && connected(ad);
+    kept.forEach(([a,b])=>el('line',{x1:nodes[a].x,y1:nodes[a].y,x2:nodes[b].x,y2:nodes[b].y,stroke:'#e8544f','stroke-width':3,'stroke-linecap':'round'},gT));
+    $('rK').textContent=kept.length;
+    const cut=Math.round((edges.length-kept.length)/edges.length*100);
+    $('bfsRun').disabled=false; $('bfsNew').disabled=false;
+    if(tree){
+      verdict.className='verdict';
+      verdict.textContent='Tree check passed in '+S.t.toFixed(1)+' s. '+kept.length+' of '+edges.length+' links kept, a '+cut+'% cut, for '+(S.tx*BYTES).toLocaleString()+' bytes sent and '+(S.rx*BYTES).toLocaleString()+' delivered.';
+    }else{
+      const lost=S.delta.filter(d=>d===Infinity).length;
+      verdict.className='verdict no';
+      verdict.textContent='Tree check failed after '+S.t.toFixed(1)+' s: '+kept.length+' links kept'+(lost?', and '+lost+' robot'+(lost>1?'s never heard':' never heard')+' a hop count':'')+'. The fleet would keep its last good tree for one epoch and try again.';
+    }
+  }
+
+  drop.addEventListener('input',()=>{dropVal.textContent=parseFloat(drop.value).toFixed(2);});
+  $('bfsRun').addEventListener('click',run);
+  $('bfsNew').addEventListener('click',newFleet);
+  newFleet();
+})();
+</script>
+
+<script>
+/* Background: the two layers running on a drifting fleet. BlueROV2-shaped wireframes ride a
+   spatially varying current (a slow gyre plus a sheared drift) with Brownian spreading, the
+   advection-diffusion model from the paper. Every epoch the disk graph is rebuilt and a δ-BFS
+   tree is grown from the smallest-ID robot, parents chosen one hop closer with the smallest ID.
+   Between epochs a range barrier holds only the tree edges inside R_max and a collision barrier
+   keeps vehicles apart. The fleet spreads for coverage, then a goal cube appears and the fleet
+   reconfigures toward it without dropping a tree link. */
+(function(){
+  const canvas=document.getElementById('fleetscene');
+  if(!window.THREE||!canvas) return;
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.028);
+  const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,0.1,160);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,RED=0xe8544f;
+  const mobile=innerWidth<700;
+
+  /* seabed */
+  const bed=new THREE.GridHelper(40,40,0x1c3a66,0x10213d);
+  bed.material.transparent=true; bed.material.opacity=0.22; bed.position.y=-4.2; scene.add(bed);
+
+  /* marine snow drifting with the same current */
+  const SNOW=mobile?260:620;
+  const snowPos=new Float32Array(SNOW*3);
+  for(let i=0;i<SNOW;i++){snowPos[i*3]=(Math.random()-0.5)*36;snowPos[i*3+1]=-4+Math.random()*9;snowPos[i*3+2]=(Math.random()-0.5)*36;}
+  const snowGeo=new THREE.BufferGeometry(); snowGeo.setAttribute('position',new THREE.BufferAttribute(snowPos,3));
+  const snow=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0x6f93c4,size:0.05,transparent:true,opacity:0.5}));
+  scene.add(snow);
+
+  /* the current: a slow gyre about the origin plus a shear that grows with depth */
+  function flow(x,y,z,t){
+    const r=Math.hypot(x,z)+0.001, w=0.10*Math.exp(-r*r/160);
+    const fx=-z*w*1.3 + 0.10*Math.sin(0.08*t) + 0.035*y;
+    const fz= x*w*1.3 + 0.06*Math.cos(0.06*t);
+    const fy=0.02*Math.sin(0.35*x+0.2*t);
+    return [fx,fy,fz];
+  }
+
+  const N=mobile?12:20;
+  const RMAX=3.0, DMIN=0.9, UMAX=1.4, GAMMA=1.6, SIGMA=0.16, BOUND=11;
+  const bots=[];
+
+  const G={frame:new THREE.BoxGeometry(0.34,0.2,0.5), foam:new THREE.BoxGeometry(0.3,0.07,0.36),
+    tube:new THREE.CylinderGeometry(0.08,0.08,0.34,8,1,true), thr:new THREE.CylinderGeometry(0.05,0.05,0.16,6,1,true)};
+  const bodyMat=new THREE.MeshBasicMaterial({color:CYAN,wireframe:true,transparent:true,opacity:0.5});
+  const rootMat=new THREE.MeshBasicMaterial({color:AMBER,wireframe:true,transparent:true,opacity:0.95});
+  const foamMat=new THREE.MeshBasicMaterial({color:0xdfe8f4,wireframe:true,transparent:true,opacity:0.28});
+  function rov(root){
+    const g=new THREE.Group(), m=root?rootMat:bodyMat;
+    g.add(new THREE.Mesh(G.frame,m));
+    const f=new THREE.Mesh(G.foam,foamMat); f.position.y=0.135; g.add(f);
+    const tb=new THREE.Mesh(G.tube,m); tb.rotation.x=Math.PI/2; g.add(tb);
+    [-1,1].forEach(s=>{const t=new THREE.Mesh(G.thr,m);t.rotation.x=Math.PI/2;t.rotation.y=s*0.35;t.position.set(s*0.19,-0.02,-0.18);g.add(t);});
+    return g;
+  }
+  function deal(){
+    bots.forEach((b,i)=>{
+      const a=i/N*Math.PI*2;
+      const rr=1.2+(i%3)*0.8; b.x=-4+Math.cos(a)*rr+(Math.random()-0.5)*0.4; b.y=(Math.random()-0.5)*1.2; b.z=-2+Math.sin(a)*rr+(Math.random()-0.5)*0.4;
+      b.vx=b.vy=b.vz=0;
+    });
+  }
+  for(let i=0;i<N;i++){const b={id:i,ph:Math.random()*6.28,yaw:0};b.mesh=rov(i===0);scene.add(b.mesh);bots.push(b);}
+  deal();
+
+  /* goal cube */
+  const goal=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.6,1.6,1.6)),
+    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0}));
+  scene.add(goal);
+
+  /* line buffers: disk graph (faint) and kept tree (red) */
+  function lineBuf(max,color,op){
+    const pos=new Float32Array(max*6), geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const l=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color,transparent:true,opacity:op}));
+    l.frustumCulled=false; scene.add(l); return {pos,geo,l,max};
+  }
+  const disk=lineBuf(N*N/2,DEEPBLUE,0.32), treeL=lineBuf(N,RED,0.9);
+  let tree=[], lastGood=[];
+
+  function epoch(){
+    const d=Array(N).fill(Infinity), nb=bots.map(()=>[]);
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+      const A=bots[i],B=bots[j];
+      if(Math.hypot(A.x-B.x,A.y-B.y,A.z-B.z)<=RMAX){nb[i].push(j);nb[j].push(i);}
+    }
+    d[0]=0; const q=[0];
+    while(q.length){const u=q.shift();for(const v of nb[u]) if(d[v]===Infinity){d[v]=d[u]+1;q.push(v);}}
+    const kept=[];
+    for(let i=1;i<N;i++){
+      if(d[i]===Infinity) continue;
+      let p=-1; for(const j of nb[i]) if(d[j]===d[i]-1 && (p<0||j<p)) p=j;
+      if(p>=0) kept.push([i,p]);
+    }
+    if(kept.length===N-1){ tree=kept; lastGood=kept; } else tree=lastGood;  // fallback: keep the last valid tree
+  }
+
+  let phase='spread', phaseT=0, epochT=0, gx=0,gy=0,gz=0;
+  function control(dt,t){
+    for(const b of bots){
+      let ux=0,uy=0,uz=0;
+      if(phase==='goal'){                         // nominal CLF input toward the goal
+        const dx=gx-b.x, dy=gy-b.y, dz=gz-b.z, dd=Math.hypot(dx,dy,dz)||1;
+        const s=Math.min(UMAX*0.8,dd*0.6); ux=dx/dd*s; uy=dy/dd*s; uz=dz/dd*s;
+      }
+      const r=Math.hypot(b.x,b.z);                // prescribed bounds: thrust only near the edge
+      if(r>BOUND){ ux-=b.x/r*(r-BOUND)*0.8; uz-=b.z/r*(r-BOUND)*0.8; }
+      if(Math.abs(b.y)>2.4){ uy-=Math.sign(b.y)*(Math.abs(b.y)-2.4); }
+      b.ux=ux; b.uy=uy; b.uz=uz;
+    }
+    for(const [i,j] of tree){                     // range barrier on kept edges only
+      const A=bots[i],B=bots[j], dx=B.x-A.x,dy=B.y-A.y,dz=B.z-A.z, dd=Math.hypot(dx,dy,dz)||1e-6;
+      const h=RMAX*RMAX-dd*dd;
+      if(h<RMAX*RMAX*0.45){ const k=(RMAX*RMAX*0.45-h)*0.22/dd; A.ux+=dx*k;A.uy+=dy*k;A.uz+=dz*k; B.ux-=dx*k;B.uy-=dy*k;B.uz-=dz*k; }
+    }
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){  // collision barrier on the short-range set
+      const A=bots[i],B=bots[j], dx=B.x-A.x,dy=B.y-A.y,dz=B.z-A.z, dd=Math.hypot(dx,dy,dz)||1e-6;
+      if(dd<DMIN*1.5){ const k=(DMIN*1.5-dd)*2.4/dd; A.ux-=dx*k;A.uy-=dy*k;A.uz-=dz*k; B.ux+=dx*k;B.uy+=dy*k;B.uz+=dz*k; }
+    }
+    const sq=Math.sqrt(dt);
+    for(const b of bots){                         // advection-diffusion with damped thrust
+      const m=Math.hypot(b.ux,b.uy,b.uz); if(m>UMAX){b.ux*=UMAX/m;b.uy*=UMAX/m;b.uz*=UMAX/m;}
+      b.vx+=(b.ux-GAMMA*b.vx)*dt; b.vy+=(b.uy-GAMMA*b.vy)*dt; b.vz+=(b.uz-GAMMA*b.vz)*dt;
+      const f=flow(b.x,b.y,b.z,t);
+      b.x+=(f[0]+b.vx)*dt+SIGMA*sq*gauss();
+      b.y+=(f[1]+b.vy)*dt+SIGMA*0.4*sq*gauss();
+      b.z+=(f[2]+b.vz)*dt+SIGMA*sq*gauss();
+    }
+  }
+  function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v);}
+
+  let sTarget=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  renderer.setSize(innerWidth,innerHeight);
+  epoch();
+
+  const clock=new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.04), t=clock.elapsedTime;
+    if(!reduced){
+      phaseT+=dt; epochT+=dt;
+      if(epochT>1.6){ epoch(); epochT=0; }
+      if(phase==='spread' && phaseT>14){
+        phase='goal'; phaseT=0;
+        let cx=0,cz=0; bots.forEach(b=>{cx+=b.x;cz+=b.z;}); cx/=N; cz/=N;
+        const a=Math.random()*6.28; gx=cx+Math.cos(a)*5; gz=cz+Math.sin(a)*5; gy=-0.5;
+        const r=Math.hypot(gx,gz); if(r>BOUND-2){gx*=(BOUND-2)/r; gz*=(BOUND-2)/r;}
+      }else if(phase==='goal'){
+        const arrived=bots.filter(b=>Math.hypot(b.x-gx,b.y-gy,b.z-gz)<3.2).length>=N*0.8;
+        if((arrived&&phaseT>6)||phaseT>26){ phase='hold'; phaseT=0; }
+      }else if(phase==='hold' && phaseT>3){ phase='spread'; phaseT=0; }
+      control(dt,t);
+      const gop=phase==='goal'||phase==='hold'?0.85:0;
+      goal.material.opacity+=(gop-goal.material.opacity)*Math.min(1,dt*2);
+      goal.position.set(gx,gy,gz); goal.rotation.y=t*0.2;
+
+      for(let i=0;i<SNOW;i++){
+        const x=snowPos[i*3],y=snowPos[i*3+1],z=snowPos[i*3+2], f=flow(x,y,z,t);
+        let nx=x+f[0]*dt, nz=z+f[2]*dt, ny=y-0.04*dt;
+        if(Math.abs(nx)>18||Math.abs(nz)>18||ny<-4.2){nx=(Math.random()-0.5)*36;nz=(Math.random()-0.5)*36;ny=4.5;}
+        snowPos[i*3]=nx; snowPos[i*3+1]=ny; snowPos[i*3+2]=nz;
+      }
+      snowGeo.attributes.position.needsUpdate=true;
+    }
+    bots.forEach(b=>{
+      b.mesh.position.set(b.x,b.y+Math.sin(t*1.7+b.ph)*0.03,b.z);
+      const sp=Math.hypot(b.vx,b.vz);
+      if(sp>0.03){ let e=Math.atan2(b.vx,b.vz)-b.yaw; while(e>Math.PI)e-=6.2832; while(e<-Math.PI)e+=6.2832; b.yaw+=e*Math.min(1,dt*3); }
+      b.mesh.rotation.y=b.yaw;
+    });
+    let n=0;
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+      const A=bots[i],B=bots[j];
+      if(Math.hypot(A.x-B.x,A.y-B.y,A.z-B.z)<=RMAX && n<disk.max){
+        disk.pos.set([A.x,A.y,A.z,B.x,B.y,B.z],n*6); n++;
+      }
+    }
+    disk.pos.fill(0,n*6); disk.geo.attributes.position.needsUpdate=true;
+    let m=0;
+    for(const [i,j] of tree){ const A=bots[i],B=bots[j]; treeL.pos.set([A.x,A.y,A.z,B.x,B.y,B.z],m*6); m++; }
+    treeL.pos.fill(0,m*6); treeL.geo.attributes.position.needsUpdate=true;
+
+    smooth+=(sTarget-smooth)*0.05;
+    const d=smooth*0.0009;
+    let cx=0,cy=0,cz=0; bots.forEach(b=>{cx+=b.x;cy+=b.y;cz+=b.z;}); cx/=N; cy/=N; cz/=N;
+    const orbit=mobile?20:15;
+    camera.position.x=cx+Math.sin(t*0.05+d*0.5)*orbit+mx*2.2;
+    camera.position.z=cz+Math.cos(t*0.05+d*0.5)*orbit;
+    camera.position.y=cy+5.5+Math.min(d*2,4);
+    camera.lookAt(cx+(mobile?0:-2.5),cy,cz);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

@@ -464,7 +464,7 @@
     </div>
     <div class="reveal d3">
       <button class="reel-cta" id="reelBtn" type="button">
-        <span class="tri"></span>Watch the demo reel <em>· 27 clips</em>
+        <span class="tri"></span>Watch the demo reel <em>· 32 clips</em>
       </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Keep scrolling, the swarm holds its formation</div>
@@ -491,6 +491,32 @@
   <section id="research">
     <div class="sec-label reveal"><span class="num">02</span>Research &amp; Publications</div>
     <h2 class="reveal">Where the research has landed so far.</h2>
+
+    <article class="project reveal">
+      <a class="pthumb" href="projects/flow-fleet-connectivity.html" data-vkey="iros-connectivity" aria-hidden="true" tabindex="-1"><img src="assets/ai/iros-connectivity.jpg" alt="" loading="lazy" decoding="async"></a>
+      <button class="vbadge" type="button" data-reel="iros-connectivity"><span class="tri"></span>5 clips</button>
+      <div class="proj-meta"><span>Current Research · Underwater Robot Fleets · IROS 2026</span><span>AMASS Lab · NSF</span></div>
+      <h3><a href="projects/flow-fleet-connectivity.html" class="proj-link">Keeping Flow-Driven Robot Fleets Connected on Six-Byte Messages<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a></h3>
+      <p>
+        My main research, and my first-author IROS 2026 paper. Underwater robots drift apart with the
+        current and talk over short, lossy acoustic links, so I split the problem in two. A distributed
+        δ-BFS protocol trims the communication graph down to a spanning tree using constant six-byte
+        broadcasts, and a CLF-CBF-QP safety filter keeps only those tree links in range while the robots
+        avoid each other and head for a goal. Compared with adjacency consensus it builds the tree just as
+        reliably, far faster and with a fraction of the traffic, and I tested the whole pipeline with
+        BlueROV2 fleets in HoloOcean under currents and a channel made bad on purpose.
+      </p>
+      <div class="metrics">
+        <div class="metric"><b>36.6×</b><span>faster convergence · N = 20</span></div>
+        <div class="metric"><b>151×</b><span>less payload · N = 20</span></div>
+        <div class="metric"><b>6 B</b><span>per broadcast</span></div>
+        <div class="metric"><b>100%</b><span>spanning tree success</span></div>
+      </div>
+      <div class="proj-stack">
+        <span class="tag">δ-BFS Spanning Trees</span><span class="tag">CLF-CBF-QP</span>
+        <span class="tag">Distributed Algorithms</span><span class="tag">HoloOcean</span><span class="tag">BlueROV2</span>
+      </div>
+    </article>
 
     <div class="pub reveal">
       <span class="venue">IROS 2026 · IEEE/RSJ Intl. Conf. on Intelligent Robots and Systems · Accepted</span>
@@ -544,7 +570,7 @@
     <h2 class="reveal">The projects I'd show you first.</h2>
 
     <article class="project reveal">
-      <a class="pthumb" href="projects/wafer-cell.html" data-vkey="wafer-cell" aria-hidden="true" tabindex="-1"><img src="assets/wafer/run-poster.jpg" alt="" loading="lazy" decoding="async"></a>
+      <a class="pthumb" href="projects/wafer-cell.html" data-vkey="wafer-cell" aria-hidden="true" tabindex="-1"><img src="assets/ai/wafer-cell.jpg" alt="" loading="lazy" decoding="async"></a>
       <button class="vbadge" type="button" data-reel="wafer-cell"><span class="tri"></span>2 clips</button>
       <div class="proj-meta"><span>Industrial Automation · Multi-Robot Cell · 2026</span><span>RAS 598 / RS4</span></div>
       <h3><a href="projects/wafer-cell.html" class="proj-link">PLC-Coordinated Semiconductor Wafer Handling Cell<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a></h3>
@@ -889,6 +915,18 @@
 
   /*  clip catalogue  */
   const GROUPS = [
+    {k:'iros-connectivity', page:'projects/flow-fleet-connectivity.html', proj:'Connectivity in Flow-Driven Robot Fleets', clips:[
+      {f:'iros-hero-10', po:'assets/iros/hero-poster.jpg', t:'Ten BlueROV2s on a bursty channel',
+       x:'Ten BlueROV2 vehicles in HoloOcean on a bursty Gilbert and Elliott channel, played at 2×. The red lines are the only links the fleet bothers to keep, nine of them for ten robots.'},
+      {f:'iros-layer1-pruning', po:'assets/iros/layer1-poster.jpg', t:'Layer 1: δ-BFS pruning',
+       x:'Layer 1 on its own, with fifteen robots. The left plot is every link they could use, and the right plot is the fourteen-edge tree the δ-BFS epoch keeps.'},
+      {f:'iros-layer2-goal', po:'assets/iros/layer2-poster.jpg', t:'Layer 2: safety filter to the goal',
+       x:'Fifteen vehicles steer into the black goal cube while the safety filter holds every red tree link in range, and the side panel logs sends, receives and drops.'},
+      {f:'iros-scale-25', po:'assets/iros/scale25-poster.jpg', t:'Scaled up to 25 vehicles',
+       x:'The same protocol and controller with twenty-five vehicles. The tree settles on 24 kept edges out of more than 80 in range and is rebuilt online as neighbors change.'},
+      {f:'iros-submission', po:'assets/iros/submission-poster.jpg', t:'The IROS 2026 video',
+       x:'The video that went with the IROS 2026 paper: Layer 1 pruning, Layer 2 holding the backbone together on an unreliable channel, and a run scaled up to 35 robots.'}]},
+
     {k:'wafer-cell', page:'projects/wafer-cell.html', proj:'PLC-Coordinated Wafer Handling Cell', clips:[
       {f:'wafer-cell-run', po:'assets/wafer/run-poster.jpg', t:'One full wafer cycle',
        x:'The M1 Pro draws a wafer off the cassette shelf, the belt carries it past the inspection station, and the Pro600 lifts it onto the deposit platform. Recorded from start to finish and played back at 5 fps.'},
