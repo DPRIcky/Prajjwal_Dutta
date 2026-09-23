@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Team-One took first place in the MathWorks Minidrone Competition 2024: a Simulink line-following pipeline for the Parrot Mambo, from red colour detection to Bresenham waypoint probes to circle detection and landing.">
+<title>MathWorks Minidrone Competition · Prajjwal Dutta</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #dronescene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+.nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
+    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+  .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
+  .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
+    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+  .nav-mark:hover .mark-icon .mark-node{r:5;}
+  @media (prefers-reduced-motion:reduce){
+    .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
+    .nav-mark:hover .mark-icon{transform:none;}
+  }
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.8rem 1.4rem;border-radius:8px;border:1px solid var(--cyan);
+    color:var(--cyan);transition:background .25s,color .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;background:#000;}
+  figure.vid-tall{max-width:560px;margin-left:auto;margin-right:auto;}
+  figure img.diagram{padding:1.6rem 1.8rem;box-sizing:border-box;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="dronescene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>MathWorks Minidrone Competition · Spring 2024</span><span>Team-One · Arizona State University</span></div>
+    <h1 class="reveal">First Place with a Line-Following Parrot Mambo</h1>
+    <p class="sub reveal">
+      Four of us entered the MathWorks Minidrone Competition for the United States and Canada
+      as Team-One, and we took first place in Round 2. The task was a line-following one: a
+      Parrot Mambo flies over a red track painted on the arena floor, follows it using nothing
+      but its downward camera, and lands on a circle at the end. Everything ran in MATLAB and
+      Simulink against the simulated arena.
+    </p>
+    <div class="actions reveal">
+      <a class="btn alt" href="../assets/minidrone/certificate.jpg" target="_blank" rel="noopener">Certificate</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>1st</b><span>place · Round 2</span></div>
+      <div class="metric"><b>4</b><span>on the team</span></div>
+      <div class="metric"><b>120 &times; 160</b><span>camera frame, pixels</span></div>
+      <div class="metric"><b>2024</b><span>US and Canada</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="none" poster="../assets/minidrone/sim-poster.jpg"
+      aria-label="A Simulink simulation of the Parrot Mambo following a red line track from above, beside a debug window showing the camera view with the detected red line, two green probe rays and the traced path.">
+      <source src="../media/minidrone-sim.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">VID 01</span>A run in the simulated arena. The left window looks down on the track with the drone as a blue marker, and the right window is what the drone sees: the red line picked out of the floor, the probe rays fanning out, and the path it decided to fly. No sound.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">The Task</div>
+    <h2 class="reveal">Follow a red line you can only see from below.</h2>
+    <p class="reveal">
+      The competition gives every team the same starting point: a Simulink model of the Parrot
+      Mambo, a simulated arena with a red track on the floor, and a downward-facing camera. The
+      drone has to take off, find the line, follow it wherever it goes, recognise the circle that
+      marks the end, and land on it. No map, no external tracking, no operator. The only input
+      that matters is a <strong>120 by 160 pixel</strong> camera frame arriving every control step.
+    </p>
+    <p class="reveal">
+      That constraint is what makes the problem interesting. At that resolution, and that close to
+      the floor, the drone almost never sees the whole track. It sees a red band crossing a grey
+      frame, and it has to work out from that alone which way the line continues and which way it
+      came from.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Pipeline</div>
+    <h2 class="reveal">Four stages, from red pixels to a landing.</h2>
+    <p class="reveal">
+      This is the structure we walked through in our competition presentation. The image
+      processing system turns the camera frame into a heading, and the control system turns that
+      heading into a flight command.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Stage</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Red colour detection</td><td>Thresholds the camera frame into a bitmap of the track, separating red floor paint from grey floor</td></tr>
+        <tr><td>Waypoint calculation</td><td>Casts Bresenham rays across the bitmap to work out where the line leaves the frame, and picks the next waypoint</td></tr>
+        <tr><td>Circle detection</td><td>Watches for the filled circle that marks the end of the track</td></tr>
+        <tr class="hl"><td>Control system</td><td>A path planning chart turns the waypoint into a position command for the Mambo</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Waypoints</div>
+    <h2 class="reveal">Rays cast at the edges of the frame.</h2>
+    <p class="reveal">
+      The part worth explaining is how the waypoint gets chosen, because it is not a curve fit or
+      a Hough transform. It is a ray cast, done with Bresenham's line algorithm, and it is cheap
+      enough to run every frame on a drone with no real compute on board.
+    </p>
+    <div class="law reveal">
+      distance = line_drawer(x<sub>1</sub>, y<sub>1</sub>, x<sub>2</sub>, y<sub>2</sub>, u, compare) &nbsp;<span class="c">walk a Bresenham line through bitmap u, stop at the first pixel matching compare</span><br>
+      W = edge_number(x, y) &nbsp;<span class="a">1 up, 2 left, 3 down, 4 right</span> <span class="c">which border of the 120 by 160 frame a point sits on</span><br>
+      [X, Y] = nearest_edge(x, y) &nbsp;<span class="c">snap a point out to the closest border of the frame</span>
+    </div>
+    <p class="reveal">
+      Each ray starts near the centre of the image and walks outward pixel by pixel until it hits
+      red. The distance it travelled before hitting is the useful number. Rays that run a long way
+      before hitting are pointing along the line, and rays that stop almost immediately are
+      pointing across it. Comparing the rays gives the drone the direction the track continues in,
+      and <code>edge_number</code> then says which side of the frame the line is heading out of,
+      which is enough to place the next waypoint.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/minidrone/arena.jpg" target="_blank" rel="noopener">
+          <img src="../assets/minidrone/arena.jpg" alt="Top view of the simulated arena: a red track laid out as an irregular loop with a filled circle marking the landing point, and a blue marker showing the drone.">
+        </a>
+        <figcaption><span class="n">FIG 01</span>The arena from above, with the track and the landing circle. The drone never gets this view.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/minidrone/detect.jpg" target="_blank" rel="noopener">
+          <img src="../assets/minidrone/detect.jpg" alt="The detection window: a red band on a grey floor with two green probe rays, blue and magenta regions of interest, and a white traced path.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>What the drone does get. The green rays are the probes, the blue and magenta blocks are the regions they score, and the white line is the path that comes out of it.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Submission</div>
+    <h2 class="reveal">Round 2 was judged on a presentation.</h2>
+    <p class="reveal">
+      Round 2 ran virtually, so the entry was a recorded walkthrough rather than a flight in a
+      room somewhere. The four of us took a section each and explained the model end to end:
+      how the red detection works, how the waypoint algorithm decides a heading, how the circle
+      is recognised, and how the control system turns all of it into a command. Everything you
+      see flying on this page is the Simulink simulation, which is what the competition was run
+      against.
+    </p>
+    <figure class="reveal">
+      <video controls preload="metadata" playsinline poster="../assets/minidrone/presentation-poster.jpg"
+        aria-label="The team's recorded competition presentation, about seven minutes, walking through the image processing and control system slides with the four presenters on webcam.">
+        <source src="../media/minidrone-presentation.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 02</span>Our Round 2 presentation, just under seven minutes, with audio. Rajdeep Adak, Vivek Kulkarni, Yashas Karthik and I each take a part of the model.</figcaption>
+    </figure>
+    <figure class="reveal vid-tall">
+      <a href="../assets/minidrone/certificate.jpg" target="_blank" rel="noopener">
+        <img src="../assets/minidrone/certificate.jpg" alt="MathWorks certificate: first place, Prajjwal Dutta, Team-One, MathWorks Minidrone Competition United States and Canada 2024, Round 2, 23 April 2024, virtual.">
+      </a>
+      <figcaption><span class="n">FIG 03</span>The Round 2 result, 23 April 2024.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Credit</div>
+    <h2 class="reveal">What we started from.</h2>
+    <p class="reveal">
+      The competition project is built on the MathWorks Parrot Minidrone Competition template,
+      which supplies the airframe model, the arena, the sensor and command buses and the code
+      generation setup. Portions of that template are copyright 2015 Fabian Riether and Sertac
+      Karaman, and the rest is copyright 2017 The MathWorks, Inc. Our working project also
+      carries over the line-following approach and the Bresenham helper functions from the
+      open-source <a href="https://github.com/koraykzly/parrotMinidroneCompetition" target="_blank" rel="noopener">koraykzly/parrotMinidroneCompetition</a>
+      project, which is where the ray-cast waypoint idea and the <code>line_drawer</code>,
+      <code>nearest_edge</code> and <code>edge_number</code> functions come from. I would rather
+      name that plainly than leave it ambiguous.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
+    <p class="reveal">
+      The lesson that stuck is how much you can get out of a deliberately cheap perception step.
+      There is no filter, no map and no learned model anywhere in this pipeline. There is a colour
+      threshold and a handful of rays walked across a small bitmap, and that is enough to fly a
+      whole track and find the landing circle. On hardware with almost no compute, picking the
+      representation that makes the question easy beats reaching for a heavier algorithm. It is
+      the same trade I kept making later on the blimp, where quadrants beat 3D pose estimation for
+      the same reason.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">MATLAB</span><span class="tag">Simulink</span><span class="tag">Stateflow</span>
+      <span class="tag">Image Processing</span><span class="tag">Bresenham</span><span class="tag">Parrot Mambo</span>
+      <span class="tag">Path Planning</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#projects">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the competition task itself. A wireframe minidrone flies a closed red
+     track laid on the arena floor, and cyan probe rays fan out from its downward camera
+     and stop where they cross the line, which is the ray-cast the waypoint stage does. */
+  const canvas=document.getElementById('dronescene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.045);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  camera.position.set(0,7,15);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+
+  const grid=new THREE.GridHelper(90,56,0x1c3a66,0x11223f);
+  grid.position.y=-0.02; grid.material.transparent=true; grid.material.opacity=0.42;
+  scene.add(grid);
+
+  /* everything for the task sits in a rig offset to one side so it frames the copy
+     instead of sitting behind it */
+  const rig=new THREE.Group();
+  rig.position.set(mobile?0.5:5.4,-0.8,mobile?-5:-1.5);
+  rig.scale.setScalar(mobile?0.46:0.62);
+  rig.rotation.y=-0.18;
+  scene.add(rig);
+
+  /* the track: an irregular closed loop, like the painted arena course */
+  const PTS=[[0,0],[5.2,1.1],[8.4,4.3],[7.9,8.2],[4.2,10.4],[-0.6,9.9],[-4.4,7.6],[-6.9,3.9],[-5.8,0.2],[-2.6,-1.4]];
+  const curve=new THREE.CatmullRomCurve3(PTS.map(p=>new THREE.Vector3(p[0],0,p[1])),true,'catmullrom',0.5);
+  const SEG=mobile?160:260;
+  const tp=curve.getPoints(SEG);
+  const track=new THREE.Line(new THREE.BufferGeometry().setFromPoints(tp),
+    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.8}));
+  rig.add(track);
+  /* a second, offset copy reads as the painted width of the line */
+  const track2=new THREE.Line(new THREE.BufferGeometry().setFromPoints(tp.map(p=>new THREE.Vector3(p.x,0.012,p.z))),
+    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.32}));
+  track2.scale.set(1.012,1,1.012); rig.add(track2);
+
+  /* landing circle at the end of the course */
+  const landing=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.05,6,28),wire(AMBER));
+  landing.rotation.x=Math.PI/2; landing.position.copy(curve.getPointAt(0)); landing.position.y=0.02;
+  rig.add(landing);
+  const landFill=new THREE.Mesh(new THREE.CircleGeometry(0.72,24),
+    new THREE.MeshBasicMaterial({color:AMBER,transparent:true,opacity:0.16,side:THREE.DoubleSide}));
+  landFill.rotation.x=-Math.PI/2; landFill.position.copy(landing.position); landFill.position.y=0.015;
+  rig.add(landFill);
+
+  /* the minidrone */
+  const drone=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.17,0.62),wire(DEEPBLUE));
+  drone.add(body);
+  const rotors=[];
+  [[0.46,0.46],[-0.46,0.46],[0.46,-0.46],[-0.46,-0.46]].forEach(o=>{
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.04,0.06),wire(DEEPBLUE));
+    arm.position.set(o[0]*0.6,0,o[1]*0.6); drone.add(arm);
+    const r=new THREE.Mesh(new THREE.TorusGeometry(0.26,0.02,5,16),wire(CYAN));
+    r.rotation.x=Math.PI/2; r.position.set(o[0],0.09,o[1]);
+    drone.add(r); rotors.push(r);
+  });
+  /* downward camera cone */
+  const cam=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.2,6),wire(AMBER));
+  cam.position.y=-0.16; drone.add(cam);
+  drone.position.y=2.1;
+  drone.scale.setScalar(mobile?0.85:1.15);
+  rig.add(drone);
+
+  /* the 120 x 160 camera footprint projected on the floor */
+  const FW=2.4,FH=1.8;
+  const footGeo=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-FW/2,0,-FH/2),new THREE.Vector3(FW/2,0,-FH/2),
+    new THREE.Vector3(FW/2,0,FH/2),new THREE.Vector3(-FW/2,0,FH/2),new THREE.Vector3(-FW/2,0,-FH/2)]);
+  const foot=new THREE.Line(footGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3}));
+  foot.position.y=0.03; rig.add(foot);
+
+  /* probe rays: cast from the frame centre outward, stopping where they meet the track */
+  const NRAY=mobile?5:9;
+  const rayPos=new Float32Array(NRAY*6);
+  const rayGeo=new THREE.BufferGeometry();
+  rayGeo.setAttribute('position',new THREE.BufferAttribute(rayPos,3));
+  const rays=new THREE.LineSegments(rayGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.5}));
+  rig.add(rays);
+  /* a hit marker per ray, sitting where it stopped */
+  const hits=[];
+  for(let i=0;i<NRAY;i++){
+    const h=new THREE.Mesh(new THREE.SphereGeometry(0.07,6,5),
+      new THREE.MeshBasicMaterial({color:AMBER,transparent:true,opacity:0.8}));
+    rig.add(h); hits.push(h);
+  }
+
+  /* distance from a floor point to the track, sampled once into a lookup */
+  const SAMP=[]; for(let i=0;i<=240;i++){const p=curve.getPointAt(i/240);SAMP.push(p);}
+  function distToTrack(x,z){
+    let best=1e9;
+    for(let i=0;i<SAMP.length;i++){
+      const dx=SAMP[i].x-x,dz=SAMP[i].z-z;const d=dx*dx+dz*dz;
+      if(d<best)best=d;
+    }
+    return Math.sqrt(best);
+  }
+
+  let target=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{target=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+  const clock=new THREE.Clock();
+  const dp=new THREE.Vector3(),ahead=new THREE.Vector3();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      /* fly the course at a steady pace */
+      const u=(t*0.022)%1;
+      curve.getPointAt(u,dp);
+      curve.getPointAt((u+0.01)%1,ahead);
+      drone.position.x=dp.x; drone.position.z=dp.z;
+      drone.position.y=2.1+Math.sin(t*0.9)*0.12;
+      drone.rotation.y=Math.atan2(ahead.x-dp.x,ahead.z-dp.z);
+      drone.rotation.z=Math.sin(t*0.7)*0.05;
+      rotors.forEach((r,i)=>{r.rotation.z+=0.6+(i%2)*0.1;});
+
+      foot.position.x=dp.x; foot.position.z=dp.z; foot.rotation.y=drone.rotation.y;
+
+      /* recast the probes: walk outward until the ray passes near the track */
+      const base=drone.rotation.y;
+      for(let i=0;i<NRAY;i++){
+        const a=base+(i/(NRAY-1)-0.5)*Math.PI*1.35;
+        const sx=Math.sin(a),sz=Math.cos(a);
+        let d=0.12;
+        for(;d<3.2;d+=0.08){
+          if(distToTrack(dp.x+sx*d,dp.z+sz*d)<0.16)break;
+        }
+        rayPos[i*6]=dp.x;   rayPos[i*6+1]=0.05; rayPos[i*6+2]=dp.z;
+        rayPos[i*6+3]=dp.x+sx*d; rayPos[i*6+4]=0.05; rayPos[i*6+5]=dp.z+sz*d;
+        hits[i].position.set(dp.x+sx*d,0.06,dp.z+sz*d);
+        hits[i].material.opacity=d<3.2?0.85:0.0;
+        hits[i].scale.setScalar(d<3.2?1:0.001);
+      }
+      rayGeo.attributes.position.needsUpdate=true;
+
+      landing.rotation.z=t*0.4;
+      landFill.material.opacity=0.12+Math.sin(t*1.6)*0.05;
+    }
+    smooth+=(target-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.42)*7+mx*1.8;
+    camera.position.z=17+Math.cos(d*0.42)*3;
+    camera.position.y=7.2-Math.min(d*1.3,3.6);
+    camera.lookAt(mobile?0.6:3.3,0.3,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

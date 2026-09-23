@@ -464,7 +464,7 @@
     </div>
     <div class="reveal d3">
       <button class="reel-cta" id="reelBtn" type="button">
-        <span class="tri"></span>Watch the demo reel <em>· 37 clips</em>
+        <span class="tri"></span>Watch the demo reel <em>· 39 clips</em>
       </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Keep scrolling, the swarm holds its formation</div>
@@ -676,11 +676,12 @@
 
     <div class="grid">
       <div class="gcard award reveal">
-        <div class="gthumb"><img src="assets/ai/matlab-drone.jpg" alt="" loading="lazy" decoding="async"></div>
+        <a class="gthumb" href="projects/matlab-minidrone.html" data-vkey="minidrone" aria-hidden="true" tabindex="-1"><img src="assets/ai/matlab-drone.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="minidrone"><span class="tri"></span>2 clips</button>
         <span class="gm">Competition · Spring 2024</span>
-        <h4>MATLAB Mini Drone Competition</h4>
-        <p>I led a team of four to first place. We built a Simulink pipeline for SLAM and path following, then took it off the simulator and flew it on the real drone.</p>
-        <span class="kpi">1st place · flown on hardware</span>
+        <h4><a href="projects/matlab-minidrone.html" class="proj-link">MathWorks Minidrone Competition<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a></h4>
+        <p>Four of us entered as Team-One and took first place in Round 2. A Parrot Mambo follows a red line using only its downward camera: a colour threshold, then Bresenham rays cast across a 120 by 160 frame to work out where the line leaves it, then a landing on the circle at the end. All in MATLAB and Simulink.</p>
+        <span class="kpi">1st place · US and Canada 2024</span>
       </div>
       <div class="gcard reveal">
         <a class="gthumb" href="projects/turtlebot4-sft.html" data-vkey="turtlebot4-sft" aria-hidden="true" tabindex="-1"><img src="assets/ai/turtlebot4-sft.jpg" alt="" loading="lazy" decoding="async"></a>
@@ -941,6 +942,12 @@
     {k:'tube-mpc', page:'projects/tube-mpc.html', proj:'Tube-MPC Lateral Path Tracking', clips:[
       {f:'tube-mpc-carsim', po:'assets/tubempc/carsim_visualizer.jpg', t:'CarSim closed-loop run',
        x:'The final closed-loop CarSim run, captured live. The car holds the centerline through the curves at 54 km/h while the plots log tracking error, trajectory, steering and lateral acceleration.'}]},
+
+    {k:'minidrone', page:'projects/matlab-minidrone.html', proj:'MathWorks Minidrone Competition', clips:[
+      {f:'minidrone-sim', po:'assets/minidrone/sim-poster.jpg', t:'Flying the track in simulation',
+       x:'A run in the simulated arena. The left window looks down on the track with the drone as a blue marker, and the right window is what the drone sees: the red line picked out of the floor, the probe rays fanning out, and the path it decided to fly.'},
+      {f:'minidrone-presentation', po:'assets/minidrone/presentation-poster.jpg', t:'The Round 2 presentation',
+       x:'Team-One's recorded Round 2 walkthrough, just under seven minutes. Rajdeep Adak, Vivek Kulkarni, Yashas Karthik and Prajjwal Dutta each take a part of the model, from red colour detection to the control system.'}]},
 
     {k:'blimp', page:'projects/blimp.html', proj:'AeroFusion: Autonomous Blimp', clips:[
       {f:'blimp-vision-chase', po:'assets/blimp/chase-poster.jpg', t:'The loop closed on a balloon',
