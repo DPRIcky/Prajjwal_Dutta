@@ -464,7 +464,7 @@
     </div>
     <div class="reveal d3">
       <button class="reel-cta" id="reelBtn" type="button">
-        <span class="tri"></span>Watch the demo reel <em>· 32 clips</em>
+        <span class="tri"></span>Watch the demo reel <em>· 37 clips</em>
       </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Keep scrolling, the swarm holds its formation</div>
@@ -645,7 +645,8 @@
     </article>
 
     <article class="project reveal">
-      <a class="pthumb" href="projects/blimp.html" aria-hidden="true" tabindex="-1"><img src="assets/ai/blimp.jpg" alt="" loading="lazy" decoding="async"></a>
+      <a class="pthumb" href="projects/blimp.html" data-vkey="blimp" aria-hidden="true" tabindex="-1"><img src="assets/ai/blimp.jpg" alt="" loading="lazy" decoding="async"></a>
+      <button class="vbadge" type="button" data-reel="blimp"><span class="tri"></span>5 clips</button>
       <div class="proj-meta"><span>Aerial Autonomy · Hardware · Spring 2025</span><span>RAS 598</span></div>
       <h3><a href="projects/blimp.html" class="proj-link">Autonomous Blimp, from Custom Airframe to Vision Autonomy<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a></h3>
       <p>
@@ -940,6 +941,18 @@
     {k:'tube-mpc', page:'projects/tube-mpc.html', proj:'Tube-MPC Lateral Path Tracking', clips:[
       {f:'tube-mpc-carsim', po:'assets/tubempc/carsim_visualizer.jpg', t:'CarSim closed-loop run',
        x:'The final closed-loop CarSim run, captured live. The car holds the centerline through the curves at 54 km/h while the plots log tracking error, trajectory, steering and lateral acceleration.'}]},
+
+    {k:'blimp', page:'projects/blimp.html', proj:'AeroFusion: Autonomous Blimp', clips:[
+      {f:'blimp-vision-chase', po:'assets/blimp/chase-poster.jpg', t:'The loop closed on a balloon',
+       x:'A green balloon goes up, the detector picks it out, and the yaw and altitude PI loops walk the blimp across the lab until the balloon sits in the middle of the frame. Nobody is touching the controls.'},
+      {f:'blimp-dtr-altitude', po:'assets/blimp/dtr-altitude-poster.jpg', t:'Altitude hold at Defend the Republic',
+       x:'Holding altitude inside the netted arena at the Defend the Republic competition. The yellow ring marks the target the blimp is working toward.'},
+      {f:'blimp-dtr-manual', po:'assets/blimp/dtr-manual-poster.jpg', t:'Joystick flight at the competition',
+       x:'The airframe under joystick control at the competition, driven over ROS 2 teleop. Same thrust allocation the autonomous mode uses, with a human supplying the setpoints instead of the detector.'},
+      {f:'blimp-gui', po:'assets/blimp/gui-poster.jpg', t:'The AeroFusion ground station',
+       x:'One run through the web ground station. State walks from Idle to Hovering to Landing, the detector panel prints each balloon position and its quadrant, and the altitude trace climbs to the 1.5 m setpoint, holds, then drops on landing.'},
+      {f:'blimp-quadrant-feed', po:'assets/blimp/quadrant-poster.jpg', t:'Quadrant detector on the bench',
+       x:'The quadrant detector with the camera carried by hand rather than flying, which is how we tuned the thresholds. The balloon crossing from Q2 into Q3 is what flips the yaw command.'}]},
 
     {k:'turtlebot4-sft', page:'projects/turtlebot4-sft.html', proj:'TurtleBot 4 Human-Following', clips:[
       {f:'sft-hardware-demo', po:'assets/turtlebot4/hardware_demo_poster.jpg', t:'Hardware run',

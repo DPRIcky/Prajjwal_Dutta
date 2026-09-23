@@ -88,7 +88,8 @@
   figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
     background:rgba(14,24,48,0.5);}
   figure a{display:block;}
-  figure img{display:block;width:100%;height:auto;}
+  figure img,figure video{display:block;width:100%;height:auto;background:#000;}
+  figure.vid-tall{max-width:560px;margin-left:auto;margin-right:auto;}
   figure img.diagram{padding:1.6rem 1.8rem;box-sizing:border-box;}
   figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
     padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
@@ -160,6 +161,14 @@
   </header>
 
   <figure class="reveal">
+    <video autoplay muted loop playsinline preload="none" poster="../assets/blimp/dtr-altitude-poster.jpg"
+      aria-label="The blimp holding altitude inside the netted arena at the Defend the Republic competition, with a yellow target ring marked on the footage.">
+      <source src="../media/blimp-dtr-altitude.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">VID 01</span>Holding altitude inside the netted arena at the Defend the Republic competition. The yellow ring marks the target the blimp is working toward. No sound.</figcaption>
+  </figure>
+
+  <figure class="reveal">
     <a href="../assets/blimp/gondola_cad.jpg" target="_blank" rel="noopener">
       <img src="../assets/blimp/gondola_cad.jpg" alt="CAD render of the blimp gondola suspended under the envelope: electronics board, servo and gear drive, and two carbon-fiber motor booms with propellers.">
     </a>
@@ -198,6 +207,14 @@
       The whole thing lives off one 7.4 V, 900 mAh LiPo.
     </p>
     <figure class="reveal">
+      <video controls preload="none" playsinline poster="../assets/blimp/dtr-manual-poster.jpg"
+        aria-label="A minute of the blimp flying under joystick control in a high bay, seen from below against the ceiling trusses, translating and rotating on command.">
+        <source src="../media/blimp-dtr-manual.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 02</span>The airframe under joystick control at the competition, driven over ROS 2 teleop. This is the same thrust allocation the autonomous mode uses, with a human supplying the setpoints instead of the detector. No sound.</figcaption>
+    </figure>
+
+    <figure class="reveal">
       <a href="../assets/blimp/envelope_cad.jpg" target="_blank" rel="noopener">
         <img src="../assets/blimp/envelope_cad.jpg" alt="SolidWorks CAD model of the ellipsoidal blimp envelope with the gondola assembly mounted underneath.">
       </a>
@@ -226,6 +243,13 @@
       safety overrides. If the detector loses the balloon, the blimp holds its altitude and stops
       turning until it finds it again. We'd rather it hover than guess.
     </p>
+    <figure class="reveal vid-tall">
+      <video controls preload="none" playsinline poster="../assets/blimp/gui-poster.jpg"
+        aria-label="The AeroFusion web ground station during a run: battery, state and timer across the top, a direction pad and launch and land buttons, the live camera and detector output panels, IMU, altitude and pressure readouts, and an altitude plot that climbs to the target and comes back down on landing.">
+        <source src="../media/blimp-gui.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 03</span>The ground station through one run. The state field walks from Idle to Hovering to Landing, the detector panel prints each balloon position and the quadrant it fell in, and the altitude trace climbs to the 1.5 m setpoint, holds, then drops when we land it. Everything on the page is a ROS 2 topic. No sound.</figcaption>
+    </figure>
   </section>
 
   <section>
@@ -239,6 +263,13 @@
       quadrants with a small dead zone in the middle, and each region maps to an obvious pair of
       commands.
     </p>
+    <figure class="reveal vid-tall">
+      <video controls preload="none" playsinline poster="../assets/blimp/chase-poster.jpg"
+        aria-label="The blimp in the lab turning and drifting toward a green balloon held up by a person, closing until the balloon is right at the nose.">
+        <source src="../media/blimp-vision-chase.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 04</span>The loop closed. A green balloon goes up, the detector picks it out, and the yaw and altitude PI loops walk the blimp across the lab until the balloon sits in the middle of the frame. Nobody is touching the controls. No sound.</figcaption>
+    </figure>
     <table class="reveal">
       <thead><tr><th>Region</th><th>Centroid</th><th>Yaw command</th><th>Vertical command</th></tr></thead>
       <tbody>
@@ -250,11 +281,12 @@
       </tbody>
     </table>
     <p class="tnote reveal">Detections under 0.5 confidence are thrown out. A box that gets too big triggers a safety retreat, because it means the balloon is about to hit the lens.</p>
-    <figure class="reveal">
-      <a href="../assets/blimp/quadrant_feed.jpg" target="_blank" rel="noopener">
-        <img src="../assets/blimp/quadrant_feed.jpg" alt="Live onboard camera feed partitioned into quadrants Q1 to Q4 by a green crosshair, with a balloon target visible in quadrant Q4.">
-      </a>
-      <figcaption><span class="n">FIG 03</span>The live onboard feed split into quadrants. A balloon in Q4 means turn left and descend, and the PI loops bring it back to the center.</figcaption>
+    <figure class="reveal vid-tall">
+      <video controls preload="none" playsinline poster="../assets/blimp/quadrant-poster.jpg"
+        aria-label="The onboard camera feed split into quadrants Q1 to Q4 by a green crosshair while the camera is moved by hand around a room, a green balloon crossing between quadrants as the detector tracks it.">
+        <source src="../media/blimp-quadrant-feed.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 05</span>The quadrant detector on the bench, with the camera carried by hand rather than flying, which is how we tuned the thresholds. The crosshair splits the frame and the balloon crossing from Q2 into Q3 is what flips the yaw command. No sound.</figcaption>
     </figure>
   </section>
 
@@ -276,13 +308,13 @@
         <a href="../assets/blimp/vicon_x_dark.png" target="_blank" rel="noopener">
           <img class="diagram" src="../assets/blimp/vicon_x_dark.png" alt="Plot of forward single-degree-of-freedom test: experimental Vicon trajectory versus theoretical model prediction along the X axis.">
         </a>
-        <figcaption><span class="n">FIG 04</span>The forward (X axis) test, with the Vicon measurement against what our model predicted.</figcaption>
+        <figcaption><span class="n">FIG 03</span>The forward (X axis) test, with the Vicon measurement against what our model predicted.</figcaption>
       </figure>
       <figure class="reveal">
         <a href="../assets/blimp/vicon_z_dark.png" target="_blank" rel="noopener">
           <img class="diagram" src="../assets/blimp/vicon_z_dark.png" alt="Plot of vertical single-degree-of-freedom test: experimental Vicon trajectory versus theoretical model prediction along the Z axis.">
         </a>
-        <figcaption><span class="n">FIG 05</span>The vertical (Z axis) test, comparing how the blimp actually rose and sank with the model's prediction.</figcaption>
+        <figcaption><span class="n">FIG 04</span>The vertical (Z axis) test, comparing how the blimp actually rose and sank with the model's prediction.</figcaption>
       </figure>
     </div>
   </section>
@@ -341,6 +373,7 @@
 <script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
