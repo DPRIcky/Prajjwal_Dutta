@@ -464,7 +464,7 @@
     </div>
     <div class="reveal d3">
       <button class="reel-cta" id="reelBtn" type="button">
-        <span class="tri"></span>Watch the demo reel <em>· 39 clips</em>
+        <span class="tri"></span>Watch the demo reel <em>· 43 clips</em>
       </button>
     </div>
     <div class="scroll-cue"><span class="pulse"></span> Keep scrolling, the swarm holds its formation</div>
@@ -708,11 +708,12 @@
         <span class="kpi">±15 cm goal accuracy · 95%+ of goals reached</span>
       </div>
       <div class="gcard reveal">
-        <div class="gthumb"><img src="assets/ai/fanuc-servoing.jpg" alt="" loading="lazy" decoding="async"></div>
-        <span class="gm">Manipulation · Fall 2025</span>
-        <h4>ROS 2 Visual Servoing on a FANUC LR Mate</h4>
-        <p>A camera watches for a target, and its 2D detections become 3D goals in the workspace through geometric inverse kinematics, holding an elbow-up posture to stay clear of collisions, so nobody has to program the goal by hand.</p>
-        <span class="kpi">manipulation driven by detection</span>
+        <a class="gthumb" href="projects/fanuc-roboguide.html" data-vkey="fanuc" aria-hidden="true" tabindex="-1"><img src="assets/ai/fanuc-servoing.jpg" alt="" loading="lazy" decoding="async"></a>
+        <button class="vbadge" type="button" data-reel="fanuc"><span class="tri"></span>4 clips</button>
+        <span class="gm">Industrial Robotics · Summer 2026</span>
+        <h4><a href="projects/fanuc-roboguide.html" class="proj-link">Teaching a FANUC Arm, from RoboGuide to the Real Cell<span class="arrow"> <svg class="ic" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true"><path d="M1.5 6h8.5M6.5 2.5 10 6 6.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a></h4>
+        <p>Six exercises from an offline cell to a real six-axis FANUC. I built the cell in RoboGuide, looped a trace around a CAD table with a register and a FOR loop, then taught two programs on the hardware and set a user frame by the three-point method. Written up as an IEEE report.</p>
+        <span class="kpi">2 programs taught on hardware · IEEE report</span>
       </div>
       <div class="gcard reveal">
         <a class="gthumb" href="projects/space-robotics.html" data-vkey="space-robotics" aria-hidden="true" tabindex="-1"><img src="assets/ai/lqr-px4-landing.jpg" alt="" loading="lazy" decoding="async"></a>
@@ -942,6 +943,16 @@
     {k:'tube-mpc', page:'projects/tube-mpc.html', proj:'Tube-MPC Lateral Path Tracking', clips:[
       {f:'tube-mpc-carsim', po:'assets/tubempc/carsim_visualizer.jpg', t:'CarSim closed-loop run',
        x:'The final closed-loop CarSim run, captured live. The car holds the centerline through the curves at 54 km/h while the plots log tracking error, trajectory, steering and lateral acceleration.'}]},
+
+    {k:'fanuc', page:'projects/fanuc-roboguide.html', proj:'Teaching a FANUC Arm', clips:[
+      {f:'fanuc-cell', po:'assets/fanuc/cell-poster.jpg', t:'The real cell',
+       x:'A six-axis FANUC moving over a fixtured plate in the guarded lab cell. The tool carries an illuminator and a vacuum cup on an extended post, and that post is what gets jogged to each corner of the jig when teaching a frame.'},
+      {f:'fanuc-teach', po:'assets/fanuc/teach-poster.jpg', t:'Teaching from the pendant',
+       x:'Teaching the physical robot from the pendant, in T1 mode at 50 percent override. Every pose in both taught programs was reached by jogging to it and recording it.'},
+      {f:'fanuc-loop', po:'assets/fanuc/loop-poster.jpg', t:'Looped trace in RoboGuide',
+       x:'The offline cell running a looped trace of the table edges. A register holds the count and a FOR and ENDFOR wrap the four edge moves, so the arm runs the rectangle five times before parking above the centre.'},
+      {f:'fanuc-trace', po:'assets/fanuc/trace-poster.jpg', t:'Single pass, stepped',
+       x:'The same trace without the loop, one pass through the four recorded points. Stepping a new path one line at a time is how you check it before letting it run continuously.'}]},
 
     {k:'minidrone', page:'projects/matlab-minidrone.html', proj:'MathWorks Minidrone Competition', clips:[
       {f:'minidrone-sim', po:'assets/minidrone/sim-poster.jpg', t:'Flying the track in simulation',

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Teaching a six-axis FANUC manipulator in RAS 598: offline cell building and looped programs in RoboGuide, then taught programs and a three-point user frame on the real robot, written up as an IEEE report.">
+<title>Teaching a FANUC Arm · Prajjwal Dutta</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830;
+    --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:linear-gradient(180deg,var(--abyss),var(--deep) 55%,var(--abyss));
+    color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
+  #fanucscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+  main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
+
+  nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
+    align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+.nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
+  .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
+    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+  .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
+  .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
+    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+  .nav-mark:hover .mark-icon .mark-node{r:5;}
+  @media (prefers-reduced-motion:reduce){
+    .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
+    .nav-mark:hover .mark-icon{transform:none;}
+  }
+  .back{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .back:hover{color:var(--cyan);}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;border-radius:2px;}
+
+  header.proj{padding:9.5rem 0 3rem;}
+  .eyebrow{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.26em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:1.3rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;}
+  .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,5.5vw,3.4rem);
+    line-height:1.08;letter-spacing:-0.02em;max-width:22ch;}
+  .sub{margin-top:1.4rem;color:var(--muted);font-size:1rem;max-width:68ch;}
+  .actions{display:flex;flex-wrap:wrap;gap:0.9rem;margin-top:2rem;align-items:center;}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+    text-decoration:none;padding:0.8rem 1.4rem;border-radius:8px;border:1px solid var(--cyan);
+    color:var(--cyan);transition:background .25s,color .25s;}
+  .btn:hover{background:var(--cyan);color:var(--abyss);}
+  .btn.alt{border-color:var(--line);color:var(--muted);}
+  .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+  .icon-link{display:inline-flex;align-items:center;justify-content:center;
+    width:42px;height:42px;transition:transform .25s,filter .25s;}
+  .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
+    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+  .icon-link svg{width:26px;height:26px;display:block;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
+  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
+  .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
+
+  section{padding:3.4rem 0 0;}
+  .sec-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.26em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.9rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2.1rem);
+    letter-spacing:-0.015em;margin-bottom:1.1rem;}
+  p{color:var(--muted);font-size:0.95rem;max-width:72ch;margin-bottom:1rem;}
+  strong{color:var(--text);font-weight:600;}
+
+  .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
+    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
+  .law .c{color:var(--muted);}
+  .law .a{color:var(--amber);}
+
+  figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    background:rgba(14,24,48,0.5);}
+  figure a{display:block;}
+  figure img,figure video{display:block;width:100%;height:auto;background:#000;}
+  figure.vid-tall{max-width:560px;margin-left:auto;margin-right:auto;}
+  figure img.diagram{padding:1.6rem 1.8rem;box-sizing:border-box;}
+  figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
+    padding:0.8rem 1.1rem;border-top:1px solid var(--line);}
+  figcaption .n{color:var(--amber);margin-right:0.6rem;}
+  .fig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+  .fig-grid figure{margin:0.6rem 0;}
+  @media(max-width:720px){.fig-grid{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;margin:1.4rem 0 0.6rem;font-size:0.85rem;}
+  th,td{text-align:left;padding:0.65rem 0.9rem;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);}
+  td{color:var(--muted);font-family:var(--mono);font-size:0.78rem;}
+  td:first-child{color:var(--text);font-family:var(--body);}
+  tr.hl td{color:var(--cyan);}
+  .tnote{font-family:var(--mono);font-size:0.64rem;color:var(--muted);letter-spacing:0.06em;}
+
+  .proj-stack{margin-top:1.4rem;display:flex;flex-wrap:wrap;gap:0.55rem;}
+  .tag{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;border:1px solid var(--line);
+    border-radius:999px;padding:0.32rem 0.85rem;color:var(--muted);}
+
+  .pager{display:flex;justify-content:space-between;margin-top:5rem;border-top:1px solid var(--line);padding-top:2rem;}
+  .pager a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;color:var(--muted);
+    text-decoration:none;text-transform:uppercase;transition:color .25s;}
+  .pager a:hover{color:var(--cyan);}
+
+  .reveal{opacity:0;transform:translateY(30px);
+    transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="fanucscene"></canvas>
+<div class="vignette"></div>
+
+<nav>
+  <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
+  <a class="back" href="../index.html#work">Back to portfolio</a>
+</nav>
+
+<main>
+  <header class="proj">
+    <div class="eyebrow reveal"><span>RAS 598 · Robotic Systems 4 · Summer 2026</span><span>Industrial Robotics and Smart Factory Automation</span></div>
+    <h1 class="reveal">Teaching a FANUC Arm, from RoboGuide to the Real Cell</h1>
+    <p class="sub reveal">
+      Six lab exercises that start in simulation and finish with my hands on a teach pendant.
+      I built a cell in FANUC RoboGuide, wrote programs on the virtual pendant, imported a table
+      from the CAD library and looped a trace around its edges with a register and a FOR loop.
+      Then the same ideas on a real six-axis FANUC: two taught programs, and a user frame
+      established by the three-point method on a jig sitting almost square to nothing.
+    </p>
+    <div class="actions reveal">
+      <a class="icon-link" href="../assets/fanuc/FANUC_RoboGuide_Report.pdf" target="_blank" rel="noopener" aria-label="IEEE report PDF" title="IEEE Report (PDF)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FA0F00" d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z"/></svg>
+      </a>
+      <a class="btn alt" href="../assets/fanuc/FANUC_RoboGuide_Report.pdf" target="_blank" rel="noopener">Read the report</a>
+    </div>
+    <div class="metrics reveal">
+      <div class="metric"><b>6</b><span>lab exercises</span></div>
+      <div class="metric"><b>2</b><span>programs taught on hardware</span></div>
+      <div class="metric"><b>3-point</b><span>user frame method</span></div>
+      <div class="metric"><b>T1 · 50%</b><span>manual mode and override</span></div>
+    </div>
+  </header>
+
+  <figure class="reveal">
+    <video autoplay muted loop playsinline preload="none" poster="../assets/fanuc/cell-poster.jpg"
+      aria-label="A six-axis FANUC arm moving over a fixtured sheet metal plate in a guarded laboratory cell, its tool carrying an illuminator and a vacuum cup.">
+      <source src="../media/fanuc-cell.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="n">VID 01</span>The real cell. The tool carries an illuminator and a vacuum cup on an extended post, and that post is what I jogged to each corner of the jig when teaching the frame. No sound.</figcaption>
+  </figure>
+
+  <section>
+    <div class="sec-label reveal">Why Teaching</div>
+    <h2 class="reveal">Industrial arms are still programmed by pointing at things.</h2>
+    <p class="reveal">
+      Almost every industrial manipulator in service is programmed the same way it was thirty
+      years ago. An operator jogs the robot to a pose, records it, and strings the recorded poses
+      into a program. Offline tools have got much better, but a simulated cell is only worth
+      something if the poses it produces survive the trip onto hardware whose geometry never quite
+      matches the model.
+    </p>
+    <p class="reveal">
+      That gap is what this module is built around. Six exercises, arranged so each one is a
+      prerequisite for the next, running from building a cell in RoboGuide to setting frames on a
+      real robot. The point was not to invent anything. It was to get fluent with the tools an
+      integrator actually touches, and to find out first-hand where simulation and hardware stop
+      agreeing.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Simulation</div>
+    <h2 class="reveal">A cell, a table, and a loop around its edges.</h2>
+    <p class="reveal">
+      RoboGuide gives you a six-axis arm and a virtual pendant that mirrors the real one closely
+      enough that the muscle memory transfers. I took the defaults through all eight steps of the
+      cell wizard and flange type 1, then spent the first two exercises just moving things: dragging
+      the tool centre point along an axis, holding shift to rotate about it instead, and typing
+      exact coordinates into the position screen when I needed a pose I could get back to.
+    </p>
+    <figure class="reveal">
+      <video controls preload="none" playsinline poster="../assets/fanuc/loop-poster.jpg"
+        aria-label="RoboGuide running a program that traces the four edges of a table fixture repeatedly, with the virtual teach pendant showing the program executing line by line.">
+        <source src="../media/fanuc-loop.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 02</span>The looped trace. A register holds the count, a FOR and ENDFOR wrap the four edge moves, and the arm runs the rectangle five times before parking above the centre of the table. No sound.</figcaption>
+    </figure>
+    <p class="reveal">
+      Then the table. It comes out of the RoboGuide CAD library, and the only real constraint is
+      that it has to sit inside the reachable workspace, which is easy to get wrong and obvious
+      once you do. Four points on the edges gives you a rectangle. Repeating it needs two things
+      that are worth naming: a <strong>register</strong>, which is just a numbered variable the
+      controller owns, and a <strong>FOR / ENDFOR</strong> pair around the four moves. Both have
+      to be inserted above the existing lines, which is its own small lesson in pendant editing.
+    </p>
+    <figure class="reveal">
+      <video controls preload="none" playsinline poster="../assets/fanuc/trace-poster.jpg"
+        aria-label="RoboGuide tracing the table edges once, without the loop, with the program stepping through each recorded point.">
+        <source src="../media/fanuc-trace.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 03</span>The same trace without the loop, one pass through the four recorded points. Stepping a new path one line at a time is how you check it before letting it run continuously. No sound.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Hardware</div>
+    <h2 class="reveal">Two programs, and what the interpolation does to them.</h2>
+    <p class="reveal">
+      On the real robot everything happens in T1 with the override at 50 percent, which is what
+      you use when people are inside the fence. The enable switch on the pendant has to be held
+      for the arm to move at all. Let go and you get <code>SRVO-003 Deadman switch released</code>
+      and the program aborts, which is exactly what you see in the screenshots below, because I had
+      to let go of the pendant to take the photograph.
+    </p>
+    <figure class="reveal">
+      <video controls preload="none" playsinline poster="../assets/fanuc/teach-poster.jpg"
+        aria-label="Teaching the physical FANUC robot from the pendant inside the guarded cell."><source src="../media/fanuc-teach.mp4" type="video/mp4">
+      </video>
+      <figcaption><span class="n">VID 04</span>Teaching from the pendant at the real cell. Every pose in the programs below was reached by jogging to it and recording it. No sound.</figcaption>
+    </figure>
+    <p class="reveal">
+      The first program traces the same rectangle twice, deliberately. Lines 1 to 5 use
+      <strong>joint</strong> moves at 100 percent through P[1] to P[4]. Lines 6 to 10 use
+      <strong>linear</strong> moves at 100 mm/sec through P[5] to P[8]. Every instruction ends in
+      <code>FINE</code>, so the arm settles on each pose instead of blending through it.
+    </p>
+    <table class="reveal">
+      <thead><tr><th>Line</th><th>Instruction</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>1 to 5</td><td>J P[1] to P[4], back to P[1], 100%</td><td>Joint interpolation, each axis driven independently</td></tr>
+        <tr class="hl"><td>6 to 10</td><td>L P[5] to P[8], back to P[5], 100mm/sec</td><td>Linear interpolation, tool held on the straight segment</td></tr>
+        <tr><td>11</td><td>J P[1], 100%</td><td>Return home</td></tr>
+      </tbody>
+    </table>
+    <p class="tnote reveal">Eleven lines in all, every one terminated FINE, running with the World frame active.</p>
+    <p class="reveal">
+      Running both halves back to back makes the difference impossible to miss. The joint moves
+      visit all four corners but the tool swings out in an arc between them, because each axis is
+      just travelling from its start angle to its end angle on its own schedule. Only the linear
+      half actually draws a rectangle. The corners are the same points either way, which is the
+      part that catches people out.
+    </p>
+    <div class="fig-grid">
+      <figure class="reveal">
+        <a href="../assets/fanuc/prog1.jpg" target="_blank" rel="noopener">
+          <img src="../assets/fanuc/prog1.jpg" alt="FANUC teach pendant showing program PROG1: five joint moves at one hundred percent followed by five linear moves at one hundred millimetres per second, all with FINE termination, with the status line reading T1, fifty percent and S slash WORLD.">
+        </a>
+        <figcaption><span class="n">FIG 01</span>PROG1 on the pendant. The status line reads S/WORLD, so every position in it is expressed against the robot base.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <a href="../assets/fanuc/prog2.jpg" target="_blank" rel="noopener">
+          <img src="../assets/fanuc/prog2.jpg" alt="FANUC teach pendant showing program PROG2: one joint move followed by four linear moves at one hundred millimetres per second, with the status line reading S slash USER.">
+        </a>
+        <figcaption><span class="n">FIG 02</span>PROG2, the same shape with User frame 1 active. The status line now reads S/USER.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Frames</div>
+    <h2 class="reveal">Three corners are enough to describe a jig.</h2>
+    <p class="reveal">
+      The last exercise is the one that actually matters in a real cell. A workpiece almost never
+      sits square to the robot base, and you do not want to carry that offset around in your head
+      or bake it into every taught position. So you teach a frame. The three-point method asks for
+      three poses you can physically identify: the origin at one corner of the jig, a point out
+      along +X at the next corner, and a point along +Y at the third.
+    </p>
+    <div class="law reveal">
+      X = 401.4 &nbsp; Y = 144.1 &nbsp; Z = &minus;76.9 &nbsp;<span class="c">origin of User Frame 1, millimetres from the base</span><br>
+      W = 9.4 &nbsp; P = 1.7 &nbsp; <span class="a">R = &minus;87.5</span> &nbsp;<span class="c">orientation in degrees, and R is the one that matters</span>
+    </div>
+    <p class="reveal">
+      That <strong>R of about minus 87.5 degrees</strong> is the whole point of the exercise. The
+      jig was sitting very nearly a quarter turn away from the robot base, while W and P stayed
+      within a couple of degrees of zero, which says the surface itself was close to level. With
+      the frame taught and activated, the jog keys move along the jig instead of along the base,
+      and a position recorded afterwards means something a person looking at the part would
+      recognise. Without it, every one of those positions would quietly carry that rotation.
+    </p>
+    <figure class="reveal vid-tall">
+      <a href="../assets/fanuc/userframe.jpg" target="_blank" rel="noopener">
+        <img src="../assets/fanuc/userframe.jpg" alt="FANUC setup frames screen showing User Frame 1 taught by the three point method, with X four hundred one point four, Y one hundred forty four point one, Z minus seventy six point nine, W nine point four, P one point seven, R minus eighty seven point five, and all three direction points marked USED.">
+      </a>
+      <figcaption><span class="n">FIG 03</span>The frame the controller computed from those three corners. All three constituent points read USED, so it built the frame from my triad rather than falling back on a default.</figcaption>
+    </figure>
+    <p class="tnote reveal">One thing worth knowing before you do this: activating a frame does not move positions you already recorded in a different one. Teach the frame first, then the positions that depend on it.</p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">The Write-Up</div>
+    <h2 class="reveal">Written up as an IEEE report.</h2>
+    <p class="reveal">
+      I wrote the module up properly, in IEEE conference format: the setup, the method for each
+      exercise, both taught programs transcribed line by line, the measured frame, and what I
+      observed running them. It also says plainly what the work does not establish. I reported a
+      taught frame and two taught programs, but I never measured how closely the executed path
+      follows the intended rectangle. That needs external metrology, which the module did not
+      include. The obvious next step would be teaching the frame several times over and reporting
+      the spread, which would separate operator error from the machine's own repeatability.
+    </p>
+    <div class="actions reveal">
+      <a class="btn alt" href="../assets/fanuc/FANUC_RoboGuide_Report.pdf" target="_blank" rel="noopener">Read the report (PDF)</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Credit</div>
+    <h2 class="reveal">Whose lab this is.</h2>
+    <p class="reveal">
+      The module, the exercise structure and the instructional material are the work of
+      Rajesh S. Aouti, Dr. Cynthia Pickering and Dr. Sangram Redkar, delivered as part of the
+      PSMART hands-on session series at ASU. The RoboGuide cell configuration and the order of the
+      six exercises follow their material. What is mine is the work of doing them, the programs and
+      the frame taught on the robot, and the report.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-label reveal">Looking Back</div>
+    <h2 class="reveal">What I took away from it.</h2>
+    <p class="reveal">
+      Specifying motion is the easy half. I could describe the rectangle I wanted in a sentence,
+      and the pendant took about a minute to accept it. What took the time, and what the exercises
+      are really about, is establishing the frames that make the specification mean what I
+      intended. The same four corners give you an arc or a rectangle depending on one
+      interpolation letter, and the same recorded position means two different places depending on
+      which frame was active when you pressed record. On a shop floor that distinction is the
+      difference between a part and scrap.
+    </p>
+    <div class="proj-stack reveal">
+      <span class="tag">FANUC</span><span class="tag">RoboGuide</span><span class="tag">Teach Pendant</span>
+      <span class="tag">Offline Programming</span><span class="tag">Coordinate Frames</span>
+      <span class="tag">Industrial Robotics</span><span class="tag">Industry 4.0</span>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="../index.html#projects">All work</a>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
+  const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* Background: the exercise itself. A wireframe six-axis arm traces a rectangle on a
+     jig, alternating between a joint-interpolated pass (the tool bows out between the
+     corners) and a linear pass (it holds the straight edge). The jig carries a triad
+     rotated by the real taught value, R = -87.5 degrees, against the base triad. */
+  const canvas=document.getElementById('fanucscene');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x060a14,0.05);
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
+  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
+  const mobile=innerWidth<700;
+  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.62});
+
+  const grid=new THREE.GridHelper(70,44,0x1c3a66,0x11223f);
+  grid.position.y=-2.6; grid.material.transparent=true; grid.material.opacity=0.4;
+  scene.add(grid);
+
+  /* rig: the whole cell sits to one side so it frames the copy */
+  const rig=new THREE.Group();
+  rig.position.set(mobile?0.4:6.2,0.9,mobile?-6:-3.0);
+  rig.scale.setScalar(mobile?0.52:0.86);
+  rig.rotation.y=-0.3;
+  scene.add(rig);
+
+  /* the jig: a plate rotated by the taught R, with its own triad */
+  const RDEG=-87.5, RRAD=RDEG*Math.PI/180;
+  const jig=new THREE.Group();
+  jig.position.set(2.2,-1.9,0.8);
+  jig.rotation.y=RRAD;
+  rig.add(jig);
+  const plate=new THREE.Mesh(new THREE.BoxGeometry(3.4,0.12,2.4),wire(DEEPBLUE));
+  jig.add(plate);
+  /* the taught rectangle on the jig surface */
+  const RW=2.5,RH=1.6;
+  const corners=[new THREE.Vector3(-RW/2,0.09,-RH/2),new THREE.Vector3(RW/2,0.09,-RH/2),
+                 new THREE.Vector3(RW/2,0.09,RH/2),new THREE.Vector3(-RW/2,0.09,RH/2)];
+  const rect=new THREE.Line(new THREE.BufferGeometry().setFromPoints(corners.concat([corners[0]])),
+    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.75}));
+  jig.add(rect);
+  corners.forEach(c=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.075,6,5),
+      new THREE.MeshBasicMaterial({color:AMBER,transparent:true,opacity:0.85}));
+    m.position.copy(c); jig.add(m);
+  });
+  /* triads: base frame on the robot, user frame on the jig */
+  function triad(len,op){
+    const g=new THREE.Group();
+    [[len,0,0,0xff6b6b],[0,len,0,0x7dd87d],[0,0,len,0x6bb6ff]].forEach(a=>{
+      const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+        [new THREE.Vector3(0,0,0),new THREE.Vector3(a[0],a[1],a[2])]),
+        new THREE.LineBasicMaterial({color:a[3],transparent:true,opacity:op}));
+      g.add(l);
+    });
+    return g;
+  }
+  const userTriad=triad(1.0,0.75); userTriad.position.y=0.12; jig.add(userTriad);
+  const baseTriad=triad(1.2,0.4); baseTriad.position.y=0.05; rig.add(baseTriad);
+
+  /* six-axis arm, built as a nested chain so the joints actually drive it */
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(0.62,0.78,0.42,12),wire(DEEPBLUE));
+  base.position.y=0.21; rig.add(base);
+  const j1=new THREE.Group(); j1.position.y=0.42; rig.add(j1);
+  const shoulder=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.5,0.62),wire(CYAN));
+  shoulder.position.y=0.25; j1.add(shoulder);
+  const j2=new THREE.Group(); j2.position.y=0.5; j1.add(j2);
+  const upper=new THREE.Mesh(new THREE.BoxGeometry(0.34,2.0,0.34),wire(CYAN));
+  upper.position.y=1.0; j2.add(upper);
+  const j3=new THREE.Group(); j3.position.y=2.0; j2.add(j3);
+  const fore=new THREE.Mesh(new THREE.BoxGeometry(0.28,1.7,0.28),wire(CYAN));
+  fore.position.y=0.85; j3.add(fore);
+  const j5=new THREE.Group(); j5.position.y=1.7; j3.add(j5);
+  const wristM=new THREE.Mesh(new THREE.SphereGeometry(0.22,8,6),wire(AMBER));
+  j5.add(wristM);
+  /* the tool post, which is what gets jogged to the corners */
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.5,6),wire(AMBER));
+  post.position.y=-0.25; j5.add(post);
+  const cup=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.16,8),wire(AMBER));
+  cup.position.y=-0.52; cup.rotation.x=Math.PI; j5.add(cup);
+
+  /* the trail the tool actually leaves, which differs between J and L passes */
+  const TRAIL=mobile?70:130;
+  const trailPos=new Float32Array(TRAIL*3);
+  const trailGeo=new THREE.BufferGeometry();
+  trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));
+  const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.55}));
+  rig.add(trail);
+  let trailN=0;
+
+  /* two-link IK in the arm's vertical plane, elbow-up (same convention as the UR5 page) */
+  const L1=2.0,L2=1.7;
+  const tgt=new THREE.Vector3(),local=new THREE.Vector3();
+  function solve(p){
+    /* p is in rig space; yaw the base to face it */
+    const yaw=Math.atan2(p.x,p.z);
+    j1.rotation.y=yaw;
+    const planar=Math.sqrt(p.x*p.x+p.z*p.z);
+    const dy=p.y-0.92;
+    let d=Math.sqrt(planar*planar+dy*dy);
+    d=Math.min(d,L1+L2-0.02);
+    const a2=Math.acos(Math.min(1,Math.max(-1,(d*d-L1*L1-L2*L2)/(2*L1*L2))));
+    const a1=Math.atan2(dy,planar)-Math.atan2(L2*Math.sin(a2),L1+L2*Math.cos(a2));
+    j2.rotation.x=Math.PI/2-a1;
+    j3.rotation.x=-a2;
+  }
+
+  let target=0,smooth=0,mx=0;
+  addEventListener('scroll',()=>{target=scrollY;},{passive:true});
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+  const clock=new THREE.Clock();
+  const world=new THREE.Vector3();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(!reduced){
+      /* one full lap every 16 s; alternate J and L passes so the trail differs */
+      const lap=(t/16)%2;
+      const linear=lap>=1;
+      const u=(lap%1)*4;              /* 0..4 across the four edges */
+      const i=Math.floor(u), f=u-i;
+      const a=corners[i%4], b=corners[(i+1)%4];
+      if(linear){
+        /* L: hold the tool on the straight edge */
+        local.lerpVectors(a,b,f);
+      }else{
+        /* J: axes interpolate independently, so the tool bows off the edge */
+        local.lerpVectors(a,b,f);
+        local.y+=Math.sin(f*Math.PI)*0.55;
+        const nx=-(b.z-a.z),nz=(b.x-a.x);
+        const nl=Math.hypot(nx,nz)||1;
+        local.x+=(nx/nl)*Math.sin(f*Math.PI)*0.38;
+        local.z+=(nz/nl)*Math.sin(f*Math.PI)*0.38;
+      }
+      tgt.copy(local); jig.localToWorld(tgt); rig.worldToLocal(tgt);
+      tgt.y+=0.55;                    /* stand the wrist off so the post reaches down */
+      solve(tgt);
+
+      /* trail follows the tool tip */
+      j5.getWorldPosition(world); rig.worldToLocal(world); world.y-=0.52;
+      if(trailN<TRAIL){
+        trailPos[trailN*3]=world.x; trailPos[trailN*3+1]=world.y; trailPos[trailN*3+2]=world.z;
+        trailN++;
+        trailGeo.setDrawRange(0,trailN);
+      }else{
+        trailPos.copyWithin(0,3);
+        trailPos[(TRAIL-1)*3]=world.x; trailPos[(TRAIL-1)*3+1]=world.y; trailPos[(TRAIL-1)*3+2]=world.z;
+      }
+      trailGeo.attributes.position.needsUpdate=true;
+      trail.material.color.setHex(linear?CYAN:AMBER);
+
+      j5.rotation.y=Math.sin(t*0.6)*0.25;
+      userTriad.children.forEach((c,k)=>{c.material.opacity=0.55+Math.sin(t*1.3+k)*0.18;});
+    }
+    smooth+=(target-smooth)*0.05;
+    const d=smooth*0.0012;
+    camera.position.x=Math.sin(d*0.45)*7+mx*1.8;
+    camera.position.z=16+Math.cos(d*0.45)*3;
+    camera.position.y=5.0-Math.min(d*1.2,3.0);
+    camera.lookAt(mobile?0.4:3.6,2.5,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
