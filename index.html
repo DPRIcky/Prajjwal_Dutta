@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+/* theme before first paint: dark by default; a visitor's saved choice wins */
+(function(){var t=null;try{t=localStorage.getItem('theme');}catch(e){}
+document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="I'm Prajjwal Dutta, an autonomy engineer at ASU. I work on motion planning, predictive and safety-critical control, and keeping teams of robots connected, and I test it all on ground, aerial and underwater platforms.">
 <title>Prajjwal Dutta · Autonomous Systems &amp; Robotics</title>
@@ -22,6 +27,9 @@
     --display:'Space Grotesk',sans-serif;
     --mono:'IBM Plex Mono',monospace;
     --body:'Sora',sans-serif;
+    --ink-rgb:6,10,20; --shadow-rgb:3,7,16; --card-rgb:14,24,48; --card2-rgb:10,18,38;
+    --cyan-rgb:79,216,232; --amber-rgb:245,163,92; --line-rgb:140,170,220;
+    color-scheme:dark;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -32,16 +40,16 @@
   }
   #roboscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(4,7,14,0.6) 100%);}
+    background:radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(var(--ink-rgb),0.6) 100%);}
   /* the robots alternate sides; a scrim on the copy's side keeps it legible.
      The scene script crossfades the two as the camera flies between stages. */
   .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;display:none;opacity:0;}
-  .scrim-l{background:linear-gradient(90deg,rgba(5,8,16,0.78) 0%,rgba(5,8,16,0.6) 44%,rgba(5,8,16,0.22) 62%,rgba(5,8,16,0) 72%);opacity:1;}
-  .scrim-r{background:linear-gradient(270deg,rgba(5,8,16,0.78) 0%,rgba(5,8,16,0.6) 44%,rgba(5,8,16,0.22) 62%,rgba(5,8,16,0) 72%);}
+  .scrim-l{background:linear-gradient(90deg,rgba(var(--ink-rgb),0.78) 0%,rgba(var(--ink-rgb),0.6) 44%,rgba(var(--ink-rgb),0.22) 62%,rgba(var(--ink-rgb),0) 72%);opacity:1;}
+  .scrim-r{background:linear-gradient(270deg,rgba(var(--ink-rgb),0.78) 0%,rgba(var(--ink-rgb),0.6) 44%,rgba(var(--ink-rgb),0.22) 62%,rgba(var(--ink-rgb),0) 72%);}
   @media (min-aspect-ratio:21/20){ .scrim{display:block;} }
   @media (max-aspect-ratio:21/20){
-    .vignette{background:linear-gradient(180deg,rgba(5,8,16,0.62),rgba(5,8,16,0.48) 50%,rgba(5,8,16,0.62)),
-      radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(4,7,14,0.6) 100%);}
+    .vignette{background:linear-gradient(180deg,rgba(var(--ink-rgb),0.62),rgba(var(--ink-rgb),0.48) 50%,rgba(var(--ink-rgb),0.62)),
+      radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(var(--ink-rgb),0.6) 100%);}
   }
   main{position:relative;z-index:2;}
 
@@ -49,13 +57,13 @@
   nav{position:fixed;top:0;left:0;right:0;z-index:10;
     display:flex;justify-content:space-between;align-items:center;
     padding:1.3rem 4vw;backdrop-filter:blur(10px);
-    background:linear-gradient(180deg,rgba(6,10,20,0.75),rgba(6,10,20,0));}
+    background:linear-gradient(180deg,rgba(var(--ink-rgb),0.75),rgba(var(--ink-rgb),0));}
   .nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
   .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
-    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+    filter:drop-shadow(0 0 10px rgba(var(--cyan-rgb),0.28));transition:transform .35s ease,filter .35s ease;}
   .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
   .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
-    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+    filter:drop-shadow(0 0 16px rgba(var(--cyan-rgb),0.5));}
   .nav-mark:hover .mark-icon .mark-node{r:5;}
   @media (prefers-reduced-motion:reduce){
     .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
@@ -74,7 +82,7 @@
   .eyebrow::before{content:'';width:34px;height:1px;background:var(--amber);}
   h1{font-family:var(--display);font-weight:700;font-size:clamp(2.5rem,8vw,6rem);
     line-height:1.03;letter-spacing:-0.02em;max-width:16ch;}
-  h1 .glow{color:var(--cyan);text-shadow:0 0 44px rgba(79,216,232,0.35);}
+  h1 .glow{color:var(--cyan);text-shadow:0 0 44px rgba(var(--cyan-rgb),0.35);}
   .hero-sub{margin-top:1.7rem;max-width:58ch;color:var(--muted);font-size:1rem;}
   .hero-stats{display:flex;flex-wrap:wrap;gap:2.4rem;margin-top:2.6rem;}
   .hstat b{display:block;font-family:var(--display);font-weight:700;font-size:1.6rem;color:var(--cyan);}
@@ -121,16 +129,16 @@
   .pub p{color:var(--muted);font-size:0.85rem;max-width:70ch;}
 
   .ra-card{margin-top:3.2rem;border:1px solid var(--line);border-radius:14px;
-    background:linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+    background:linear-gradient(160deg,rgba(var(--card-rgb),0.72),rgba(var(--card2-rgb),0.5));
     backdrop-filter:blur(6px);padding:2.3rem 2.4rem;}
   .ra-card .proj-meta{margin-bottom:0.8rem;}
 
   /*  featured projects  */
   .project{margin-top:4rem;border:1px solid var(--line);border-radius:14px;
-    background:linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+    background:linear-gradient(160deg,rgba(var(--card-rgb),0.72),rgba(var(--card2-rgb),0.5));
     backdrop-filter:blur(6px);padding:2.5rem 2.5rem 2.1rem;position:relative;overflow:hidden;
     transition:border-color .35s,transform .35s;}
-  .project:hover{border-color:rgba(79,216,232,0.35);transform:translateY(-3px);}
+  .project:hover{border-color:rgba(var(--cyan-rgb),0.35);transform:translateY(-3px);}
   .project::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
     background:linear-gradient(90deg,var(--cyan),transparent 65%);opacity:.7;}
   .proj-meta{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.16em;color:var(--amber);
@@ -144,7 +152,7 @@
   .project p{color:var(--muted);max-width:68ch;font-size:0.93rem;}
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:1.9rem;}
-  .metric{background:rgba(6,10,20,0.65);padding:1rem 1.1rem;}
+  .metric{background:rgba(var(--ink-rgb),0.65);padding:1rem 1.1rem;}
   .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.45rem;
     color:var(--cyan);letter-spacing:-0.01em;}
   .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
@@ -155,14 +163,14 @@
   /*  project grid (more work)  */
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.3rem;margin-top:3rem;}
   .gcard{border:1px solid var(--line);border-radius:12px;padding:1.6rem 1.5rem;
-    background:rgba(14,24,48,0.45);transition:border-color .3s,transform .3s;position:relative;}
-  .gcard:hover{border-color:rgba(245,163,92,0.4);transform:translateY(-3px);}
+    background:rgba(var(--card-rgb),0.45);transition:border-color .3s,transform .3s;position:relative;}
+  .gcard:hover{border-color:rgba(var(--amber-rgb),0.4);transform:translateY(-3px);}
   .gcard .gm{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.14em;color:var(--amber);
     text-transform:uppercase;margin-bottom:0.6rem;display:block;}
   .gcard h4{font-family:var(--display);font-weight:500;font-size:1.02rem;margin-bottom:0.6rem;letter-spacing:-0.01em;}
   .gcard p{color:var(--muted);font-size:0.82rem;line-height:1.65;}
   .gcard .kpi{font-family:var(--mono);font-size:0.68rem;color:var(--cyan);margin-top:0.8rem;display:block;letter-spacing:0.06em;}
-  .award{border-color:rgba(245,163,92,0.45);}
+  .award{border-color:rgba(var(--amber-rgb),0.45);}
   .award::after{content:'1ST PLACE';position:absolute;top:1.1rem;right:1.2rem;z-index:2;
     font-family:var(--mono);font-size:0.58rem;letter-spacing:0.14em;color:var(--amber);
     text-shadow:0 1px 8px rgba(6,10,20,0.95),0 0 3px rgba(6,10,20,0.9);}
@@ -188,7 +196,7 @@
   .project.in .pthumb img,.gcard.in .gthumb img{
     animation:tileDrift 15s ease-in-out infinite alternate;}
   .pthumb::before,.gthumb::before{content:'';position:absolute;inset:-10% 0;z-index:1;pointer-events:none;
-    background:linear-gradient(102deg,transparent 40%,rgba(79,216,232,0.17) 50%,transparent 60%);
+    background:linear-gradient(102deg,transparent 40%,rgba(var(--cyan-rgb),0.17) 50%,transparent 60%);
     transform:translateX(-130%);}
   .project.in .pthumb::before,.gcard.in .gthumb::before{
     animation:tileSweep 9s ease-in-out infinite;}
@@ -206,11 +214,11 @@
 
   /*  skills  */
   .skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.3rem;margin-top:2.8rem;}
-  .skill-card{border:1px solid var(--line);border-radius:12px;padding:1.6rem 1.5rem;background:rgba(14,24,48,0.45);}
+  .skill-card{border:1px solid var(--line);border-radius:12px;padding:1.6rem 1.5rem;background:rgba(var(--card-rgb),0.45);}
   .skill-card h4{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;
     color:var(--amber);margin-bottom:0.9rem;}
   .skill-card ul{list-style:none;}
-  .skill-card li{color:var(--muted);font-size:0.85rem;padding:0.3rem 0;border-bottom:1px dashed rgba(140,170,220,0.1);}
+  .skill-card li{color:var(--muted);font-size:0.85rem;padding:0.3rem 0;border-bottom:1px dashed rgba(var(--line-rgb),0.1);}
   .skill-card li:last-child{border-bottom:none;}
 
   /*  contact  */
@@ -219,12 +227,12 @@
   .icon-link{display:inline-flex;align-items:center;justify-content:center;
     width:46px;height:46px;transition:transform .25s,filter .25s;}
   .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
-    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+    filter:drop-shadow(0 0 12px rgba(var(--cyan-rgb),0.45));}
   .icon-link svg{width:27px;height:27px;display:block;}
   .btn{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;
     text-decoration:none;padding:0.85rem 1.55rem;border-radius:8px;
     border:1px solid var(--cyan);color:var(--cyan);transition:background .25s,color .25s,box-shadow .25s;}
-  .btn:hover{background:var(--cyan);color:var(--abyss);box-shadow:0 0 34px rgba(79,216,232,0.35);}
+  .btn:hover{background:var(--cyan);color:var(--abyss);box-shadow:0 0 34px rgba(var(--cyan-rgb),0.35);}
   .btn.alt{border-color:var(--line);color:var(--muted);}
   .btn.alt:hover{border-color:var(--amber);color:var(--amber);background:transparent;box-shadow:none;}
   .contact-meta{margin-top:2rem;font-family:var(--mono);font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;line-height:2.1;}
@@ -276,24 +284,24 @@
   .project,.gcard,.skill-card,.ra-card{--mx:50%;--my:0%;--glow:0;}
   .project{
     background-image:
-      radial-gradient(460px circle at var(--mx) var(--my),rgba(79,216,232,calc(0.13*var(--glow,0))),transparent 62%),
-      linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+      radial-gradient(460px circle at var(--mx) var(--my),rgba(var(--cyan-rgb),calc(0.13*var(--glow,0))),transparent 62%),
+      linear-gradient(160deg,rgba(var(--card-rgb),0.72),rgba(var(--card2-rgb),0.5));
     transition:border-color .35s,transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s,--glow .45s;}
-  .project:hover{--glow:1;transform:translateY(-4px);box-shadow:0 18px 50px rgba(3,7,16,0.55);}
+  .project:hover{--glow:1;transform:translateY(-4px);box-shadow:0 18px 50px rgba(var(--shadow-rgb),0.55);}
   .ra-card{
     background-image:
-      radial-gradient(460px circle at var(--mx) var(--my),rgba(245,163,92,calc(0.10*var(--glow,0))),transparent 62%),
-      linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));
+      radial-gradient(460px circle at var(--mx) var(--my),rgba(var(--amber-rgb),calc(0.10*var(--glow,0))),transparent 62%),
+      linear-gradient(160deg,rgba(var(--card-rgb),0.72),rgba(var(--card2-rgb),0.5));
     transition:border-color .35s,--glow .45s;}
-  .ra-card:hover{--glow:1;border-color:rgba(245,163,92,0.30);}
+  .ra-card:hover{--glow:1;border-color:rgba(var(--amber-rgb),0.30);}
   .gcard{
-    background-image:radial-gradient(340px circle at var(--mx) var(--my),rgba(245,163,92,calc(0.12*var(--glow,0))),transparent 60%);
+    background-image:radial-gradient(340px circle at var(--mx) var(--my),rgba(var(--amber-rgb),calc(0.12*var(--glow,0))),transparent 60%);
     transition:border-color .3s,transform .3s cubic-bezier(.16,1,.3,1),box-shadow .3s,--glow .4s;}
-  .gcard:hover{--glow:1;transform:translateY(-4px);box-shadow:0 16px 40px rgba(3,7,16,0.5);}
+  .gcard:hover{--glow:1;transform:translateY(-4px);box-shadow:0 16px 40px rgba(var(--shadow-rgb),0.5);}
   .skill-card{
-    background-image:radial-gradient(320px circle at var(--mx) var(--my),rgba(79,216,232,calc(0.10*var(--glow,0))),transparent 60%);
+    background-image:radial-gradient(320px circle at var(--mx) var(--my),rgba(var(--cyan-rgb),calc(0.10*var(--glow,0))),transparent 60%);
     transition:border-color .3s,transform .3s cubic-bezier(.16,1,.3,1),--glow .4s;}
-  .skill-card:hover{--glow:1;border-color:rgba(79,216,232,0.30);transform:translateY(-2px);}
+  .skill-card:hover{--glow:1;border-color:rgba(var(--cyan-rgb),0.30);transform:translateY(-2px);}
 
   /*  nav underline sweeps in from the left, out to the right  */
   .nav-links a{position:relative;padding-bottom:3px;}
@@ -318,19 +326,19 @@
   #focusTag{position:fixed;left:0;top:0;z-index:5;pointer-events:none;
     transform:translate3d(var(--x,0px),var(--y,0px),0) translate(-50%,-150%);
     font-family:var(--mono);font-size:0.56rem;letter-spacing:0.16em;text-transform:uppercase;
-    color:var(--cyan);background:rgba(6,10,20,0.70);backdrop-filter:blur(6px);
-    border:1px solid rgba(79,216,232,0.35);border-radius:999px;padding:0.34rem 0.72rem;
+    color:var(--cyan);background:rgba(var(--ink-rgb),0.70);backdrop-filter:blur(6px);
+    border:1px solid rgba(var(--cyan-rgb),0.35);border-radius:999px;padding:0.34rem 0.72rem;
     white-space:nowrap;opacity:0;transition:opacity .28s ease;}
   #focusTag.on{opacity:1;}
   #stageTag{position:fixed;right:4vw;bottom:1.6rem;z-index:5;pointer-events:none;
     display:flex;align-items:center;gap:0.8rem;
     font-family:var(--mono);font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;
     color:var(--muted);opacity:0;transform:translateY(6px);transition:opacity .5s ease,transform .5s ease;}
-  #stageTag::before{content:"";width:2.4rem;height:1px;background:rgba(79,216,232,0.45);}
+  #stageTag::before{content:"";width:2.4rem;height:1px;background:rgba(var(--cyan-rgb),0.45);}
   #stageTag .n{color:var(--cyan);}
   #stageTag.left{right:auto;left:4vw;flex-direction:row-reverse;}
   #stageTag.left::before{display:none;}
-  #stageTag.left::after{content:"";width:2.4rem;height:1px;background:rgba(79,216,232,0.45);}
+  #stageTag.left::after{content:"";width:2.4rem;height:1px;background:rgba(var(--cyan-rgb),0.45);}
   #stageTag.on{opacity:0.9;transform:none;}
   body.lb-lock #stageTag{opacity:0;}
 
@@ -345,33 +353,33 @@
   .vbadge{position:absolute;z-index:5;top:0.85rem;right:0.9rem;
     display:inline-flex;align-items:center;gap:0.45rem;
     font-family:var(--mono);font-size:0.55rem;letter-spacing:0.14em;text-transform:uppercase;
-    color:var(--cyan);background:rgba(6,10,20,0.74);backdrop-filter:blur(6px);
-    border:1px solid rgba(79,216,232,0.4);border-radius:999px;line-height:1;
+    color:var(--cyan);background:rgba(var(--ink-rgb),0.74);backdrop-filter:blur(6px);
+    border:1px solid rgba(var(--cyan-rgb),0.4);border-radius:999px;line-height:1;
     padding:0.36rem 0.72rem 0.36rem 0.56rem;cursor:pointer;
     transition:background .25s,color .25s,box-shadow .25s,transform .25s,border-color .25s;}
   .vbadge .tri{width:0;height:0;flex:none;border-left:7px solid currentColor;
     border-top:4.5px solid transparent;border-bottom:4.5px solid transparent;}
   .vbadge:hover,.vbadge:focus-visible{background:var(--cyan);color:var(--abyss);
-    border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 0 26px rgba(79,216,232,0.42);}
+    border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 0 26px rgba(var(--cyan-rgb),0.42);}
 
   /* hero reel entry */
   .reel-cta{display:inline-flex;align-items:center;gap:0.7rem;margin-top:2.3rem;
     font-family:var(--mono);font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;
-    color:var(--cyan);background:rgba(6,10,20,0.45);border:1px solid rgba(79,216,232,0.35);
+    color:var(--cyan);background:rgba(var(--ink-rgb),0.45);border:1px solid rgba(var(--cyan-rgb),0.35);
     border-radius:999px;padding:0.72rem 1.3rem;cursor:pointer;line-height:1;
     transition:background .25s,color .25s,box-shadow .25s,transform .25s;}
   .reel-cta .tri{width:0;height:0;flex:none;border-left:9px solid currentColor;
     border-top:5.5px solid transparent;border-bottom:5.5px solid transparent;}
   .reel-cta em{font-style:normal;color:var(--muted);letter-spacing:0.1em;}
   .reel-cta:hover,.reel-cta:focus-visible{background:var(--cyan);color:var(--abyss);
-    transform:translateY(-2px);box-shadow:0 0 32px rgba(79,216,232,0.35);}
-  .reel-cta:hover em{color:rgba(6,10,20,0.7);}
+    transform:translateY(-2px);box-shadow:0 0 32px rgba(var(--cyan-rgb),0.35);}
+  .reel-cta:hover em{color:rgba(var(--ink-rgb),0.7);}
 
   /*  video lightbox  */
   .lb{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
     padding:4vh 4vw;opacity:0;pointer-events:none;transition:opacity .3s ease;}
   .lb.open{opacity:1;pointer-events:auto;}
-  .lb-back{position:absolute;inset:0;background:rgba(4,7,14,0.88);backdrop-filter:blur(9px);}
+  .lb-back{position:absolute;inset:0;background:rgba(var(--ink-rgb),0.88);backdrop-filter:blur(9px);}
   .lb-box{position:relative;width:min(1080px,100%);max-height:92vh;overflow:auto;
     border:1px solid var(--line);border-radius:14px;background:var(--panel);
     box-shadow:0 30px 90px rgba(0,0,0,0.6);transform:translateY(14px) scale(.985);
@@ -380,13 +388,13 @@
   .lb-stage{position:relative;background:#03060d;border-radius:13px 13px 0 0;overflow:hidden;}
   .lb-stage video{display:block;width:100%;max-height:64vh;background:#03060d;}
   .lb-x{position:absolute;top:0.7rem;right:0.7rem;z-index:3;width:36px;height:36px;
-    border-radius:50%;border:1px solid var(--line);background:rgba(6,10,20,0.72);
+    border-radius:50%;border:1px solid var(--line);background:rgba(var(--ink-rgb),0.72);
     color:var(--text);font-size:1rem;line-height:1;cursor:pointer;
     transition:background .2s,color .2s,border-color .2s;}
   .lb-x:hover{background:var(--cyan);color:var(--abyss);border-color:var(--cyan);}
   .lb-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;
     width:42px;height:60px;border:none;border-radius:8px;cursor:pointer;
-    background:rgba(6,10,20,0.55);color:var(--text);font-size:1.7rem;line-height:1;
+    background:rgba(var(--ink-rgb),0.55);color:var(--text);font-size:1.7rem;line-height:1;
     transition:background .2s,color .2s;}
   .lb-nav:hover{background:var(--cyan);color:var(--abyss);}
   .lb-nav.prev{left:0.5rem;} .lb-nav.next{right:0.5rem;}
@@ -417,7 +425,7 @@
   .lb-strip button.cur img{opacity:1;}
   .lb-strip button span{position:absolute;left:0;right:0;bottom:0;font-family:var(--mono);
     font-size:0.5rem;letter-spacing:0.06em;color:var(--text);text-transform:uppercase;
-    background:linear-gradient(180deg,transparent,rgba(6,10,20,0.92));padding:0.9rem 0.35rem 0.25rem;
+    background:linear-gradient(180deg,transparent,rgba(var(--ink-rgb),0.92));padding:0.9rem 0.35rem 0.25rem;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   body.lb-lock{overflow:hidden;}
 
@@ -454,7 +462,7 @@
        it is their only background (the shorthand leaves background-color transparent) */
     .split .w > i{transform:none;transition:none;}
     .reveal.wipe,.reveal.wipe.in{-webkit-mask-image:none;mask-image:none;transition:none;}
-    .project,.ra-card{background-image:linear-gradient(160deg,rgba(14,24,48,0.72),rgba(10,18,38,0.5));}
+    .project,.ra-card{background-image:linear-gradient(160deg,rgba(var(--card-rgb),0.72),rgba(var(--card2-rgb),0.5));}
     .gcard,.skill-card{background-image:none;}
     .project,.gcard,.skill-card,.ra-card,.btn,.lb-sm,.pub{transition:border-color .01ms;}
     .project:hover,.gcard:hover,.skill-card:hover,.btn:hover,.pub:hover,
@@ -463,6 +471,57 @@
     #focusTag{display:none;}
     #stageTag{display:none;}
   }
+
+  /*  light theme: warm cream and honey, like a bedside lamp, rather than
+     white, so it never reads as an LED panel. Same tokens, re-pointed; accents deepened
+     to hold about 4.5:1 on the cards. The video lightbox keeps the dark set. */
+  :root[data-theme="light"]{
+    --abyss:#e6d8bc; --deep:#eee2c9; --panel:#f5ecd9; --line:rgba(96,68,28,0.17);
+    --cyan:#0a6a74; --amber:#974607; --text:#2e2416; --muted:#63523a;
+    --ink-rgb:234,222,198; --shadow-rgb:84,58,22; --card-rgb:248,239,220; --card2-rgb:241,229,205;
+    --cyan-rgb:10,106,116; --amber-rgb:151,70,7; --line-rgb:96,68,28;
+    color-scheme:light;
+  }
+  :root[data-theme="light"] .lb{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830; --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --ink-rgb:6,10,20; --shadow-rgb:3,7,16; --card-rgb:14,24,48; --card2-rgb:10,18,38;
+    --cyan-rgb:79,216,232; --amber-rgb:245,163,92; --line-rgb:140,170,220;
+  }
+  :root[data-theme="light"] .project,:root[data-theme="light"] .gcard,:root[data-theme="light"] .ra-card,
+  :root[data-theme="light"] .skill-card{box-shadow:0 1px 2px rgba(84,58,22,0.08),0 8px 24px rgba(84,58,22,0.08);}
+
+  .icon-link .gh-mark{color:#ffffff;}
+  :root[data-theme="light"] .icon-link .gh-mark{color:#2e2416;}
+  /* light nav is near-opaque: its blur would otherwise smear the dark artwork tiles scrolling under it */
+  :root[data-theme="light"] nav{background:rgba(var(--ink-rgb),0.92);border-bottom:1px solid var(--line);}
+
+  /* light vignette shades the corners warm instead of brightening them */
+  :root[data-theme="light"] .vignette{background:radial-gradient(ellipse at 50% 40%,transparent 42%,rgba(96,62,18,0.24) 100%);}
+  @media (max-aspect-ratio:21/20){
+    :root[data-theme="light"] .vignette{background:linear-gradient(180deg,rgba(var(--ink-rgb),0.62),rgba(var(--ink-rgb),0.48) 50%,rgba(var(--ink-rgb),0.62)),
+      radial-gradient(ellipse at 50% 40%,transparent 42%,rgba(96,62,18,0.24) 100%);}
+  }
+
+  /* light covers: assets/ai/light/ holds a redrawn set (teal and amber ink on
+     cream, generated from the dark originals); the theme script swaps src. */
+  :root[data-theme="light"] .pthumb,:root[data-theme="light"] .gthumb{background:var(--panel);}
+  :root[data-theme="light"] .pthumb::after,:root[data-theme="light"] .gthumb::after{
+    background:linear-gradient(180deg,rgba(var(--card-rgb),0) 62%,rgba(var(--card-rgb),0.55));}
+  :root[data-theme="light"] .award::after{text-shadow:0 1px 6px rgba(var(--card-rgb),0.95),0 0 2px rgba(var(--card-rgb),0.9);}
+
+  /*  theme toggle  */
+  .nav-right{display:flex;align-items:center;gap:1.8rem;}
+  .theme-btn{display:inline-flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;
+    border-radius:999px;border:1px solid var(--line);background:rgba(var(--ink-rgb),0.45);color:var(--muted);
+    cursor:pointer;transition:color .25s,border-color .25s,transform .35s;}
+  .theme-btn:hover,.theme-btn:focus-visible{color:var(--cyan);border-color:rgba(var(--cyan-rgb),0.5);transform:rotate(-14deg);}
+  .theme-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+  .theme-btn svg{width:1rem;height:1rem;}
+  .theme-btn .moon{display:none;}
+  :root[data-theme="light"] .theme-btn .sun{display:none;}
+  :root[data-theme="light"] .theme-btn .moon{display:block;}
+  @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
 </head>
 <body>
@@ -476,13 +535,19 @@
 
 <nav>
   <a class="nav-mark" href="#top"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <div class="nav-links">
-    <a href="#about">About</a>
-    <a href="#research">Research</a>
-    <a href="#work">Work</a>
-    <a href="#projects">Projects</a>
-    <a href="#skills">Skills</a>
-    <a href="#contact">Contact</a>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="#about">About</a>
+      <a href="#research">Research</a>
+      <a href="#work">Work</a>
+      <a href="#projects">Projects</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch to light theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7Z"/></svg>
+    </button>
   </div>
 </nav>
 
@@ -902,7 +967,7 @@
         </svg>
       </a>
       <a class="icon-link" href="https://github.com/DPRIcky" target="_blank" rel="noopener" aria-label="GitHub profile" title="GitHub">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" class="gh-mark" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       </a>
       <a class="icon-link" href="https://scholar.google.com/citations?hl=en&amp;user=ZDtbedQAAAAJ" target="_blank" rel="noopener" aria-label="Google Scholar profile" title="Google Scholar">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1400,6 +1465,26 @@
 })();
 </script>
 
+<script>
+/* theme toggle: dark by default, the visitor's choice is saved site-wide */
+(function(){
+  const root = document.documentElement, btn = document.getElementById('themeBtn');
+  if(!btn) return;
+  // card covers: each illustrated tile has a redrawn light twin in assets/ai/light/
+  const covers = Array.from(document.querySelectorAll('.pthumb img, .gthumb img'))
+    .filter(img => /assets\/ai\/[^/]+\.jpg$/.test(img.getAttribute('src') || ''));
+  covers.forEach(img => { img.dataset.dark = img.getAttribute('src'); img.dataset.light = img.dataset.dark.replace('assets/ai/', 'assets/ai/light/'); });
+  function set(t, save){
+    root.setAttribute('data-theme', t);
+    covers.forEach(img => { const want = t === 'light' ? img.dataset.light : img.dataset.dark; if(img.getAttribute('src') !== want) img.setAttribute('src', want); });
+    btn.setAttribute('aria-label', t === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+    if(save){ try{ localStorage.setItem('theme', t); }catch(e){} }
+    window.dispatchEvent(new CustomEvent('themechange', {detail:t}));
+  }
+  set(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark', false);
+  btn.addEventListener('click', () => set(root.getAttribute('data-theme') === 'light' ? 'dark' : 'light', true));
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
@@ -1549,6 +1634,10 @@
   grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
   grid.position.set(WORLD_X, 0.003, 0);
   scene.add(grid);
+  const gridL = new THREE.GridHelper(900, 450, 0x9c8458, 0xc1aa80);
+  gridL.material.transparent = true; gridL.material.opacity = 0.35; gridL.material.depthWrite = false;
+  gridL.position.copy(grid.position); gridL.visible = false;
+  scene.add(gridL);
 
   // lights travel with the active stage
   const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
@@ -1584,6 +1673,11 @@
      read as light rather than square pixels, particle swarms with a
      per-point step, light shafts that fade toward the floor, and
      holographic readout panels that print live state from the sims. */
+  const PARTS = [], HOLOS = [], SHAFTS = [];   // re-tinted when the page theme flips
+  let LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const HC = () => LIGHT
+    ? {bg:'rgba(248,239,220,0.8)', edge:'rgba(10,106,116,0.85)', title:'#974607', rule:'rgba(10,106,116,0.4)', label:'#2e2416', val:'#0a6a74', track:'rgba(10,106,116,0.16)', bar:'rgba(10,106,116,0.85)'}
+    : {bg:'rgba(79,216,232,0.1)', edge:'rgba(79,216,232,0.8)', title:'#f5a35c', rule:'rgba(79,216,232,0.45)', label:'rgba(235,242,250,0.95)', val:'#4fd8e8', track:'rgba(79,216,232,0.18)', bar:'rgba(79,216,232,0.85)'};
   const dotTex = canvasTex(64, 64, g => {
     const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
     r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1596,6 +1690,7 @@
     const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
       depthWrite:false, blending:THREE.AdditiveBlending});
     const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    PARTS.push({m, c:m.color.clone()});
     return {m, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
   }
   const shaftTex = canvasTex(4, 128, (g, w, h) => {
@@ -1607,7 +1702,8 @@
       blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
     const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
     sh.position.set(x, h/2, z); root.add(sh);
-    sh.userData.op = op;
+    sh.userData.op = sh.userData.op0 = op;
+    SHAFTS.push(sh);
     return sh;
   }
   function holo(root, w, h, x, y, z){
@@ -1618,6 +1714,7 @@
       blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
     mesh.position.set(x, y, z); root.add(mesh);
     let last = -1;
+    HOLOS.push({m:mesh.material, reset:() => { last = -1; }});
     return {mesh, draw(t, fn){
       mesh.lookAt(camera.position);
       mesh.position.y = y + Math.sin(t*0.8)*0.04;
@@ -1626,22 +1723,24 @@
     }};
   }
   function holoFrame(g, w, h, title){
-    g.fillStyle = 'rgba(79,216,232,0.1)'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = 'rgba(79,216,232,0.8)'; g.lineWidth = 3;
+    const P = HC();
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = P.edge; g.lineWidth = 3;
     const k = 26;
     [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
       g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
     });
-    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = '#f5a35c'; g.fillText(title, 26, 48);
-    g.fillStyle = 'rgba(79,216,232,0.45)'; g.fillRect(26, 62, w - 52, 2);
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = P.title; g.fillText(title, 26, 48);
+    g.fillStyle = P.rule; g.fillRect(26, 62, w - 52, 2);
     g.font = '400 26px "IBM Plex Mono", monospace';
   }
   function holoRow(g, y, label, val, frac){
-    g.fillStyle = 'rgba(235,242,250,0.95)'; g.fillText(label, 26, y);
-    g.fillStyle = '#4fd8e8'; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    const P = HC();
+    g.fillStyle = P.label; g.fillText(label, 26, y);
+    g.fillStyle = P.val; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
     if(frac !== undefined){
-      g.fillStyle = 'rgba(79,216,232,0.18)'; g.fillRect(26, y + 10, 460, 5);
-      g.fillStyle = 'rgba(79,216,232,0.85)'; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
+      g.fillStyle = P.track; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = P.bar; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
     }
   }
   const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
@@ -1859,6 +1958,7 @@
     pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
     const pts3 = new THREE.Points(pg, new THREE.PointsMaterial({color:lin(0x9ff0ff), size:0.07, map:dotTex, transparent:true, opacity:0.6, depthWrite:false, blending:THREE.AdditiveBlending}));
     pts3.frustumCulled = false; root.add(pts3);
+    PARTS.push({m:pts3.material, c:pts3.material.color.clone()});
 
     function current(x, z, t, out){
       const r = Math.hypot(x, z) + 1e-4, tang = 0.5 + 0.15*Math.sin(t*0.3 + r);
@@ -2696,13 +2796,13 @@
 
   /*  STAGES, pinned to real sections in document order  */
   const DEFS = [
-    {sel:'.hero',     build:buildArm,   dress:dressArm,   cam:{az: 0.35, d:10.5, h:3.9, ly:1.55}, sky:[0x050a16, 0x0f2140], hemi:0xa8c8ff, label:'Six-axis arm · pick and place'},
-    {sel:'#research', build:buildFleet, dress:dressFleet, cam:{az: 0.12, d:12.5, h:3.4, ly:1.9, fit:1.25}, sky:[0x020a12, 0x0b3a4c], hemi:0x9fe8f5, label:'AUV fleet under ice · connectivity tree'},
-    {sel:'#work',     build:buildScara, dress:dressScara, cam:{az: 0.62, d:12.0, h:5.4, ly:1.0, sh:0.64}, sky:[0x090705, 0x2a1b0f], hemi:0xffcf9a, label:'SCARA · wafer transfer cell'},
+    {sel:'.hero',     build:buildArm,   dress:dressArm,   cam:{az: 0.35, d:10.5, h:3.9, ly:1.55}, skyL:[0xc4ad84, 0xe6d6b4], sky:[0x050a16, 0x0f2140], hemi:0xa8c8ff, label:'Six-axis arm · pick and place'},
+    {sel:'#research', build:buildFleet, dress:dressFleet, cam:{az: 0.12, d:12.5, h:3.4, ly:1.9, fit:1.25}, skyL:[0x3f6f6c, 0x93ac98], sky:[0x020a12, 0x0b3a4c], hemi:0x9fe8f5, label:'AUV fleet under ice · connectivity tree'},
+    {sel:'#work',     build:buildScara, dress:dressScara, cam:{az: 0.62, d:12.0, h:5.4, ly:1.0, sh:0.64}, skyL:[0xc9ab7c, 0xe8d5b0], sky:[0x090705, 0x2a1b0f], hemi:0xffcf9a, label:'SCARA · wafer transfer cell'},
     // the blimp takes over from the SCARA at the Tube-MPC card (third in Featured Work)
-    {sel:'#work > .project:nth-of-type(3)', build:buildBlimp, dress:dressBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6}, sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · catch and score'},
-    {sel:'#projects', build:buildRover, dress:dressRover, cam:{az:-0.55, d:10.0, h:5.0, ly:1.1, sh:0.6, fit:1.22}, sky:[0x050912, 0x10203a], hemi:0xa8c8ff, label:'Rover, quadrotor and flapping wing'},
-    {sel:'#contact',  build:buildTB4,   dress:dressTB4,   cam:{az:-0.1,  d:10.5, h:4.2, ly:0.75, sh:0.55}, sky:[0x04070f, 0x0c1830], hemi:0xa8c8ff, label:'TurtleBot 4 · patrol'}
+    {sel:'#work > .project:nth-of-type(3)', build:buildBlimp, dress:dressBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6}, skyL:[0x9a8a86, 0xe3c99c], sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · catch and score'},
+    {sel:'#projects', build:buildRover, dress:dressRover, cam:{az:-0.55, d:10.0, h:5.0, ly:1.1, sh:0.6, fit:1.22}, skyL:[0xbfa883, 0xe1d0ae], sky:[0x050912, 0x10203a], hemi:0xa8c8ff, label:'Rover, quadrotor and flapping wing'},
+    {sel:'#contact',  build:buildTB4,   dress:dressTB4,   cam:{az:-0.1,  d:10.5, h:4.2, ly:0.75, sh:0.55}, skyL:[0xc6b08a, 0xe8d9b9], sky:[0x04070f, 0x0c1830], hemi:0xa8c8ff, label:'TurtleBot 4 · patrol'}
   ];
   const stages = DEFS.filter(s => document.querySelector(s.sel));
   /* World layout zig-zags: each stage is one step deeper and one step
@@ -2722,14 +2822,16 @@
     scene.add(s.root);
     s.api = s.build(s.root);
     s.fx = s.dress ? s.dress(s.root, s.api) : null;
-    s.top = new THREE.Color(s.sky[0]); s.hor = new THREE.Color(s.sky[1]); s.hemiC = lin(s.hemi);
+    s.topD = new THREE.Color(s.sky[0]); s.horD = new THREE.Color(s.sky[1]);
+    s.topL = new THREE.Color(s.skyL[0]); s.horL = new THREE.Color(s.skyL[1]);
+    s.top = s.topD; s.hor = s.horD; s.hemiC = lin(s.hemi);
     s.az0 = s.cam.az;
   });
   const NST = stages.length;
   // centre the floor and grid under however the stages fell
   const wMid = new THREE.Vector3();
   stages.forEach(s => wMid.add(s.p)); wMid.divideScalar(NST);
-  ground.position.set(wMid.x, 0, wMid.z); grid.position.set(wMid.x, 0.003, wMid.z);
+  ground.position.set(wMid.x, 0, wMid.z); grid.position.set(wMid.x, 0.003, wMid.z); gridL.position.copy(grid.position);
 
   // drifting motes for depth across the whole world
   const DC = mobile ? 600 : 1400;
@@ -2743,6 +2845,7 @@
   dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
   const dust = new THREE.Points(dGeo, new THREE.PointsMaterial({color:lin(0x5d8fcf), size:0.11, map:dotTex, transparent:true, opacity:0.5, depthWrite:false, blending:THREE.AdditiveBlending}));
   dust.frustumCulled = false;
+  PARTS.push({m:dust.material, c:dust.material.color.clone()});
   scene.add(dust);
 
   /*
@@ -2842,6 +2945,7 @@
      stages either side of the camera; machines more than a stage
      away are hidden and not simulated. */
   const cTop = new THREE.Color(), cHor = new THREE.Color(), cHemi = new THREE.Color();
+  const WARM_SKY = lin(0xffd394);
   const center = new THREE.Vector3();
   const scrimL = document.querySelector('.scrim-l'), scrimR = document.querySelector('.scrim-r');
   let lastScrim = '';
@@ -2854,6 +2958,7 @@
     skyU.top.value.copy(cTop); skyU.hor.value.copy(cHor);
     scene.fog.color.copy(cHor);
     hemi.color.copy(cHemi);
+    if(LIGHT) hemi.color.lerp(WARM_SKY, 0.65);   // daylight, not blue LED
     center.copy(A.p).lerp(B.p, k);
     key.position.set(center.x + 5, 12, center.z + 7); key.target.position.copy(center);
     rim.position.set(center.x - 6, 5, center.z - 8);  rim.target.position.copy(center);
@@ -2877,6 +2982,40 @@
     s.root.userData.glows.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
     return true;
   }
+
+
+  /*  THEME: the same world, lit for a light page. Pale skies and floor,
+     lighter plinths, more exposure; additive glow vanishes on a bright
+     sky, so particles switch to normal blending with deeper tints and
+     the holo panels redraw as dark text on frosted glass. */
+  const groundM = ground.material, darkGround = groundM.color.clone();
+  const plD = MAT.plinth.color.clone(), plTD = MAT.plTop.color.clone();
+  function applyTheme(light){
+    LIGHT = light;
+    renderer.toneMappingExposure = light ? 0.78 : 0.82;
+    hemi.intensity = light ? 0.75 : 0.38;
+    hemi.groundColor.copy(light ? lin(0x8f7550) : lin(0x05080f));
+    key.color.copy(light ? lin(0xffd59a) : new THREE.Color(0xffffff));
+    key.intensity = light ? 2.0 : 2.3;
+    groundM.color.copy(light ? lin(0xc4ad84) : darkGround);
+    MAT.plinth.color.copy(light ? lin(0x8a7552) : plD);
+    MAT.plTop.color.copy(light ? lin(0xbfa880) : plTD);
+    grid.visible = !light; gridL.visible = light;
+    stages.forEach(s => { s.top = light ? s.topL : s.topD; s.hor = light ? s.horL : s.horD; });
+    PARTS.forEach(p => {
+      p.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      p.m.color.copy(p.c); if(light) p.m.color.multiplyScalar(0.42);
+      p.m.needsUpdate = true;
+    });
+    SHAFTS.forEach(sh => { sh.userData.op = sh.userData.op0*(light ? 0.3 : 1); sh.material.opacity = sh.userData.op; });
+    HOLOS.forEach(h => { h.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending; h.m.needsUpdate = true; h.reset(); });
+    lastScrim = '';
+  }
+  applyTheme(LIGHT);
+  window.addEventListener('themechange', e => {
+    applyTheme(e.detail === 'light');
+    if(reduced) still(true);
+  });
 
   /*  OBJECT FOCUS + STAGE TAG: the active machine reacts to the
      cursor with a small lift and a label chip; the corner tag names

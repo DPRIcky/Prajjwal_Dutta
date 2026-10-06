@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+/* theme before first paint: dark by default; a visitor's saved choice wins */
+(function(){var t=null;try{t=localStorage.getItem('theme');}catch(e){}
+document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="What I did with a UR5 across PolyScope, RoboDK and URScript: tracing a cube in the air, measuring repeatability, pick-and-place with a ROBOTIQ gripper, and a flashlight assembly tightened by torque feedback.">
 <title>UR5 Multi-Task Manipulation · Prajjwal Dutta</title>
@@ -15,6 +20,9 @@
     --line:rgba(140,170,220,0.14);
     --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
     --display:'Space Grotesk',sans-serif; --mono:'IBM Plex Mono',monospace; --body:'Sora',sans-serif;
+    --ink-rgb:6,10,20; --shadow-rgb:3,7,16; --card-rgb:14,24,48; --card2-rgb:10,18,38;
+    --cyan-rgb:79,216,232; --amber-rgb:245,163,92; --line-rgb:140,170,220;
+    color-scheme:dark;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -22,18 +30,18 @@
     color:var(--text);font-family:var(--body);font-weight:300;line-height:1.75;overflow-x:hidden;}
   #ur5scene{position:fixed;inset:0;z-index:0;pointer-events:none;}
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(4,7,14,0.65) 100%);}
+    background:radial-gradient(ellipse at 50% 35%,transparent 35%,rgba(var(--ink-rgb),0.65) 100%);}
   main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 6vw 6rem;}
 
   nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;
     align-items:center;padding:1.3rem 4vw;backdrop-filter:blur(10px);
-    background:linear-gradient(180deg,rgba(6,10,20,0.78),rgba(6,10,20,0));}
+    background:linear-gradient(180deg,rgba(var(--ink-rgb),0.78),rgba(var(--ink-rgb),0));}
 .nav-mark{display:inline-flex;align-items:center;gap:0.7rem;font-family:var(--mono);font-size:0.8rem;letter-spacing:0.18em;color:var(--cyan);text-decoration:none;}
   .nav-mark .mark-icon{width:1.5rem;height:1.5rem;display:inline-block;flex:none;
-    filter:drop-shadow(0 0 10px rgba(79,216,232,0.28));transition:transform .35s ease,filter .35s ease;}
+    filter:drop-shadow(0 0 10px rgba(var(--cyan-rgb),0.28));transition:transform .35s ease,filter .35s ease;}
   .nav-mark .mark-icon .mark-node{fill:var(--amber);transition:r .35s ease;}
   .nav-mark:hover .mark-icon,.nav-mark:focus-visible .mark-icon{transform:rotate(-8deg);
-    filter:drop-shadow(0 0 16px rgba(79,216,232,0.5));}
+    filter:drop-shadow(0 0 16px rgba(var(--cyan-rgb),0.5));}
   .nav-mark:hover .mark-icon .mark-node{r:5;}
   @media (prefers-reduced-motion:reduce){
     .nav-mark .mark-icon,.nav-mark .mark-icon .mark-node{transition:none;}
@@ -55,12 +63,12 @@
   .icon-link{display:inline-flex;align-items:center;justify-content:center;
     width:42px;height:42px;transition:transform .25s,filter .25s;}
   .icon-link:hover,.icon-link:focus-visible{transform:translateY(-3px);
-    filter:drop-shadow(0 0 12px rgba(79,216,232,0.45));}
+    filter:drop-shadow(0 0 12px rgba(var(--cyan-rgb),0.45));}
   .icon-link svg{width:26px;height:26px;display:block;}
 
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2.6rem 0 0;}
-  .metric{background:rgba(6,10,20,0.7);padding:1.1rem 1.2rem;}
+  .metric{background:rgba(var(--ink-rgb),0.7);padding:1.1rem 1.2rem;}
   .metric b{display:block;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--cyan);}
   .metric span{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;}
 
@@ -74,13 +82,13 @@
   strong{color:var(--text);font-weight:600;}
 
   .law{font-family:var(--mono);font-size:0.85rem;color:var(--cyan);
-    border:1px solid var(--line);border-radius:10px;background:rgba(6,10,20,0.7);
+    border:1px solid var(--line);border-radius:10px;background:rgba(var(--ink-rgb),0.7);
     padding:1.3rem 1.5rem;margin:1.4rem 0;overflow-x:auto;line-height:2;}
   .law .c{color:var(--muted);}
   .law .a{color:var(--amber);}
 
   figure{margin:2rem 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
-    background:rgba(14,24,48,0.5);}
+    background:rgba(var(--card-rgb),0.5);}
   figure a{display:block;}
   figure img,figure video{display:block;width:100%;height:auto;}
   figcaption{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.08em;color:var(--muted);
@@ -111,6 +119,38 @@
     transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
   .reveal.in{opacity:1;transform:none;}
   @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+
+  /*  light theme (warm lamplight), the same tokens as the home page  */
+  :root[data-theme="light"]{
+    --abyss:#e6d8bc; --deep:#eee2c9; --panel:#f5ecd9; --line:rgba(96,68,28,0.17);
+    --cyan:#0a6a74; --amber:#974607; --text:#2e2416; --muted:#63523a;
+    --ink-rgb:234,222,198; --shadow-rgb:84,58,22; --card-rgb:248,239,220; --card2-rgb:241,229,205;
+    --cyan-rgb:10,106,116; --amber-rgb:151,70,7; --line-rgb:96,68,28;
+    color-scheme:light;
+  }
+  /* the interactive labs are instrument panels: they keep the dark set */
+  :root[data-theme="light"] .lab{
+    --abyss:#060a14; --deep:#0a1226; --panel:#0e1830; --line:rgba(140,170,220,0.14);
+    --cyan:#4fd8e8; --amber:#f5a35c; --text:#dfe8f4; --muted:#8a9ab5;
+    --ink-rgb:6,10,20; --shadow-rgb:3,7,16; --card-rgb:14,24,48; --card2-rgb:10,18,38;
+    --cyan-rgb:79,216,232; --amber-rgb:245,163,92; --line-rgb:140,170,220;
+    
+    color:var(--text);color-scheme:dark;background:linear-gradient(160deg,#0e1830,#0a1226);border-color:rgba(140,170,220,0.22);}
+  :root[data-theme="light"] nav{background:rgba(var(--ink-rgb),0.92);border-bottom:1px solid var(--line);}
+  :root[data-theme="light"] .vignette{background:radial-gradient(ellipse at 50% 40%,transparent 42%,rgba(96,62,18,0.22) 100%);}
+
+  /*  theme toggle  */
+  .nav-right{display:flex;align-items:center;gap:1.4rem;}
+  .theme-btn{display:inline-flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;flex:none;
+    border-radius:999px;border:1px solid var(--line);background:rgba(var(--ink-rgb),0.45);color:var(--muted);
+    cursor:pointer;transition:color .25s,border-color .25s,transform .35s;}
+  .theme-btn:hover,.theme-btn:focus-visible{color:var(--cyan);border-color:rgba(var(--cyan-rgb),0.5);transform:rotate(-14deg);}
+  .theme-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+  .theme-btn svg{width:1rem;height:1rem;}
+  .theme-btn .moon{display:none;}
+  :root[data-theme="light"] .theme-btn .sun{display:none;}
+  :root[data-theme="light"] .theme-btn .moon{display:block;}
+  @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
 </head>
 <body>
@@ -120,7 +160,13 @@
 
 <nav>
   <a class="nav-mark" href="../index.html"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
-  <a class="back" href="../index.html#work">Back to portfolio</a>
+  <div class="nav-right">
+    <a class="back" href="../index.html#work">Back to portfolio</a>
+    <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch to light theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7Z"/></svg>
+    </button>
+  </div>
 </nav>
 
 <main>
@@ -363,7 +409,78 @@
   </div>
 </main>
 
+<script>
+/* theme toggle: dark by default, the visitor's choice is saved site-wide */
+(function(){
+  const root = document.documentElement, btn = document.getElementById('themeBtn');
+  if(!btn) return;
+  function set(t, save){
+    root.setAttribute('data-theme', t);
+    btn.setAttribute('aria-label', t === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+    if(save){ try{ localStorage.setItem('theme', t); }catch(e){} }
+    window.dispatchEvent(new CustomEvent('themechange', {detail:t}));
+  }
+  set(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark', false);
+  btn.addEventListener('click', () => set(root.getAttribute('data-theme') === 'light' ? 'dark' : 'light', true));
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* light theme for the wireframe background, without touching the scene code:
+   render() is wrapped so every material the scene draws is re-inked, same hue
+   darkened to ink depth, glow switched to normal blending, fog turned cream.
+   Colours the scene changes itself (live highlights) are caught each frame.
+   Textured materials (canvas displays) are left alone. */
+(function(){
+  if(!window.THREE) return;
+  const render = THREE.WebGLRenderer.prototype.render;
+  const seen = new WeakSet(), mats = [], scenes = [];
+  const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
+  let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
+  function ink(m){
+    const u = m.userData;
+    m.color.copy(u.tc0);
+    if(light){
+      m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
+      // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
+      // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
+      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*(m.vertexColors ? 0.22 : 0.4);
+      if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
+    } else {
+      if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
+      if(u.to0 !== undefined) m.opacity = u.to0;
+    }
+    u.tset = m.color.clone();
+  }
+  function scan(scene){
+    scene.traverse(o => {
+      const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+      list.forEach(m => {
+        if(seen.has(m) || !m.color || m.map) return;
+        if(!m.transparent){ m.transparent = true; m.needsUpdate = true; }
+        seen.add(m); m.userData.tc0 = m.color.clone(); m.userData.tb0 = m.blending; m.userData.to0 = m.opacity; mats.push(m); ink(m);
+      });
+    });
+  }
+  function fog(scene){
+    if(!scene.fog) return;
+    if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
+    scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
+  }
+  THREE.WebGLRenderer.prototype.render = function(scene, cam){
+    if(scene && scene.isScene){
+      if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
+      else if(++tick % 90 === 0) scan(scene);
+      if(light) for(let i=0;i<mats.length;i++){
+        const m = mats[i];
+        if(!m.color.equals(m.userData.tset)){ m.userData.tc0.copy(m.color); ink(m); }
+      }
+    }
+    return render.call(this, scene, cam);
+  };
+  window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
+})();
+</script>
 <script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
