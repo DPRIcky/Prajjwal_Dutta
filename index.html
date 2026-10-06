@@ -1580,6 +1580,72 @@
   }
   const TOP = 0.315;   // plinth deck height
 
+  /*  FX TOOLKIT for the stage dressing: a soft glow sprite so particles
+     read as light rather than square pixels, particle swarms with a
+     per-point step, light shafts that fade toward the floor, and
+     holographic readout panels that print live state from the sims. */
+  const dotTex = canvasTex(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  });
+  function swarm(root, n, col, size, op, init, step){
+    const a = new Float32Array(n*3);
+    for(let i=0;i<n;i++) init(a, i);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
+      depthWrite:false, blending:THREE.AdditiveBlending});
+    const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    return {m, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
+  }
+  const shaftTex = canvasTex(4, 128, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  function shaft(root, x, z, rTop, rBot, h, col, op){
+    const m = new THREE.MeshBasicMaterial({color:lin(col), map:shaftTex, transparent:true, opacity:op,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
+    sh.position.set(x, h/2, z); root.add(sh);
+    sh.userData.op = op;
+    return sh;
+  }
+  function holo(root, w, h, x, y, z){
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512*h/w);
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:tex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
+    mesh.position.set(x, y, z); root.add(mesh);
+    let last = -1;
+    return {mesh, draw(t, fn){
+      mesh.lookAt(camera.position);
+      mesh.position.y = y + Math.sin(t*0.8)*0.04;
+      if(last >= 0 && t - last < 0.15) return;
+      last = t; g.clearRect(0, 0, c.width, c.height); fn(g, c.width, c.height); tex.needsUpdate = true;
+    }};
+  }
+  function holoFrame(g, w, h, title){
+    g.fillStyle = 'rgba(79,216,232,0.1)'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(79,216,232,0.8)'; g.lineWidth = 3;
+    const k = 26;
+    [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
+    });
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = '#f5a35c'; g.fillText(title, 26, 48);
+    g.fillStyle = 'rgba(79,216,232,0.45)'; g.fillRect(26, 62, w - 52, 2);
+    g.font = '400 26px "IBM Plex Mono", monospace';
+  }
+  function holoRow(g, y, label, val, frac){
+    g.fillStyle = 'rgba(235,242,250,0.95)'; g.fillText(label, 26, y);
+    g.fillStyle = '#4fd8e8'; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    if(frac !== undefined){
+      g.fillStyle = 'rgba(79,216,232,0.18)'; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = 'rgba(79,216,232,0.85)'; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
+    }
+  }
+  const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
+
   /*  0. SIX-AXIS ARM, pick and place
      A real three-link planar IK in the arm's vertical plane after
      the base yaw (elbow-up branch), with the wrist pitched so the
@@ -1663,7 +1729,7 @@
         cube.position.set(PR*Math.cos(pa), CY, PR*Math.sin(pa)); cube.rotation.y = -pa;
       }
     }
-    return {update, focus:[0, 1.8, 0]};
+    return {update, focus:[0, 1.8, 0], joints:[j1, j2, j3, j4], T};
   }
 
   /*  QUADROTOR model + flight: banks into its acceleration, so any
@@ -1791,7 +1857,7 @@
     for(let i=0;i<NP;i++) respawn(i);
     const pg = new THREE.BufferGeometry();
     pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
-    const pts3 = new THREE.Points(pg, new THREE.PointsMaterial({color:lin(0x9ff0ff), size:0.035, transparent:true, opacity:0.55, depthWrite:false}));
+    const pts3 = new THREE.Points(pg, new THREE.PointsMaterial({color:lin(0x9ff0ff), size:0.07, map:dotTex, transparent:true, opacity:0.6, depthWrite:false, blending:THREE.AdditiveBlending}));
     pts3.frustumCulled = false; root.add(pts3);
 
     function current(x, z, t, out){
@@ -2000,11 +2066,86 @@
       beltTex.offset.y = -t*0.6/CL*14;
       flashM.emissiveIntensity = 0.6 + lit*4;
     }
-    return {update, focus:[0.4, 1.4, -0.4]};
+    return {update, focus:[0.4, 1.4, -0.4], T, NS};
+  }
+
+  /*  FLAPPING-WING ROBOT, from the foldable bat-wing project: one
+     servo between the wings drives both through a meshed gear pair, on the
+     same sinusoidal gait as that page (1.15 Hz, 0.62 rad). Each wing is a
+     humerus, a folding elbow and three finger spars with a laminated
+     membrane webbed between them; the span folds in on the upstroke and
+     opens on the downstroke. Here it flies a banked loop around the stage,
+     below the quadrotor's altitude, its body bobbing against each stroke. */
+  function buildBatRig(parent){
+    const g = new THREE.Group(); parent.add(g);
+    const r = new THREE.Group(); r.scale.setScalar(0.24); g.add(r);
+    add(r, rbox(0.5, 0.16, 1.5, 0.06), MAT.carbon);
+    add(r, rbox(0.36, 0.34, 0.5, 0.04), MAT.cap, 0, 0.24, 0.12);
+    function gearGeo(rad, teeth){
+      const sh = new THREE.Shape(), n = teeth*4;
+      for(let i=0;i<=n;i++){
+        const a = i/n*Math.PI*2, rr = rad*((i % 4) < 2 ? 1 : 0.84);
+        if(i === 0) sh.moveTo(Math.cos(a)*rr, Math.sin(a)*rr); else sh.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
+      }
+      const hole = new THREE.Path(); hole.absarc(0, 0, rad*0.18, 0, Math.PI*2, true); sh.holes.push(hole);
+      const geo = new THREE.ExtrudeGeometry(sh, {depth:0.06, bevelEnabled:false}); geo.translate(0, 0, -0.03);
+      return geo;
+    }
+    const gA = add(r, gearGeo(0.4, 12), MAT.amber, -0.38, 0.12, 0.42);
+    const gB = add(r, gearGeo(0.4, 12), MAT.amber,  0.38, 0.12, 0.42);
+    gB.rotation.z = Math.PI/12;                       // offset half a tooth so they mesh
+
+    const SPARS = [{len:2.5, spread:0.30}, {len:2.9, spread:0.02}, {len:2.4, spread:-0.34}];
+    const memM = new THREE.MeshStandardMaterial({color:lin(0xf5a35c), roughness:0.55, metalness:0.05,
+      transparent:true, opacity:0.62, side:THREE.DoubleSide, depthWrite:false});
+    const wings = [-1, 1].map(side => {
+      const shoulder = new THREE.Group(); shoulder.position.set(side*0.3, 0.08, 0.1); r.add(shoulder);
+      add(shoulder, cylX(0.055, 1.5, 10), MAT.carbon, side*0.75, 0, 0);
+      add(shoulder, new THREE.SphereGeometry(0.09, 14, 10), MAT.steel);
+      const elbow = new THREE.Group(); elbow.position.x = side*1.5; shoulder.add(elbow);
+      add(elbow, new THREE.SphereGeometry(0.075, 14, 10), MAT.steel);
+      const tips = SPARS.map(sp => {
+        const spar = new THREE.Group(); spar.rotation.y = sp.spread*side; elbow.add(spar);
+        add(spar, cylX(0.032, sp.len, 8), MAT.carbon, side*sp.len/2, 0, 0);
+        const tip = new THREE.Object3D(); tip.position.x = side*sp.len; spar.add(tip);
+        return tip;
+      });
+      const rear = new THREE.Object3D(); rear.position.set(side*0.25, 0.05, -0.7); r.add(rear);
+      const pos = new Float32Array(4*3*3);
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mem = new THREE.Mesh(geo, memM); mem.frustumCulled = false; r.add(mem);
+      return {side, shoulder, elbow, tips, rear, pos, geo};
+    });
+    const P = [0,1,2,3,4,5].map(() => new THREE.Vector3());
+    function update(t){
+      const ph = t*1.15*Math.PI*2, flap = Math.sin(ph)*0.62, fold = (0.5 - 0.5*Math.cos(ph))*0.5;
+      wings.forEach(w => {
+        w.shoulder.rotation.z = flap*-w.side;
+        w.elbow.rotation.z = fold*-w.side;
+        w.elbow.rotation.y = fold*0.35*w.side;
+      });
+      gA.rotation.z = ph*0.5; gB.rotation.z = -ph*0.5 + Math.PI/12;
+      // loop flight: nose (+z) along the tangent, banked into the turn
+      const a = t*0.26, R = 1.9;
+      g.position.set(Math.cos(a)*R, TOP + 1.45 + Math.sin(a*2)*0.12 + Math.sin(ph)*0.04, Math.sin(a)*R);
+      g.rotation.set(0, -a, -0.28);
+      r.updateWorldMatrix(true, true);
+      wings.forEach(w => {
+        // shoulder, elbow, rear spar tip, middle, front, body trailing corner, in rig space
+        [w.shoulder, w.elbow, w.tips[0], w.tips[1], w.tips[2], w.rear].forEach((o, i) => r.worldToLocal(o.getWorldPosition(P[i])));
+        const tri = [[1,4,3],[1,3,2],[0,1,2],[0,2,5]];
+        let n = 0;
+        tri.forEach(tr => tr.forEach(k => { w.pos[n++] = P[k].x; w.pos[n++] = P[k].y; w.pos[n++] = P[k].z; }));
+        w.geo.attributes.position.needsUpdate = true;
+        w.geo.computeVertexNormals();
+      });
+    }
+    return {g, update};
   }
 
   /*  4. AIR-GROUND TEAM: a mecanum rover strafing a square without ever
-     turning, with a quadrotor escort circling above it on a lag
+     turning, with a quadrotor escort circling above it on a lag, and
+     the flapping-wing robot looping the stage beneath it
      Each wheel carries real 45 degree rollers; wheel speeds come from
      the mecanum inverse kinematics of the commanded body velocity. */
   function buildRover(root){
@@ -2020,6 +2161,7 @@
       add(root, cylY(0.072, 0.072, 0.12, 20), MAT.shell, x, TOP+0.6, z);
     });
 
+    const bat = buildBatRig(root);
     const rv = new THREE.Group(); root.add(rv);
     const car = new THREE.Group(); car.scale.setScalar(1.45); rv.add(car);
     const WR = 0.15, WY = 0.15;
@@ -2086,68 +2228,148 @@
       qx += (x + Math.cos(oa)*1.1 - qx)*damp(0.018, dt);
       qz += (z + Math.sin(oa)*1.1 - qz)*damp(0.018, dt);
       flyQuad(quad, qx, TOP + 2.5 + Math.sin(t*0.9)*0.12, qz, -oa - Math.PI/2, dt);
+      bat.update(t);
     }
-    return {update, focus:[0, 1.4, 0]};
+    return {update, focus:[0, 1.4, 0], rv, lidar};
   }
 
-  /*  5. BLIMP tracking a green balloon (the AeroFusion vision target):
-     it yaws to face the balloon and closes to a standoff distance
-     with a first-order lag, the way a gentle visual servo would. */
+  /*  5. BLIMP, catch and score (the Defend the Republic game AeroFusion
+     flew): a free balloon spawns, the blimp chases it until the net under
+     its gondola scoops it up, carries it to the next goal (circle, then
+     triangle, then square), lines up square to the frame and puts the
+     balloon through it. The nose is the blunt end; the envelope tapers to
+     the tail fins, and the two ducted thrusters ride on the envelope's
+     flanks. */
   function buildBlimp(root){
     plinth(root, 3.0);
+    const L = 3.6, R = 0.78, C = 0.68;
     const pts = [];
-    const L = 3.6, R = 0.78;
-    for(let i=0;i<=40;i++){
-      const u = i/40, y = -L/2 + u*L;
-      const r = R*Math.pow(Math.sin(Math.PI*Math.pow(u, 0.85)), 0.72);
+    for(let i=0;i<=48;i++){
+      const v = i/48, y = -L/2 + v*L;          // v: 0 tail, 1 nose
+      const r = v < C ? R*Math.pow(v/C, 0.8) : R*Math.sqrt(Math.max(0, 1 - Math.pow((v - C)/(1 - C), 2)));
       pts.push(new THREE.Vector2(Math.max(r, 0.002), y));
     }
     const envG = new THREE.LatheGeometry(pts, 56); envG.rotateZ(-Math.PI/2);
     const bl = new THREE.Group(); root.add(bl);
     add(bl, envG, std(0xc9d2dc, 0.26, 0.72));
-    const band = add(bl, cylX(R*0.985, 0.05, 56), MAT.amber, 0.25, 0, 0); band.scale.set(1, 1, 1);
-    const finG = rbox(0.62, 0.5, 0.03, 0.02), finH = rbox(0.62, 0.03, 0.5, 0.02);
-    add(bl, finG, MAT.amber, -1.52, 0.42, 0); add(bl, finG, MAT.amber, -1.52, -0.42, 0);
-    add(bl, finH, MAT.amber, -1.52, 0, 0.42); add(bl, finH, MAT.amber, -1.52, 0, -0.42);
-    [[-0.12, 0.14], [0.22, 0.14], [-0.12, -0.14], [0.22, -0.14]].forEach(([x, z]) => add(bl, cylY(0.008, 0.008, 0.2, 6), MAT.steel, x, -0.82, z));
-    add(bl, rbox(0.66, 0.2, 0.32, 0.05), MAT.carbon, 0.05, -0.98, 0);
-    add(bl, rbox(0.04, 0.03, 0.18, 0.008), MAT.cyanG, 0.38, -0.94, 0, false);
-    add(bl, new THREE.SphereGeometry(0.045, 16, 10), MAT.glass, 0.39, -1.02, 0);
-    add(bl, cylZ(0.016, 1.15, 10), MAT.steel, 0, -0.98, 0);
-    const blur = new THREE.MeshBasicMaterial({color:0xcfe6ff, transparent:true, opacity:0.08, depthWrite:false, side:THREE.DoubleSide});
+    add(bl, cylX(R*0.99, 0.05, 56), MAT.amber, 0.55, 0, 0);
+    const finG = rbox(0.55, 0.42, 0.03, 0.02), finH = rbox(0.55, 0.03, 0.42, 0.02);
+    add(bl, finG, MAT.amber, -1.45, 0.3, 0); add(bl, finG, MAT.amber, -1.45, -0.3, 0);
+    add(bl, finH, MAT.amber, -1.45, 0, 0.3); add(bl, finH, MAT.amber, -1.45, 0, -0.3);
+    // gondola with the camera, slung under the envelope
+    [[-0.12, 0.12], [0.22, 0.12], [-0.12, -0.12], [0.22, -0.12]].forEach(([x, z]) => add(bl, cylY(0.008, 0.008, 0.2, 6), MAT.steel, x, -0.82, z));
+    add(bl, rbox(0.6, 0.18, 0.3, 0.05), MAT.carbon, 0.05, -0.98, 0);
+    add(bl, rbox(0.04, 0.03, 0.16, 0.008), MAT.cyanG, 0.36, -0.94, 0, false);
+    add(bl, new THREE.SphereGeometry(0.045, 16, 10), MAT.glass, 0.37, -1.02, 0);
+    // side thrusters: a strut off each flank, a duct, a spinning prop
+    const blur = new THREE.MeshBasicMaterial({color:0xcfe6ff, transparent:true, opacity:0.1, depthWrite:false, side:THREE.DoubleSide});
     const props = [-1, 1].map(s => {
-      add(bl, cylX(0.05, 0.12, 20), MAT.alu, -0.02, -0.98, s*0.58);
-      const p = new THREE.Group(); p.position.set(-0.1, -0.98, s*0.58); bl.add(p);
-      add(p, rbox(0.012, 0.36, 0.04, 0.004), MAT.dark);
-      const d = new THREE.Mesh(new THREE.CircleGeometry(0.18, 32), blur); d.rotation.y = Math.PI/2; p.add(d);
+      const z = s*(R + 0.24);
+      add(bl, cylZ(0.022, 0.3, 10), MAT.steel, 0.05, -0.12, s*(R - 0.02));
+      const duct = add(bl, new THREE.TorusGeometry(0.17, 0.035, 10, 32), MAT.dark, 0.05, -0.12, z);
+      duct.rotation.y = Math.PI/2;
+      add(bl, cylX(0.05, 0.14, 16), MAT.alu, 0.05, -0.12, z);
+      const p = new THREE.Group(); p.position.set(-0.03, -0.12, z); bl.add(p);
+      add(p, rbox(0.012, 0.3, 0.04, 0.004), MAT.dark);
+      const d = new THREE.Mesh(new THREE.CircleGeometry(0.16, 28), blur); d.rotation.y = Math.PI/2; p.add(d);
       return p;
     });
+    // the catching net: a hoop under the gondola with a bag of netting
+    const NET = new THREE.Vector3(0.3, -1.42, 0);
+    const hoop = add(bl, new THREE.TorusGeometry(0.42, 0.018, 8, 48), MAT.steel, NET.x, -1.16, 0);
+    hoop.rotation.x = Math.PI/2;
+    add(bl, cylY(0.01, 0.01, 0.2, 6), MAT.steel, 0.3, -1.06, 0);
+    const netPts = [];
+    const bag = (u, a) => new THREE.Vector3(NET.x + Math.cos(a)*0.42*Math.sin(u), -1.16 - 0.4*(1 - Math.cos(u)), Math.sin(a)*0.42*Math.sin(u));
+    for(let m=0;m<12;m++){ const a = m/12*Math.PI*2; for(let k=0;k<6;k++) netPts.push(bag(Math.PI/2*(1 - k/6), a), bag(Math.PI/2*(1 - (k+1)/6), a)); }
+    for(let k=1;k<6;k++){ const u = Math.PI/2*(k/6); for(let m=0;m<24;m++) netPts.push(bag(u, m/24*Math.PI*2), bag(u, (m+1)/24*Math.PI*2)); }
+    bl.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(netPts),
+      new THREE.LineBasicMaterial({color:lin(0xdfe8f4), transparent:true, opacity:0.55})));
 
-    const ball = new THREE.Group(); root.add(ball);
-    const bm = add(ball, new THREE.SphereGeometry(0.3, 32, 22), std(0x4cc35d, 0.32, 0.05));
-    bm.scale.y = 1.12;
-    add(ball, new THREE.ConeGeometry(0.05, 0.08, 12), std(0x3a9e48, 0.4, 0.05), 0, -0.37, 0);
-    const strG = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -0.4, 0), new THREE.Vector3(0.05, -1.3, 0.03)]);
-    ball.add(new THREE.Line(strG, new THREE.LineBasicMaterial({color:lin(0x8a9ab5), transparent:true, opacity:0.6})));
+    // goals on posts, in an arc behind the plinth, each facing outward
+    const GR = 3.7, GY = 2.5;
+    const frameM = () => glow(0x4fd8e8, 0.9);
+    function bar(g, x0, y0, x1, y1, m){
+      const len = Math.hypot(x1 - x0, y1 - y0), b = add(g, rbox(len + 0.1, 0.1, 0.1, 0.03), m, (x0 + x1)/2, (y0 + y1)/2, 0, false);
+      b.rotation.z = Math.atan2(y1 - y0, x1 - x0);
+    }
+    const goals = [['circle', -2.35], ['triangle', -1.57], ['square', -0.79]].map(([shape, a]) => {
+      const n = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+      const c = new THREE.Vector3(n.x*GR, GY, n.z*GR);
+      add(root, cylY(0.05, 0.07, GY - 0.75, 12), MAT.steel, c.x, (GY - 0.75)/2, c.z);
+      add(root, cylY(0.22, 0.26, 0.08, 20), MAT.dark, c.x, 0.04, c.z);
+      const g = new THREE.Group(); g.position.copy(c); g.rotation.y = Math.atan2(n.x, n.z); root.add(g);
+      const m = frameM();
+      if(shape === 'circle'){ const tr = add(g, new THREE.TorusGeometry(0.62, 0.05, 12, 64), m, 0, 0, 0, false); }
+      else if(shape === 'triangle'){ const r3 = 0.72, P = [0, 1, 2].map(i => [Math.cos(Math.PI/2 + i*2*Math.PI/3)*r3, Math.sin(Math.PI/2 + i*2*Math.PI/3)*r3]);
+        for(let i=0;i<3;i++) bar(g, P[i][0], P[i][1], P[(i+1)%3][0], P[(i+1)%3][1], m); }
+      else { const h = 0.55; bar(g, -h, -h, h, -h, m); bar(g, h, -h, h, h, m); bar(g, h, h, -h, h, m); bar(g, -h, h, -h, -h, m); }
+      root.userData.glows.push({m, k:0.9});
+      return {shape, n, c, m, flash:0};
+    });
 
-    bl.position.set(-1.4, 3.0, 0.4);
+    const ball = add(root, new THREE.SphereGeometry(0.3, 32, 22), std(0x4cc35d, 0.32, 0.05));
+    ball.scale.y = 1.1;
+    const SPAWN = [[1.3, 2.3, 1.4], [-1.5, 2.6, 0.9], [0.4, 2.1, 2.0], [-0.6, 2.4, -0.4], [1.8, 2.7, 0.2]];
+    const st = {phase:'seek', goal:0, scored:0, spawn:0, tp:0};
+    const bp = new THREE.Vector3().fromArray(SPAWN[0]);
+    const netW = new THREE.Vector3(), tgt = new THREE.Vector3(), tmp = new THREE.Vector3(), shotA = new THREE.Vector3();
     let yaw = 0;
-    const tmp = new THREE.Vector3();
+    bl.position.set(-1.6, 3.2, -0.4);
+    const netWorld = out => out.set(NET.x*Math.cos(yaw), NET.y, -NET.x*Math.sin(yaw)).add(bl.position);
+    function steer(target, wantYaw, dt, vmax){
+      tmp.subVectors(target, bl.position);
+      const d = tmp.length(), v = Math.min(vmax, d*0.9);
+      if(d > 1e-4) bl.position.addScaledVector(tmp, v*dt/d);
+      yaw = angLerp(yaw, wantYaw, damp(0.035, dt));
+      return d;
+    }
     function update(t, dt){
-      ball.position.set(Math.cos(t*0.23)*2.1, 3.1 + Math.sin(t*0.5)*0.35, Math.sin(t*0.31)*1.4);
-      tmp.subVectors(ball.position, bl.position);
-      const dist = Math.hypot(tmp.x, tmp.z) + 1e-4;
-      const want = Math.atan2(-tmp.z, tmp.x);
-      yaw = angLerp(yaw, want, damp(0.02, dt));
+      dt = Math.min(dt, 0.05);
+      st.tp += dt;
+      const G = goals[st.goal];
+      if(st.phase === 'seek'){
+        // free balloon drifts; aim the net at it
+        ball.position.set(bp.x + Math.sin(t*0.6)*0.15, bp.y + Math.sin(t*0.9)*0.1, bp.z + Math.cos(t*0.5)*0.15);
+        tmp.subVectors(ball.position, bl.position);
+        const wy = Math.atan2(-tmp.z, tmp.x);
+        tgt.set(ball.position.x - NET.x*Math.cos(yaw), ball.position.y - NET.y + 0.05, ball.position.z + NET.x*Math.sin(yaw));
+        steer(tgt, wy, dt, 0.9);
+        netWorld(netW);
+        if(netW.distanceTo(ball.position) < 0.22){ st.phase = 'carry'; st.tp = 0; }
+      } else if(st.phase === 'carry'){
+        // to the goal's inside face, square to the frame, net level with its centre
+        const wy = Math.atan2(-G.n.z, G.n.x);
+        tgt.copy(G.c).addScaledVector(G.n, -2.2); tgt.y = G.c.y - NET.y;
+        tgt.x -= NET.x*Math.cos(wy); tgt.z += NET.x*Math.sin(wy);
+        const d = steer(tgt, wy, dt, 1.0);
+        netWorld(ball.position); ball.position.y += 0.02;
+        if(d < 0.08 && Math.abs(angLerp(yaw, wy, 1) - yaw) < 0.03){ st.phase = 'shoot'; st.tp = 0; shotA.copy(ball.position); }
+      } else if(st.phase === 'shoot'){
+        // the balloon goes through the frame and out the far side
+        const k = smoothstep(clamp01(st.tp/1.3));
+        tmp.copy(G.c).addScaledVector(G.n, 1.4);
+        ball.position.copy(shotA).lerp(tmp, k);
+        if(k > 0.55 && G.flash === 0){ G.flash = 1; st.scored++; }
+        if(st.tp > 1.6){ st.phase = 'respawn'; st.tp = 0; }
+      } else {
+        // fade out past the goal, back off, and a fresh balloon appears
+        const k = clamp01(st.tp/0.9);
+        ball.scale.setScalar(1 - k); ball.scale.y *= 1.1;
+        tmp.copy(G.c).addScaledVector(G.n, -3.2); tmp.y = 3.0;
+        steer(tmp, yaw, dt, 0.6);
+        if(k >= 1){
+          st.spawn = (st.spawn + 1) % SPAWN.length; bp.fromArray(SPAWN[st.spawn]);
+          ball.scale.set(1, 1.1, 1); st.goal = (st.goal + 1) % goals.length;
+          st.phase = 'seek'; st.tp = 0;
+        }
+      }
+      goals.forEach(g => { if(g.flash > 0){ g.flash = Math.max(0, g.flash - dt*0.8); } g.m.emissiveIntensity = 0.9 + g.flash*4; });
       bl.rotation.y = yaw;
-      const close = (dist - 2.4)*0.35;
-      bl.position.x += (tmp.x/dist)*close*dt;
-      bl.position.z += (tmp.z/dist)*close*dt;
-      bl.position.y += (ball.position.y - 0.1 - bl.position.y)*damp(0.01, dt);
-      bl.rotation.z = Math.sin(t*0.6)*0.03;
+      bl.rotation.z = Math.sin(t*0.6)*0.025;
       props.forEach((p, i) => { p.rotation.x += (i ? -1 : 1)*0.7; });
     }
-    return {update, focus:[0, 3.0, 0]};
+    return {update, focus:[0, 3.0, 0], bl, st, goals};
   }
 
   /*  6. TURTLEBOT 4, patrolling a circle beside its dock  */
@@ -2184,18 +2406,303 @@
       bot.rotation.y = -a - Math.PI/2;   // nose along the direction of travel
       lidar.rotation.y = t*6;
     }
-    return {update, focus:[0.3, 0.8, 0.4]};
+    return {update, focus:[0.3, 0.8, 0.4], bot};
+  }
+
+
+  /*  STAGE DRESSING: each stage's surroundings, built around the machine
+     and driven by its live state where there is any to show.  */
+  const R01 = i => { const x = Math.sin(i*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };   // stable hash
+
+  function dressArm(root, api){
+    // stack light: green while powered, amber flashes while the arm is moving
+    const st = new THREE.Group(); st.position.set(1.45, TOP, -2.2); root.add(st);
+    add(st, cylY(0.09, 0.11, 0.08, 20), MAT.dark, 0, 0.04, 0);
+    add(st, cylY(0.025, 0.025, 0.7, 10), MAT.steel, 0, 0.42, 0);
+    const lamps = [0x3fd17a, 0xf5a35c, 0xe5534b].map((c, i) => {
+      const m = glow(c, 0.25); add(st, cylY(0.075, 0.075, 0.13, 20), m, 0, 0.84 + i*0.14, 0, false); return m;
+    });
+    add(st, cylY(0.07, 0.075, 0.03, 20), MAT.dark, 0, 1.27, 0);
+    // parts bin with stock waiting
+    const bin = new THREE.Group(); bin.position.set(-2.15, TOP, -1.05); bin.rotation.y = 0.5; root.add(bin);
+    add(bin, rbox(0.7, 0.14, 0.46, 0.03), MAT.dark, 0, 0.07, 0);
+    for(let i=0;i<6;i++) add(bin, rbox(0.13, 0.13, 0.13, 0.02), MAT.amber, -0.22 + (i%3)*0.22, 0.2, i < 3 ? -0.09 : 0.09);
+    // hazard band around the work envelope
+    const hz = canvasTex(64, 64, (g, w) => { g.fillStyle = '#10151f'; g.fillRect(0, 0, w, w); g.fillStyle = '#c98a4c';
+      for(let k=-w;k<w*2;k+=32){ g.beginPath(); g.moveTo(k, 0); g.lineTo(k+16, 0); g.lineTo(k+16-w, w); g.lineTo(k-w, w); g.fill(); } });
+    hz.wrapS = hz.wrapT = THREE.RepeatWrapping; hz.repeat.set(9, 9);
+    const band = add(root, new THREE.RingGeometry(2.6, 2.72, 120), new THREE.MeshStandardMaterial({map:hz, roughness:0.7, metalness:0.1}), 0, TOP + 0.006, 0, false);
+    band.rotation.x = -Math.PI/2; band.receiveShadow = renderer.shadowMap.enabled;
+    // warm motes rising through the cell light
+    const motes = swarm(root, mobile ? 50 : 120, 0xffd2a0, 0.06, 0.55,
+      (a, i) => { a[i*3] = (R01(i)-0.5)*7; a[i*3+1] = R01(i+50)*4.5; a[i*3+2] = (R01(i+99)-0.5)*7; },
+      (a, i, t, dt) => { a[i*3+1] += dt*0.12; a[i*3] += Math.sin(t*0.5 + i)*dt*0.05; if(a[i*3+1] > 4.6) a[i*3+1] = 0.3; });
+    // live joint readout straight off the IK solve
+    const panel = holo(root, 2.1, 1.4, -0.4, 3.55, -2.3);
+    const J = api.joints;
+    return (t, dt) => {
+      const u = t % api.T, moving = (u > 0.4 && u < 1.3) || (u > 1.65 && u < 5.3) || (u > 5.65 && u < 6.5);
+      lamps[0].emissiveIntensity = 1.8;
+      lamps[1].emissiveIntensity = moving && Math.sin(t*9) > 0 ? 2.4 : 0.15;
+      lamps[2].emissiveIntensity = 0.12;
+      motes.update(t, dt);
+      panel.draw(t, (g, w, h) => {
+        holoFrame(g, w, h, 'JOINT STATE  IK');
+        holoRow(g, 112, 'J1  base yaw', deg(J[0].rotation.y), 0.5 + J[0].rotation.y/(2*Math.PI));
+        holoRow(g, 170, 'J2  shoulder', deg(J[1].rotation.z), 0.5 + J[1].rotation.z/(2*Math.PI));
+        holoRow(g, 228, 'J3  elbow', deg(J[2].rotation.z), 0.5 + J[2].rotation.z/(2*Math.PI));
+        holoRow(g, 286, 'J4  wrist', deg(J[3].rotation.z), 0.5 + J[3].rotation.z/(2*Math.PI));
+      });
+    };
+  }
+
+  function dressFleet(root){
+    /* UNDER ICE: the fleet works beneath a sea-ice ceiling. The underside
+       is displaced so it reads as rafted ice, keels hang from it like
+       inverted ridges, brash ice bobs at the interface, and the light
+       comes down through leads (open cracks) in the sheet. */
+    const ICE_Y = 6.0;
+    const iceM = new THREE.MeshStandardMaterial({color:lin(0xcfe9f4), roughness:0.32, metalness:0.0,
+      emissive:lin(0x0e3a4a), emissiveIntensity:0.6, transparent:true, opacity:0.92, side:THREE.DoubleSide, flatShading:true});
+    const ceilG = new THREE.PlaneGeometry(34, 34, 48, 48);
+    const cp = ceilG.attributes.position;
+    for(let i=0;i<cp.count;i++){
+      const x = cp.getX(i), y = cp.getY(i);
+      cp.setZ(i, Math.sin(x*0.55)*0.25 + Math.cos(y*0.7 + x*0.2)*0.22 + (R01(i)-0.5)*0.18);
+    }
+    ceilG.computeVertexNormals();
+    const ceil = new THREE.Mesh(ceilG, iceM); ceil.rotation.x = Math.PI/2; ceil.position.y = ICE_Y; root.add(ceil);
+    // keels: jagged inverted ridges hanging from the ice, kept above the fleet's depth band
+    const keels = [];
+    [[-4.6, -2.4, 1.0], [3.8, -3.6, 1.3], [5.4, 1.6, 0.8], [-1.2, -5.2, 1.1], [-5.6, 2.2, 0.9], [1.4, 4.8, 0.7]].forEach(([x, z, sc], k) => {
+      const g = new THREE.IcosahedronGeometry(1, 1), gp = g.attributes.position;
+      for(let i=0;i<gp.count;i++){
+        // hash the position, not the index: the faces are unwelded, so shared corners must move together
+        const f = 0.75 + R01(k*37 + Math.round(gp.getX(i)*97)*7 + Math.round(gp.getY(i)*97)*13 + Math.round(gp.getZ(i)*97)*17)*0.5;
+        gp.setXYZ(i, gp.getX(i)*f, gp.getY(i)*f, gp.getZ(i)*f);
+      }
+      g.computeVertexNormals();
+      const m = new THREE.Mesh(g, iceM);
+      m.scale.set(1.3*sc, 1.6*sc, 1.0*sc); m.position.set(x, ICE_Y + 0.3, z); m.rotation.y = R01(k)*6;
+      root.add(m); keels.push(m);
+    });
+    // brash ice bobbing at the interface
+    const brash = [];
+    for(let k=0;k<(mobile ? 8 : 16);k++){
+      const g = new THREE.DodecahedronGeometry(0.18 + R01(k+3)*0.22, 0);
+      const m = new THREE.Mesh(g, iceM);
+      const a = R01(k)*Math.PI*2, r = 1.5 + R01(k+9)*6;
+      m.position.set(Math.cos(a)*r, ICE_Y - 0.35 - R01(k+5)*0.3, Math.sin(a)*r);
+      m.scale.y = 0.5; m.userData = {y0:m.position.y, ph:R01(k+11)*6};
+      root.add(m); brash.push(m);
+    }
+    // the leads: dark-water cracks in the sheet, with the light falling through them
+    const leadM = new THREE.MeshBasicMaterial({color:lin(0x9ff3ff), transparent:true, opacity:0.35, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    [[-2.5, -3.0, 0.4], [1.8, -4.2, -0.6], [4.2, -0.6, 1.1], [-4.4, 1.5, 0.2]].forEach(([x, z, ry]) => {
+      const l = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.5), leadM); l.rotation.set(Math.PI/2, 0, ry); l.position.set(x, ICE_Y - 0.12, z); root.add(l);
+    });
+    // sunlight shafts from the surface
+    const shafts = [[-2.5, -3.0], [1.8, -4.2], [4.2, -0.6], [-4.4, 1.5]].map(([x, z], i) => shaft(root, x, z, 0.45, 1.6, ICE_Y, 0x9ff3ff, 0.09 + i*0.01));
+    // bubbles from the beacon and the seabed
+    const bub = swarm(root, mobile ? 50 : 110, 0xd8fbff, 0.08, 0.7,
+      (a, i) => { a[i*3] = (R01(i)-0.5)*9; a[i*3+1] = R01(i+7)*6; a[i*3+2] = (R01(i+13)-0.5)*9; },
+      (a, i, t, dt) => {
+        a[i*3+1] += dt*(0.35 + (i%5)*0.08); a[i*3] += Math.sin(t*2 + i)*dt*0.06;
+        if(a[i*3+1] > ICE_Y - 0.2){
+          const b = i%4 === 0;
+          a[i*3]   = b ? (Math.random()-0.5)*0.2 : (Math.random()-0.5)*9;
+          a[i*3+1] = b ? 1.35 : 0.1;
+          a[i*3+2] = b ? (Math.random()-0.5)*0.2 : (Math.random()-0.5)*9;
+        }
+      });
+    return (t, dt) => {
+      brash.forEach(m => { m.position.y = m.userData.y0 + Math.sin(t*0.6 + m.userData.ph)*0.05; m.rotation.y += dt*0.05; });
+      shafts.forEach((sh, i) => { sh.material.opacity = sh.userData.op*(0.7 + 0.3*Math.sin(t*0.6 + i*1.7)); });
+      bub.update(t, dt);
+    };
+  }
+
+  function dressScara(root, api){
+    // cleanroom ceiling: fan filter units, and the laminar downflow they drive
+    [[-1.2, -0.6], [1.0, -1.4], [0.2, 1.2]].forEach(([x, z]) => {
+      add(root, rbox(1.5, 0.05, 0.95, 0.02), glow(0xdff6ff, 1.1), x, 5.6, z, false);
+      add(root, rbox(1.62, 0.12, 1.07, 0.03), MAT.dark, x, 5.69, z, false);
+      const sh = shaft(root, x, z, 0.75, 1.5, 5.3, 0xdff6ff, 0.05); sh.position.y = 2.95;
+    });
+    const flow = swarm(root, mobile ? 160 : 380, 0xc6eeff, 0.045, 0.5,
+      (a, i) => { a[i*3] = (R01(i)-0.5)*6.5; a[i*3+1] = 0.3 + R01(i+3)*5.1; a[i*3+2] = -3.2 + R01(i+9)*5.2; },
+      (a, i, t, dt) => { a[i*3+1] -= dt*(0.45 + (i%7)*0.04); if(a[i*3+1] < 0.32) a[i*3+1] = 5.4; });
+    // wafer pods (FOUPs) waiting by the cassette
+    const podM = std(0x2a3d5c, 0.35, 0.25, {transparent:true, opacity:0.85});
+    [[-2.75, 0, 0.75], [-2.75, 0.5, 0.75], [-2.1, 0, 1.55]].forEach(([x, y, z]) => {
+      add(root, rbox(0.5, 0.46, 0.5, 0.09), podM, x, TOP + 0.23 + y, z);
+      add(root, rbox(0.04, 0.3, 0.32, 0.01), MAT.amber, x + 0.26, TOP + 0.23 + y, z);
+      add(root, rbox(0.3, 0.05, 0.12, 0.02), MAT.dark, x, TOP + 0.49 + y, z);
+    });
+    const PH = [[1.2, 'APPROACH'], [2.4, 'PICK'], [3.2, 'RETRACT'], [4.8, 'TRANSFER'], [5.6, 'PLACE'], [99, 'RETURN']];
+    const panel = holo(root, 2.1, 1.4, -1.5, 3.0, 0.6);
+    return (t, dt) => {
+      flow.update(t, dt);
+      const n = Math.floor(t/api.T), u = t - n*api.T, phase = PH.find(p => u < p[0])[1];
+      panel.draw(t, (g, w, h) => {
+        holoFrame(g, w, h, 'WAFER CELL  RUN');
+        holoRow(g, 112, 'cassette slot', (n % api.NS + 1) + ' / ' + api.NS);
+        holoRow(g, 170, 'phase', phase);
+        holoRow(g, 228, 'cycle', u.toFixed(1) + ' / ' + api.T.toFixed(1) + ' s', u/api.T);
+        holoRow(g, 300, 'wafers placed', String(n));
+      });
+    };
+  }
+
+  function dressBlimp(root, api){
+    // drifting clouds
+    const cloudM = std(0xdbe5f7, 1.0, 0.0, {transparent:true, opacity:0.11, depthWrite:false, emissive:lin(0x2a3560)});
+    const puff = new THREE.SphereGeometry(1, 18, 12);
+    const clouds = new THREE.Group(); root.add(clouds);
+    for(let c=0;c<(mobile ? 5 : 9);c++){
+      const cg = new THREE.Group(), a = R01(c)*Math.PI*2, r = 6 + R01(c+5)*9;
+      cg.position.set(Math.cos(a)*r, 3.4 + R01(c+9)*4, Math.sin(a)*r - 2);
+      for(let k=0;k<6;k++){
+        const m = new THREE.Mesh(puff, cloudM);
+        const sc = 0.6 + R01(c*7+k)*0.9;
+        m.position.set((k - 2.5)*0.75, R01(c*3+k)*0.4, (R01(c*11+k)-0.5)*0.8);
+        m.scale.set(sc*1.3, sc*0.7, sc); cg.add(m);
+      }
+      cg.userData.ph = R01(c+30)*6; cg.userData.y0 = cg.position.y;
+      clouds.add(cg);
+    }
+    // stars, twinkling as a field
+    const stars = swarm(root, mobile ? 120 : 260, 0xdfe8ff, 0.14, 0.8,
+      (a, i) => { const th = R01(i)*Math.PI*2, ph = 0.15 + R01(i+3)*1.2, r = 40 + R01(i+6)*20;
+        a[i*3] = Math.cos(th)*Math.cos(ph)*r; a[i*3+1] = Math.sin(ph)*r*0.6 + 6; a[i*3+2] = Math.sin(th)*Math.cos(ph)*r - 20; });
+    // ground station with a live uplink to the gondola
+    const gs = new THREE.Group(); gs.position.set(-2.6, TOP, 1.9); root.add(gs);
+    add(gs, rbox(0.5, 0.12, 0.5, 0.03), MAT.dark, 0, 0.06, 0);
+    add(gs, cylY(0.035, 0.05, 1.7, 10), MAT.steel, 0, 0.95, 0);
+    const dish = add(gs, new THREE.SphereGeometry(0.32, 24, 12, 0, Math.PI*2, 0, Math.PI/2.6), std(0xd9dee6, 0.35, 0.4, {side:THREE.DoubleSide}), 0, 1.55, 0);
+    dish.rotation.x = Math.PI*0.62;
+    const bcn = glow(0xe5534b, 2.5);
+    add(gs, new THREE.SphereGeometry(0.045, 12, 8), bcn, 0, 1.85, 0, false);
+    const upG = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const up = new THREE.Line(upG, new THREE.LineDashedMaterial({color:lin(0x4fd8e8), dashSize:0.12, gapSize:0.09, transparent:true, opacity:0.6}));
+    up.frustumCulled = false; root.add(up);
+    const panel = holo(root, 2.1, 1.4, -2.6, 4.6, -1.2);
+    const PHASE = {seek:'CHASING BALLOON', carry:'CARRYING TO GOAL', shoot:'SCORING', respawn:'NEXT BALLOON'};
+    return (t) => {
+      panel.draw(t, (g, w, h) => {
+        holoFrame(g, w, h, 'CATCH AND SCORE');
+        holoRow(g, 112, 'state', PHASE[api.st.phase]);
+        holoRow(g, 170, 'target goal', api.goals[api.st.goal].shape.toUpperCase());
+        holoRow(g, 228, 'balloons scored', String(api.st.scored));
+      });
+      clouds.children.forEach(cg => { cg.position.y = cg.userData.y0 + Math.sin(t*0.2 + cg.userData.ph)*0.25; });
+      clouds.rotation.y = t*0.012;
+      stars.m.opacity = 0.65 + Math.sin(t*1.7)*0.15;
+      bcn.emissiveIntensity = Math.sin(t*3) > 0.6 ? 3 : 0.2;
+      dish.rotation.z = Math.sin(t*0.4)*0.3;
+      const ua = upG.attributes.position.array, b = api.bl.position;
+      ua[0] = -2.6; ua[1] = TOP + 1.85; ua[2] = 1.9; ua[3] = b.x; ua[4] = b.y - 0.95; ua[5] = b.z;
+      upG.attributes.position.needsUpdate = true; up.computeLineDistances();
+      up.material.opacity = 0.35 + Math.sin(t*2.2)*0.2;
+    };
+  }
+
+  function dressRover(root, api){
+    // warehouse racking around the yard
+    const box = std(0xa9825a, 0.85, 0.0), upr = std(0x2c62a6, 0.45, 0.5), beam = std(0xe08a3c, 0.45, 0.4);
+    [[-4.7, -1.4, 1.2], [-1.4, -4.9, 0.1], [2.6, -4.6, -0.5], [5.0, -1.2, -1.3]].forEach(([x, z, ry], k) => {
+      const rk = new THREE.Group(); rk.position.set(x, 0, z); rk.rotation.y = ry; root.add(rk);
+      [[-1.1, -0.35], [1.1, -0.35], [-1.1, 0.35], [1.1, 0.35]].forEach(([ux, uz]) => add(rk, new THREE.BoxGeometry(0.07, 2.4, 0.07), upr, ux, 1.2, uz));
+      [0.55, 1.25, 1.95].forEach((y, l) => {
+        [-0.35, 0.35].forEach(bz => add(rk, new THREE.BoxGeometry(2.27, 0.08, 0.05), beam, 0, y, bz));
+        add(rk, new THREE.BoxGeometry(2.2, 0.03, 0.7), MAT.steel, 0, y + 0.03, 0);
+        for(let b=0;b<3;b++){
+          if(R01(k*9 + l*3 + b) < 0.25) continue;
+          const sx = 0.45 + R01(b + l + k)*0.25, sy = 0.3 + R01(b*2 + l + k)*0.25;
+          add(rk, new THREE.BoxGeometry(sx, sy, 0.5), box, -0.7 + b*0.7, y + 0.05 + sy/2, 0);
+        }
+      });
+    });
+    // a pallet waiting to be put away
+    const pal = new THREE.Group(); pal.position.set(3.7, 0, 1.9); pal.rotation.y = 0.4; root.add(pal);
+    add(pal, new THREE.BoxGeometry(1.0, 0.12, 0.8), std(0x6e5638, 0.9, 0), 0, 0.06, 0);
+    [[-0.22, -0.18], [0.22, -0.18], [0, 0.2]].forEach(([x, z]) => add(pal, new THREE.BoxGeometry(0.42, 0.34, 0.36), box, x, 0.29, z));
+    add(pal, new THREE.BoxGeometry(0.4, 0.3, 0.34), box, 0, 0.61, -0.1);
+    // skylight shafts with dust turning in them
+    const shafts = [[-1.8, -1.6], [1.6, 0.8], [0.2, -3.6]].map(([x, z]) => shaft(root, x, z, 0.7, 1.3, 9, 0xbfd6ff, 0.06));
+    const dust = swarm(root, mobile ? 90 : 220, 0xe8f0ff, 0.05, 0.6,
+      (a, i) => { a[i*3] = (R01(i)-0.5)*8; a[i*3+1] = R01(i+2)*5; a[i*3+2] = (R01(i+4)-0.5)*8; },
+      (a, i, t, dt) => { a[i*3] += Math.sin(t*0.3 + i)*dt*0.08; a[i*3+1] += Math.cos(t*0.25 + i*0.7)*dt*0.05; a[i*3+2] += Math.sin(t*0.2 + i*1.3)*dt*0.06; });
+    // LiDAR returns: a spark wherever the scan fan actually crosses a post
+    const posts = [[2.5, 0.6], [-1.3, 2.35], [-2.2, -1.6]];
+    const sparks = posts.map(() => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex, color:lin(0xff6a55), transparent:true, opacity:0,
+        blending:THREE.AdditiveBlending, depthWrite:false}));
+      sp.scale.setScalar(0.35); root.add(sp); return sp;
+    });
+    const lp = new THREE.Vector3(), q = new THREE.Quaternion(), rq = new THREE.Quaternion(), fwd = new THREE.Vector3(), tmp = new THREE.Vector3();
+    return (t, dt) => {
+      dust.update(t, dt);
+      shafts.forEach((sh, i) => { sh.material.opacity = sh.userData.op*(0.75 + 0.25*Math.sin(t*0.5 + i*2)); });
+      root.updateWorldMatrix(true, true);
+      api.lidar.getWorldPosition(lp); root.worldToLocal(lp);
+      api.lidar.getWorldQuaternion(q);
+      root.getWorldQuaternion(rq).invert();
+      fwd.set(1, 0, 0).applyQuaternion(q).applyQuaternion(rq); fwd.y = 0; fwd.normalize();
+      posts.forEach(([x, z], i) => {
+        tmp.set(x - lp.x, 0, z - lp.z);
+        const d = tmp.length(); tmp.normalize();
+        const hit = d < 3.4 && tmp.dot(fwd) > Math.cos(0.18);
+        const sp = sparks[i];
+        sp.material.opacity = hit ? 1 : sp.material.opacity*Math.pow(0.02, dt);
+        if(hit) sp.position.set(x - tmp.x*0.08, lp.y, z - tmp.z*0.08);
+      });
+    };
+  }
+
+  function dressTB4(root, api){
+    // signal ripples spreading from the robot
+    const rings = [0, 1, 2].map(i => {
+      const m = add(root, new THREE.RingGeometry(0.97, 1, 72), new THREE.MeshBasicMaterial({color:lin(0x4fd8e8), transparent:true, opacity:0,
+        blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}), 0, TOP + 0.01, 0, false);
+      m.rotation.x = -Math.PI/2; m.userData.ph = i/3; return m;
+    });
+    // fireflies
+    const ff = swarm(root, mobile ? 30 : 70, 0xffc773, 0.09, 0.85,
+      (a, i) => { a[i*3] = (R01(i)-0.5)*7; a[i*3+1] = 0.5 + R01(i+1)*2.4; a[i*3+2] = (R01(i+2)-0.5)*7; },
+      (a, i, t, dt) => { a[i*3] += Math.sin(t*0.7 + i*1.9)*dt*0.25; a[i*3+1] += Math.cos(t*0.9 + i)*dt*0.12; a[i*3+2] += Math.cos(t*0.6 + i*2.3)*dt*0.25; });
+    // potted plants
+    const leafM = std(0x3f8f5a, 0.6, 0.05), potM = std(0x2a2f38, 0.6, 0.2);
+    [[2.25, -1.1, 1.0], [-2.35, 0.5, 0.8], [-1.6, -1.9, 0.6]].forEach(([x, z, sc], k) => {
+      const pg = new THREE.Group(); pg.position.set(x, TOP, z); pg.scale.setScalar(sc); root.add(pg);
+      add(pg, cylY(0.2, 0.15, 0.36, 24), potM, 0, 0.18, 0);
+      for(let l=0;l<9;l++){
+        const lf = add(pg, new THREE.SphereGeometry(0.16, 14, 8), leafM, 0, 0.5 + R01(k*9+l)*0.35, 0);
+        const a = l/9*Math.PI*2;
+        lf.position.x = Math.cos(a)*0.16; lf.position.z = Math.sin(a)*0.16; lf.scale.set(0.45, 1.3, 0.25); lf.rotation.set(Math.sin(a)*0.5, -a, Math.cos(a)*0.5);
+      }
+    });
+    return (t, dt) => {
+      ff.update(t, dt);
+      const b = api.bot.position;
+      rings.forEach(r => {
+        const ph = (t*0.35 + r.userData.ph) % 1;
+        r.position.set(b.x, TOP + 0.01, b.z); r.scale.setScalar(0.4 + ph*2.6);
+        r.material.opacity = (1 - ph)*0.45;
+      });
+      ff.m.opacity = 0.6 + Math.sin(t*2.3)*0.25;
+    };
   }
 
   /*  STAGES, pinned to real sections in document order  */
   const DEFS = [
-    {sel:'.hero',     build:buildArm,   cam:{az: 0.35, d:10.5, h:3.9, ly:1.55}, sky:[0x050a16, 0x0f2140], hemi:0xa8c8ff, label:'Six-axis arm · pick and place'},
-    {sel:'#research', build:buildFleet, cam:{az: 0.12, d:12.5, h:3.4, ly:1.9, fit:1.25}, sky:[0x02090f, 0x0a3440], hemi:0x6fe0ee, label:'AUV fleet · connectivity tree'},
-    {sel:'#work',     build:buildScara, cam:{az: 0.62, d:12.0, h:5.4, ly:1.0, sh:0.64}, sky:[0x090705, 0x2a1b0f], hemi:0xffcf9a, label:'SCARA · wafer transfer cell'},
+    {sel:'.hero',     build:buildArm,   dress:dressArm,   cam:{az: 0.35, d:10.5, h:3.9, ly:1.55}, sky:[0x050a16, 0x0f2140], hemi:0xa8c8ff, label:'Six-axis arm · pick and place'},
+    {sel:'#research', build:buildFleet, dress:dressFleet, cam:{az: 0.12, d:12.5, h:3.4, ly:1.9, fit:1.25}, sky:[0x020a12, 0x0b3a4c], hemi:0x9fe8f5, label:'AUV fleet under ice · connectivity tree'},
+    {sel:'#work',     build:buildScara, dress:dressScara, cam:{az: 0.62, d:12.0, h:5.4, ly:1.0, sh:0.64}, sky:[0x090705, 0x2a1b0f], hemi:0xffcf9a, label:'SCARA · wafer transfer cell'},
     // the blimp takes over from the SCARA at the Tube-MPC card (third in Featured Work)
-    {sel:'#work > .project:nth-of-type(3)', build:buildBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6}, sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · balloon tracking'},
-    {sel:'#projects', build:buildRover, cam:{az:-0.55, d:10.0, h:5.0, ly:1.1, sh:0.6, fit:1.22}, sky:[0x050912, 0x10203a], hemi:0xa8c8ff, label:'Rover and quadrotor · air-ground team'},
-    {sel:'#contact',  build:buildTB4,   cam:{az:-0.1,  d:10.5, h:4.2, ly:0.75, sh:0.55}, sky:[0x04070f, 0x0c1830], hemi:0xa8c8ff, label:'TurtleBot 4 · patrol'}
+    {sel:'#work > .project:nth-of-type(3)', build:buildBlimp, dress:dressBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6}, sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · catch and score'},
+    {sel:'#projects', build:buildRover, dress:dressRover, cam:{az:-0.55, d:10.0, h:5.0, ly:1.1, sh:0.6, fit:1.22}, sky:[0x050912, 0x10203a], hemi:0xa8c8ff, label:'Rover, quadrotor and flapping wing'},
+    {sel:'#contact',  build:buildTB4,   dress:dressTB4,   cam:{az:-0.1,  d:10.5, h:4.2, ly:0.75, sh:0.55}, sky:[0x04070f, 0x0c1830], hemi:0xa8c8ff, label:'TurtleBot 4 · patrol'}
   ];
   const stages = DEFS.filter(s => document.querySelector(s.sel));
   /* World layout zig-zags: each stage is one step deeper and one step
@@ -2214,6 +2721,7 @@
     s.root.userData.glows = [];
     scene.add(s.root);
     s.api = s.build(s.root);
+    s.fx = s.dress ? s.dress(s.root, s.api) : null;
     s.top = new THREE.Color(s.sky[0]); s.hor = new THREE.Color(s.sky[1]); s.hemiC = lin(s.hemi);
     s.az0 = s.cam.az;
   });
@@ -2233,7 +2741,7 @@
   }
   const dGeo = new THREE.BufferGeometry();
   dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
-  const dust = new THREE.Points(dGeo, new THREE.PointsMaterial({color:lin(0x5d8fcf), size:0.05, transparent:true, opacity:0.45, depthWrite:false}));
+  const dust = new THREE.Points(dGeo, new THREE.PointsMaterial({color:lin(0x5d8fcf), size:0.11, map:dotTex, transparent:true, opacity:0.5, depthWrite:false, blending:THREE.AdditiveBlending}));
   dust.frustumCulled = false;
   scene.add(dust);
 
@@ -2437,7 +2945,7 @@
     stageCam(stages[i], curPos, curLook);
     camera.position.copy(curPos); camera.lookAt(curLook);
     applyMood(i);
-    stages.forEach((s, j) => { if(stagePower(s, j, i)) s.api.update(2.0, 1/60); });
+    stages.forEach((s, j) => { if(stagePower(s, j, i)){ s.api.update(2.0, 1/60); if(s.fx) s.fx(2.0, 1/60); } });
     renderer.render(scene, camera);
   }
   if(reduced){
@@ -2505,7 +3013,7 @@
     for(let i=0;i<NST;i++){
       const s = stages[i];
       // first load: the hero machine powers up instead of popping in
-      if(stagePower(s, i, i === 0 ? fCur + (1 - smoothstep(intro))*0.9 : fCur)) s.api.update(t, dt);
+      if(stagePower(s, i, i === 0 ? fCur + (1 - smoothstep(intro))*0.9 : fCur)){ s.api.update(t, dt); if(s.fx) s.fx(t, dt); }
     }
     updateTags(fCur, dt);
     renderer.render(scene, camera);
