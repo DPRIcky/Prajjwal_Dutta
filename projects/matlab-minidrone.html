@@ -160,10 +160,15 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
   :root[data-theme="light"] .theme-btn .moon{display:block;}
   @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
+<style id="solid-stage-css">
+  /* solid stage: the machine is a watermark behind the text column, under a scrim */
+  .stage-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(var(--ink-rgb),0.62);}
+</style>
 </head>
 <body>
 
 <canvas id="dronescene"></canvas>
+<div class="stage-scrim"></div>
 <div class="vignette"></div>
 
 <nav>
@@ -365,231 +370,584 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* light theme for the wireframe background, without touching the scene code:
-   each renderer's render() is wrapped so every material it draws is re-inked, same hue
-   darkened to ink depth, glow switched to normal blending, fog turned cream.
-   Colours the scene changes itself (live highlights) are caught each frame.
-   Textured materials (canvas displays) are left alone. */
-(function(){
-  if(!window.THREE) return;
-  const seen = new WeakSet(), mats = [], scenes = [];
-  const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
-  let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
-  function ink(m){
-    const u = m.userData;
-    m.color.copy(u.tc0);
-    if(light){
-      m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
-      // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
-      // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
-      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*fade(m);
-      if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
-    } else {
-      if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
-      if(u.to0 !== undefined) m.opacity = u.to0;
-    }
-    u.tset = m.color.clone(); u.topset = m.opacity;
-  }
-  // the light fade for a base opacity: vertex-coloured grids and edges were built faint on navy, fade them hardest
-  const fade = m => m.vertexColors ? 0.22 : 0.4;
-  function scan(scene){
-    scene.traverse(o => {
-      const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-      list.forEach(m => {
-        if(seen.has(m) || !m.color || m.map) return;
-        if(!m.transparent){ m.transparent = true; m.needsUpdate = true; }
-        seen.add(m); m.userData.tc0 = m.color.clone(); m.userData.tb0 = m.blending; m.userData.to0 = m.opacity; mats.push(m); ink(m);
-      });
-    });
-  }
-  function fog(scene){
-    if(!scene.fog) return;
-    if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
-    scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
-  }
-  function hook(scene){
-    if(scene && scene.isScene){
-      if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
-      else if(++tick % 90 === 0) scan(scene);
-      if(light) for(let i=0;i<mats.length;i++){
-        const m = mats[i];
-        const u = m.userData;
-        if(!m.color.equals(u.tset)){ u.tc0.copy(m.color); ink(m); }
-        else if(m.opacity !== u.topset){ u.to0 = m.opacity; m.opacity = u.to0*fade(m); u.topset = m.opacity; }   // the scene animated its opacity
-      }
-    }
-  }
-  // r128 builds render() inside the constructor, per instance, so patching the
-  // prototype does nothing: wrap the constructor and hook each renderer's own render
-  const Base = THREE.WebGLRenderer;
-  THREE.WebGLRenderer = function(params){
-    const r = new Base(params), render = r.render;
-    r.render = function(scene, cam){ hook(scene); return render.call(this, scene, cam); };
-    return r;
-  };
-  THREE.WebGLRenderer.prototype = Base.prototype;
-  window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
-})();
-</script>
-<script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+<script id="solid-stage">
+(function(){
+  const CANVAS_ID = 'dronescene';
+  /*  SOLID STAGE, the project-page version of the home page's robot
+     stages: one lit plinth with a solid, articulated machine working on
+     it, built from three.js primitives (no model files, so the page
+     still runs from file://). Generated into each page by
+     tools/solid_stage.py from tools/stage/; edit the sources there and
+     re-run the script rather than editing a page's copy.  */
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = innerWidth < 700;
+  const canvas = document.getElementById(CANVAS_ID);
+  if(!canvas || !window.THREE) return;
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  /* Background: the competition task itself. A wireframe minidrone flies a closed red
-     track laid on the arena floor, and cyan probe rays fan out from its downward camera
-     and stop where they cross the line, which is the ray-cast the waypoint stage does. */
-  const canvas=document.getElementById('dronescene');
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  renderer.setSize(innerWidth,innerHeight);
-  const scene=new THREE.Scene();
-  scene.fog=new THREE.FogExp2(0x060a14,0.045);
-  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
-  camera.position.set(0,7,15);
-  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
-  const mobile=innerWidth<700;
-  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(mobile ? 46 : 36, innerWidth/innerHeight, 0.1, 420);
 
-  const grid=new THREE.GridHelper(90,56,0x1c3a66,0x11223f);
-  grid.position.y=-0.02; grid.material.transparent=true; grid.material.opacity=0.42;
-  scene.add(grid);
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const smoothstep = x => x*x*(3-2*x);
+  const ss = (u, a, b) => smoothstep(clamp01((u-a)/(b-a)));
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const angLerp = (a, b, k) => {
+    let d = (b - a) % (Math.PI*2);
+    if(d >  Math.PI) d -= Math.PI*2;
+    if(d < -Math.PI) d += Math.PI*2;
+    return a + d*k;
+  };
+  const R01 = i => { const x = Math.sin(i*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };   // stable hash
 
-  /* everything for the task sits in a rig offset to one side so it frames the copy
-     instead of sitting behind it */
-  const rig=new THREE.Group();
-  rig.position.set(mobile?0.5:5.4,-0.8,mobile?-5:-1.5);
-  rig.scale.setScalar(mobile?0.46:0.62);
-  rig.rotation.y=-0.18;
-  scene.add(rig);
+  /*  MATERIALS: three r128 treats hex as linear, so every authored
+     colour is converted from sRGB first or the palette washes out.  */
+  const lin  = h => new THREE.Color(h).convertSRGBToLinear();
+  const std  = (c, r, m, o) => new THREE.MeshStandardMaterial(Object.assign({color:lin(c), roughness:r, metalness:m}, o||{}));
+  const glow = (c, k) => new THREE.MeshStandardMaterial({color:0x000000, emissive:lin(c), emissiveIntensity:k||1.6, roughness:0.4});
+  const MAT = {
+    shell:  std(0xe2e7ee, 0.34, 0.05),
+    alu:    std(0xb2bcc9, 0.28, 0.9),
+    steel:  std(0x76818f, 0.32, 0.85),
+    dark:   std(0x1c2433, 0.5, 0.55),
+    carbon: std(0x12161e, 0.42, 0.35),
+    rubber: std(0x0b0d12, 0.9, 0.0),
+    cap:    std(0x3f87c6, 0.36, 0.3),
+    amber:  std(0xf5a35c, 0.42, 0.12),
+    red:    std(0xc94a3a, 0.5, 0.2),
+    green:  std(0x4cc35d, 0.4, 0.1),
+    glass:  std(0x0a1a24, 0.08, 0.9),
+    cyanG:  glow(0x4fd8e8, 2.4),
+    amberG: glow(0xf5a35c, 2.0),
+    redG:   glow(0xe5534b, 2.2),
+    greenG: glow(0x3fd17a, 2.0),
+    plinth: std(0x0c1424, 0.42, 0.8),
+    plTop:  std(0x0d1522, 0.78, 0.35)
+  };
 
-  /* the track: an irregular closed loop, like the painted arena course */
-  const PTS=[[0,0],[5.2,1.1],[8.4,4.3],[7.9,8.2],[4.2,10.4],[-0.6,9.9],[-4.4,7.6],[-6.9,3.9],[-5.8,0.2],[-2.6,-1.4]];
-  const curve=new THREE.CatmullRomCurve3(PTS.map(p=>new THREE.Vector3(p[0],0,p[1])),true,'catmullrom',0.5);
-  const SEG=mobile?160:260;
-  const tp=curve.getPoints(SEG);
-  const track=new THREE.Line(new THREE.BufferGeometry().setFromPoints(tp),
-    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.8}));
-  rig.add(track);
-  /* a second, offset copy reads as the painted width of the line */
-  const track2=new THREE.Line(new THREE.BufferGeometry().setFromPoints(tp.map(p=>new THREE.Vector3(p.x,0.012,p.z))),
-    new THREE.LineBasicMaterial({color:AMBER,transparent:true,opacity:0.32}));
-  track2.scale.set(1.012,1,1.012); rig.add(track2);
+  /*  GEOMETRY HELPERS  */
+  function add(parent, geo, mat, x, y, z, shadow){
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x||0, y||0, z||0);
+    if(shadow !== false && renderer.shadowMap.enabled){ m.castShadow = true; m.receiveShadow = true; }
+    parent.add(m);
+    return m;
+  }
+  const grp = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x||0, y||0, z||0); parent.add(g); return g; };
+  const cylY = (r1, r2, h, s) => new THREE.CylinderGeometry(r1, r2, h, s||32);
+  function cylX(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateZ(Math.PI/2); return g; }
+  function cylZ(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateX(Math.PI/2); return g; }
+  /* rounded box: a rounded-rect outline, extruded with a bevel of half the radius */
+  function rbox(w, h, d, r){
+    r = Math.min(r, w/2, h/2, d/2) * 0.98;
+    const b = r*0.5, sw = w-2*b, sh = h-2*b, cr = Math.max(r-b, 0.0005);
+    const x0 = -sw/2, y0 = -sh/2, s = new THREE.Shape();
+    s.moveTo(x0+cr, y0); s.lineTo(x0+sw-cr, y0); s.quadraticCurveTo(x0+sw, y0, x0+sw, y0+cr);
+    s.lineTo(x0+sw, y0+sh-cr); s.quadraticCurveTo(x0+sw, y0+sh, x0+sw-cr, y0+sh);
+    s.lineTo(x0+cr, y0+sh); s.quadraticCurveTo(x0, y0+sh, x0, y0+sh-cr);
+    s.lineTo(x0, y0+cr); s.quadraticCurveTo(x0, y0, x0+cr, y0);
+    const g = new THREE.ExtrudeGeometry(s, {depth:Math.max(d-2*b, 0.0005), bevelEnabled:true,
+      bevelThickness:b, bevelSize:b, bevelSegments:3, curveSegments:5, steps:1});
+    g.center();
+    return g;
+  }
+  function canvasTex(w, h, draw){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = 4;
+    return t;
+  }
+  /* a solid rod between two points: a unit cylinder along y, stretched and aimed */
+  const UP = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3();
+  function rod(parent, r, mat, shadow){
+    const m = add(parent, cylY(r, r, 1, 10), mat, 0, 0, 0, shadow);
+    m.userData.set = (a, b) => {
+      _d.subVectors(b, a); const L = _d.length();
+      m.visible = L > 1e-4;
+      if(!m.visible) return;
+      m.position.copy(a).addScaledVector(_d, 0.5);
+      m.scale.set(1, L, 1);
+      m.quaternion.setFromUnitVectors(UP, _d.multiplyScalar(1/L));
+    };
+    return m;
+  }
 
-  /* landing circle at the end of the course */
-  const landing=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.05,6,28),wire(AMBER));
-  landing.rotation.x=Math.PI/2; landing.position.copy(curve.getPointAt(0)); landing.position.y=0.02;
-  rig.add(landing);
-  const landFill=new THREE.Mesh(new THREE.CircleGeometry(0.72,24),
-    new THREE.MeshBasicMaterial({color:AMBER,transparent:true,opacity:0.16,side:THREE.DoubleSide}));
-  landFill.rotation.x=-Math.PI/2; landFill.position.copy(landing.position); landFill.position.y=0.015;
-  rig.add(landFill);
+  /*  ENVIRONMENT: a small studio rendered once into a PMREM so the
+     metals have something to reflect: a white softbox overhead and a
+     cyan and an amber strip, the site's two accents.  */
+  (function(){
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24),
+      new THREE.MeshBasicMaterial({color:lin(0x0c1628), side:THREE.BackSide})));
+    const panel = (w, h, col, k, x, y, z, rx, ry) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({color:lin(col).multiplyScalar(k), side:THREE.DoubleSide}));
+      m.position.set(x, y, z); m.rotation.set(rx||0, ry||0, 0); env.add(m);
+    };
+    panel(10, 6, 0xffffff, 3.0, 0, 5.9, 0, Math.PI/2, 0);
+    panel(1.4, 8, 0x4fd8e8, 4.0, -11.9, 1, -2, 0, Math.PI/2);
+    panel(1.4, 8, 0xf5a35c, 3.0, 11.9, 1, 3, 0, -Math.PI/2);
+    panel(14, 2.2, 0x9fbfe6, 1.4, 0, 2, -11.9, 0, 0);
+    scene.environment = pm.fromScene(env, 0.035).texture;
+    pm.dispose();
+  })();
 
-  /* the minidrone */
-  const drone=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.17,0.62),wire(DEEPBLUE));
-  drone.add(body);
-  const rotors=[];
-  [[0.46,0.46],[-0.46,0.46],[0.46,-0.46],[-0.46,-0.46]].forEach(o=>{
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.04,0.06),wire(DEEPBLUE));
-    arm.position.set(o[0]*0.6,0,o[1]*0.6); drone.add(arm);
-    const r=new THREE.Mesh(new THREE.TorusGeometry(0.26,0.02,5,16),wire(CYAN));
-    r.rotation.x=Math.PI/2; r.position.set(o[0],0.09,o[1]);
-    drone.add(r); rotors.push(r);
+  /*  SKY DOME + FOG share one horizon colour so the floor melts into
+     the sky. In r128 fog is mixed in after tone mapping, so both live
+     in display space: raw hex, no linear conversion, no tone map.  */
+  const skyU = {top:{value:new THREE.Color()}, hor:{value:new THREE.Color()}};
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+    uniforms:skyU, side:THREE.BackSide, depthWrite:false, fog:false,
+    vertexShader:'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:'uniform vec3 top; uniform vec3 hor; varying vec3 vP; void main(){ gl_FragColor = vec4(mix(hor, top, smoothstep(0.0, 0.5, vP.y)), 1.0); }'
+  }));
+  sky.frustumCulled = false; sky.renderOrder = -1;
+  scene.add(sky);
+  scene.fog = new THREE.Fog(0x000000, 16, 60);
+
+  const ground = add(scene, new THREE.PlaneGeometry(900, 900), std(0x060a13, 0.92, 0.2), 0, 0, 0);
+  ground.rotation.x = -Math.PI/2; ground.castShadow = false;
+  const grid = new THREE.GridHelper(400, 200, 0x1c3a66, 0x13243e);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
+  grid.position.y = 0.003; scene.add(grid);
+  const gridL = new THREE.GridHelper(400, 200, 0x9c8458, 0xc1aa80);
+  gridL.material.transparent = true; gridL.material.opacity = 0.35; gridL.material.depthWrite = false;
+  gridL.position.y = 0.003; gridL.visible = false; scene.add(gridL);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 2.3);
+  key.castShadow = renderer.shadowMap.enabled;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(lin(0x4fd8e8), 1.6);
+  scene.add(rim, rim.target);
+  const fill = new THREE.DirectionalLight(lin(0xf5a35c), 0.55);
+  scene.add(fill, fill.target);
+
+  const GLOWS = [];   // emissive materials that power up on load
+  /* the plinth every machine stands on; its rings are the "power" lights */
+  function plinth(root, R){
+    add(root, cylY(R, R+0.14, 0.3, 80), MAT.plinth, 0, 0.15, 0);
+    add(root, cylY(R-0.1, R-0.1, 0.02, 80), MAT.plTop, 0, 0.305, 0);
+    const ringM = glow(0x4fd8e8, 2.2);
+    const ring = add(root, new THREE.TorusGeometry(R+0.005, 0.024, 8, 160), ringM, 0, 0.3, 0, false);
+    ring.rotation.x = Math.PI/2;
+    const innerM = glow(0xf5a35c, 0.7);
+    const inner = add(root, new THREE.RingGeometry(R*0.64, R*0.64+0.018, 120), innerM, 0, 0.318, 0, false);
+    inner.rotation.x = -Math.PI/2;
+    GLOWS.push({m:ringM, k:2.2}, {m:innerM, k:0.7});
+  }
+  const TOP = 0.315;   // plinth deck height
+
+  /*  FX TOOLKIT: a soft glow sprite so particles read as light, particle
+     swarms with a per-point step, light shafts that fade toward the
+     floor, and holographic readout panels that print live state.  */
+  const PARTS = [], HOLOS = [], SHAFTS = [];   // re-tinted when the page theme flips
+  let LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const HC = () => LIGHT
+    ? {bg:'rgba(248,239,220,0.8)', edge:'rgba(10,106,116,0.85)', title:'#974607', rule:'rgba(10,106,116,0.4)', label:'#2e2416', val:'#0a6a74', track:'rgba(10,106,116,0.16)', bar:'rgba(10,106,116,0.85)', amb:'#974607'}
+    : {bg:'rgba(79,216,232,0.1)', edge:'rgba(79,216,232,0.8)', title:'#f5a35c', rule:'rgba(79,216,232,0.45)', label:'rgba(235,242,250,0.95)', val:'#4fd8e8', track:'rgba(79,216,232,0.18)', bar:'rgba(79,216,232,0.85)', amb:'#f5a35c'};
+  const dotTex = canvasTex(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64);
   });
-  /* downward camera cone */
-  const cam=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.2,6),wire(AMBER));
-  cam.position.y=-0.16; drone.add(cam);
-  drone.position.y=2.1;
-  drone.scale.setScalar(mobile?0.85:1.15);
-  rig.add(drone);
-
-  /* the 120 x 160 camera footprint projected on the floor */
-  const FW=2.4,FH=1.8;
-  const footGeo=new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-FW/2,0,-FH/2),new THREE.Vector3(FW/2,0,-FH/2),
-    new THREE.Vector3(FW/2,0,FH/2),new THREE.Vector3(-FW/2,0,FH/2),new THREE.Vector3(-FW/2,0,-FH/2)]);
-  const foot=new THREE.Line(footGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3}));
-  foot.position.y=0.03; rig.add(foot);
-
-  /* probe rays: cast from the frame centre outward, stopping where they meet the track */
-  const NRAY=mobile?5:9;
-  const rayPos=new Float32Array(NRAY*6);
-  const rayGeo=new THREE.BufferGeometry();
-  rayGeo.setAttribute('position',new THREE.BufferAttribute(rayPos,3));
-  const rays=new THREE.LineSegments(rayGeo,new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.5}));
-  rig.add(rays);
-  /* a hit marker per ray, sitting where it stopped */
-  const hits=[];
-  for(let i=0;i<NRAY;i++){
-    const h=new THREE.Mesh(new THREE.SphereGeometry(0.07,6,5),
-      new THREE.MeshBasicMaterial({color:AMBER,transparent:true,opacity:0.8}));
-    rig.add(h); hits.push(h);
+  function swarm(root, n, col, size, op, init, step){
+    const a = new Float32Array(n*3);
+    for(let i=0;i<n;i++) init(a, i);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
+      depthWrite:false, blending:THREE.AdditiveBlending});
+    const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    PARTS.push({m, c:m.color.clone()});
+    return {m, a, geo, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
   }
-
-  /* distance from a floor point to the track, sampled once into a lookup */
-  const SAMP=[]; for(let i=0;i<=240;i++){const p=curve.getPointAt(i/240);SAMP.push(p);}
-  function distToTrack(x,z){
-    let best=1e9;
-    for(let i=0;i<SAMP.length;i++){
-      const dx=SAMP[i].x-x,dz=SAMP[i].z-z;const d=dx*dx+dz*dz;
-      if(d<best)best=d;
+  /* a sprite that glows: additive in the dark theme, ink in the light one */
+  function spark(root, col, size){
+    const m = new THREE.SpriteMaterial({map:dotTex, color:lin(col), transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+    const sp = new THREE.Sprite(m); sp.scale.setScalar(size); root.add(sp);
+    PARTS.push({m, c:m.color.clone()});
+    return sp;
+  }
+  const shaftTex = canvasTex(4, 128, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  function shaft(root, x, z, rTop, rBot, h, col, op){
+    const m = new THREE.MeshBasicMaterial({color:lin(col), map:shaftTex, transparent:true, opacity:op,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
+    sh.position.set(x, h/2, z); root.add(sh);
+    sh.userData.op = sh.userData.op0 = op;
+    SHAFTS.push(sh);
+    return sh;
+  }
+  /* a line set the scene rewrites every frame (beams, links, rays) */
+  function lines(root, maxSeg, col, op, dashed){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSeg*6), 3));
+    const m = new THREE.LineBasicMaterial({color:lin(col), transparent:true, opacity:op, depthWrite:false});
+    const l = new THREE.LineSegments(geo, m); l.frustumCulled = false; root.add(l);
+    PARTS.push({m, c:m.color.clone()});
+    let n = 0;
+    const arr = geo.attributes.position.array;
+    return {l, m,
+      reset(){ n = 0; },
+      seg(a, b){ if(n >= maxSeg) return; const o = n*6; arr[o]=a.x; arr[o+1]=a.y; arr[o+2]=a.z; arr[o+3]=b.x; arr[o+4]=b.y; arr[o+5]=b.z; n++; },
+      done(){ geo.setDrawRange(0, n*2); geo.attributes.position.needsUpdate = true; }};
+  }
+  function holo(root, w, h, x, y, z){
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512*h/w);
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:tex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
+    mesh.position.set(x, y, z); root.add(mesh);
+    let last = -1;
+    HOLOS.push({m:mesh.material, mesh, reset:() => { last = -1; }});
+    const wp = new THREE.Vector3();
+    return {mesh, draw(t, fn){
+      mesh.lookAt(camera.position);
+      mesh.position.y = y + Math.sin(t*0.8)*0.04;
+      if(last >= 0 && t - last < 0.15) return;
+      last = t; g.clearRect(0, 0, c.width, c.height); fn(g, c.width, c.height); tex.needsUpdate = true;
+    }};
+  }
+  function holoFrame(g, w, h, title){
+    const P = HC();
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = P.edge; g.lineWidth = 3;
+    const k = 26;
+    [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
+    });
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = P.title; g.fillText(title, 26, 48);
+    g.fillStyle = P.rule; g.fillRect(26, 62, w - 52, 2);
+    g.font = '400 26px "IBM Plex Mono", monospace';
+  }
+  function holoRow(g, y, label, val, frac){
+    const P = HC();
+    g.fillStyle = P.label; g.fillText(label, 26, y);
+    g.fillStyle = P.val; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    if(frac !== undefined){
+      g.fillStyle = P.track; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = P.bar; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
     }
-    return Math.sqrt(best);
+  }
+  const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
+  const sgn = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d);
+
+  /*  QUADROTOR model + flight: banks into its acceleration, so any path
+     it is handed reads as flown rather than slid.  */
+  function makeQuad(parent, o){
+    o = Object.assign({k:1.25, shell:MAT.shell, frame:MAT.carbon}, o||{});
+    const d = new THREE.Group(); parent.add(d);
+    const body = new THREE.Group(); d.add(body);
+    body.scale.setScalar(o.k);
+    add(body, rbox(0.62, 0.15, 0.42, 0.06), o.frame);
+    add(body, rbox(0.46, 0.1, 0.32, 0.05), o.shell, -0.02, 0.1, 0);
+    add(body, rbox(0.03, 0.02, 0.22, 0.008), MAT.cyanG, 0.31, 0.02, 0, false);
+    add(body, rbox(0.24, 0.07, 0.2, 0.02), MAT.amber, -0.1, -0.1, 0);       // battery
+    const gimbal = add(body, new THREE.SphereGeometry(0.075, 24, 16), MAT.dark, 0.26, -0.1, 0);
+    add(body, cylX(0.035, 0.04, 20), MAT.glass, 0.33, -0.1, 0);
+    const props = [];
+    const blur = new THREE.MeshBasicMaterial({color:0xcfe6ff, transparent:true, opacity:0.07, depthWrite:false, side:THREE.DoubleSide});
+    [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx, sz], i) => {
+      const L = 0.8, mx = sx*L*0.7071, mz = sz*L*0.7071;
+      const a = add(body, cylX(0.03, L, 12), o.frame, mx/2, 0, mz/2);
+      a.rotation.y = -Math.atan2(sz, sx);
+      add(body, cylY(0.07, 0.08, 0.11, 28), MAT.alu, mx, 0.05, mz);
+      add(body, cylY(0.025, 0.025, 0.05, 12), MAT.steel, mx, 0.125, mz);
+      add(body, new THREE.SphereGeometry(0.025, 12, 8), sx > 0 ? MAT.cyanG : MAT.amberG, mx, -0.02, mz, false);
+      add(body, cylY(0.012, 0.012, 0.2, 8), o.frame, mx*0.82, -0.1, mz*0.82);
+      const p = new THREE.Group(); p.position.set(mx, 0.155, mz); body.add(p);
+      const bl = add(p, rbox(0.6, 0.012, 0.055, 0.005), MAT.dark); bl.rotation.x = 0.12;
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.31, 40), blur);
+      disc.rotation.x = -Math.PI/2; p.add(disc);
+      p.userData.dir = (i === 0 || i === 3) ? 1 : -1;
+      props.push(p);
+    });
+    return {d, body, props, gimbal, px:0, pz:0, vx:0, vz:0, ax:0, az:0, init:false};
+  }
+  /* Velocity and acceleration are finite differences, which turn any
+     unevenness in frame time into noise; both are low-passed, and the
+     tilt itself is eased, so the body banks smoothly instead of twitching. */
+  function flyQuad(q, x, y, z, yaw, dt, spin){
+    if(!q.init || dt <= 0){ q.px = x; q.pz = z; q.init = true; }
+    const h = Math.max(dt, 1/240);
+    const kf = damp(0.08, h);
+    const rvx = (x - q.px)/h, rvz = (z - q.pz)/h;
+    const nvx = q.vx + (rvx - q.vx)*kf, nvz = q.vz + (rvz - q.vz)*kf;
+    q.ax += ((nvx - q.vx)/h - q.ax)*kf;
+    q.az += ((nvz - q.vz)/h - q.az)*kf;
+    const ax = q.ax, az = q.az;
+    q.px = x; q.pz = z; q.vx = nvx; q.vz = nvz;
+    q.d.position.set(x, y, z);
+    q.d.rotation.y = yaw;
+    const c = Math.cos(yaw), sn = Math.sin(yaw);
+    const fx = c*(ax*0.12 + nvx*0.08) - sn*(az*0.12 + nvz*0.08), fz = sn*(ax*0.12 + nvx*0.08) + c*(az*0.12 + nvz*0.08);
+    const kt = damp(0.06, h);
+    q.body.rotation.z += (-Math.max(-0.3, Math.min(0.3, fx)) - q.body.rotation.z)*kt;
+    q.body.rotation.x += ( Math.max(-0.3, Math.min(0.3, fz)) - q.body.rotation.x)*kt;
+    const sp = spin === undefined ? 0.9 : spin;
+    q.props.forEach(p => { p.rotation.y += p.userData.dir * sp; });
+    q.gimbal.rotation.y = -yaw*0.5;
   }
 
-  let target=0,smooth=0,mx=0;
-  addEventListener('scroll',()=>{target=scrollY;},{passive:true});
-  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
-  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+// parts: quad
+  /*  MINIDRONE LINE FOLLOWING (simulation): a Parrot Mambo class minidrone
+     flies a painted red line course and lands on the circle at its end.
+     Its downward camera frame (120 x 160) is projected on the floor, and
+     the probe rays are cast from the frame centre outward, each stopping
+     where it first meets the line, the Bresenham ray cast the team's
+     waypoint code used to find the next stretch of track.  */
+  const STAGE = {
+    sky:[0x050a16, 0x0f2140], skyL:[0xc4ad84, 0xe6d6b4], hemi:0xa8c8ff,
+    cam:{az:0.35, d:11.0, h:6.4, ly:0.6},
+    build(root){
+      plinth(root, 4.1);
+      const K = 0.36, OX = -0.75, OZ = -4.5, Y = TOP + 0.01;
+      add(root, rbox(6.0, 0.02, 4.7, 0.05), std(0x3a404c, 0.85, 0.05), 0, TOP + 0.01, 0);
+      const PTS = [[0,0],[5.2,1.1],[8.4,4.3],[7.9,8.2],[4.2,10.4],[-0.6,9.9],[-4.4,7.6],[-6.9,3.9],[-5.8,0.2],[-2.6,-1.4]];
+      const curve = new THREE.CatmullRomCurve3(PTS.map(p => new THREE.Vector3((p[0] + OX)*K, 0, (p[1] + OZ)*K)), true, 'catmullrom', 0.5);
+      // painted line: a flat red ribbon
+      const N = 260, W = 0.06, rp = [], ri = [];
+      for(let i=0;i<=N;i++){
+        const u = (i/N) % 1, p = curve.getPointAt(u), tg = curve.getTangentAt(u);
+        rp.push(p.x - tg.z*W, Y + 0.012, p.z + tg.x*W, p.x + tg.z*W, Y + 0.012, p.z - tg.x*W);
+        if(i < N) ri.push(i*2, i*2+1, i*2+2, i*2+1, i*2+3, i*2+2);
+      }
+      const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3)); rg.setIndex(ri); rg.computeVertexNormals();
+      add(root, rg, std(0xd8382c, 0.6, 0.05, {side:THREE.DoubleSide, emissive:lin(0x5a0e08), emissiveIntensity:0.6}), 0, 0, 0, false);
+      const L0 = curve.getPointAt(0);
+      const land = add(root, new THREE.RingGeometry(0.3, 0.36, 48), std(0xd8382c, 0.6, 0.05, {side:THREE.DoubleSide}), L0.x, Y + 0.014, L0.z, false); land.rotation.x = -Math.PI/2;
+      const landG = add(root, new THREE.RingGeometry(0.38, 0.4, 48), MAT.amberG, L0.x, Y + 0.014, L0.z, false); landG.rotation.x = -Math.PI/2;
+      // arena: corner posts with a net line
+      [[-2.95, -2.3], [2.95, -2.3], [2.95, 2.3], [-2.95, 2.3]].forEach(([x, z]) => add(root, cylY(0.03, 0.03, 2.4, 10), MAT.steel, x, TOP + 1.2, z));
+      // the minidrone: small white quad with a downward camera
+      const q = makeQuad(root, {k:0.55});
+      const camPt = new THREE.Object3D(); camPt.position.set(0, -0.1, 0); q.body.add(camPt);
+      // camera footprint (4:3, the 120 x 160 frame), probe rays and their hit marks
+      const FW = 1.0, FH = 0.75;
+      const foot = lines(root, 8, 0x4fd8e8, 0.6), cone = lines(root, 4, 0x4fd8e8, 0.2);
+      const NR = mobile ? 5 : 9;
+      const rays = lines(root, NR, 0x4fd8e8, 0.8);
+      const hits = swarm(root, NR, 0xf5a35c, 0.1, 1, (a, i) => { a[i*3+1] = -10; });
+      const SAMP = []; for(let i=0;i<=240;i++) SAMP.push(curve.getPointAt(i/240));
+      const distTo = (x, z) => { let b = 1e9; for(const p of SAMP){ const dx = p.x - x, dz = p.z - z, d = dx*dx + dz*dz; if(d < b) b = d; } return Math.sqrt(b); };
+      const panel = holo(root, 2.0, 1.3, -1.6, 3.9, -2.4);
+      const dp = new THREE.Vector3(), ah = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+      let found = 0, lap = 0;
+      function update(t, dt){
+        const u = (t*0.022) % 1;
+        lap = u;
+        curve.getPointAt(u, dp); curve.getPointAt((u + 0.01) % 1, ah);
+        const yaw = Math.atan2(-(ah.z - dp.z), ah.x - dp.x);
+        // descends into the landing circle as the lap closes, then lifts off again
+        const alt = TOP + 0.5 + 0.55*Math.min(ss(u, 0, 0.06), 1 - ss(u, 0.93, 1));
+        flyQuad(q, dp.x, alt + Math.sin(t*0.9)*0.03, dp.z, yaw, dt, 1.2);
+        const fx = Math.cos(yaw), fz = -Math.sin(yaw);
+        const corner = (sx, sz, out) => out.set(dp.x + fx*sx*FH/2 - fz*sz*FW/2, Y + 0.02, dp.z + fz*sx*FH/2 + fx*sz*FW/2);
+        foot.reset(); cone.reset();
+        root.updateMatrixWorld(true);
+        const cw = camPt.getWorldPosition(new THREE.Vector3()); root.worldToLocal(cw);
+        [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sz], i, A) => { corner(sx, sz, a); corner(A[(i+1)%4][0], A[(i+1)%4][1], b); foot.seg(a, b); cone.seg(cw, a); });
+        foot.done(); cone.done();
+        rays.reset(); found = 0;
+        for(let i=0;i<NR;i++){
+          const ang = yaw + (i/(NR - 1) - 0.5)*Math.PI*1.35, sx = Math.cos(ang), sz = -Math.sin(ang);
+          let d = 0.06;
+          for(; d < 1.35; d += 0.035) if(distTo(dp.x + sx*d, dp.z + sz*d) < 0.07) break;
+          a.set(dp.x, Y + 0.03, dp.z); b.set(dp.x + sx*d, Y + 0.03, dp.z + sz*d); rays.seg(a, b);
+          const hit = d < 1.35; if(hit) found++;
+          hits.a[i*3] = b.x; hits.a[i*3+1] = hit ? Y + 0.04 : -10; hits.a[i*3+2] = b.z;
+        }
+        rays.done(); hits.geo.attributes.position.needsUpdate = true;
+        landG.material.emissiveIntensity = 1 + Math.sin(t*2)*0.6;
+        panel.draw(t, (g, w, h) => {
+          holoFrame(g, w, h, 'LINE FOLLOW  SIMULINK');
+          holoRow(g, 112, 'camera frame', '120 x 160');
+          holoRow(g, 170, 'probe rays on line', found + ' / ' + NR, found/NR);
+          holoRow(g, 228, 'course', Math.round(lap*100) + ' %', lap);
+          holoRow(g, 286, 'phase', lap > 0.93 || lap < 0.06 ? 'LANDING CIRCLE' : 'FOLLOWING LINE');
+        });
+      }
+      return {update};
+    }
+  };
 
-  const clock=new THREE.Clock();
-  const dp=new THREE.Vector3(),ahead=new THREE.Vector3();
+  /*  BUILD the page's stage  */
+  const root = new THREE.Group(); scene.add(root);
+  root.userData.glows = GLOWS;   // the home-page builders register their glows here
+  const api = STAGE.build(root) || {};
+  const C = Object.assign({az:0.4, d:10.5, h:3.8, ly:1.4, fit:1.2, rise:1.2}, STAGE.cam || {});
+  const SH = STAGE.shadow || 7.5;
+  key.shadow.camera.left = key.shadow.camera.bottom = -SH;
+  key.shadow.camera.right = key.shadow.camera.top = SH;
+  key.shadow.camera.far = 30 + SH*2;
+  key.position.set(5, 12, 7); rim.position.set(-6, 5, -8); fill.position.set(8, 2.5, -2);
+  const fogK = C.d/10.5;
+  scene.fog.near = 16*fogK; scene.fog.far = 60*fogK*(STAGE.fogFar || 1);
+  if(STAGE.noGround){ ground.visible = false; }
+  const skyD = [new THREE.Color(STAGE.sky[0]), new THREE.Color(STAGE.sky[1])];
+  const skyLt = [new THREE.Color(STAGE.skyL[0]), new THREE.Color(STAGE.skyL[1])];
+  const hemiC = lin(STAGE.hemi || 0xa8c8ff), WARM_SKY = lin(0xffd394);
+
+  /*  CAMERA RIG: the machine is a backdrop, not the subject. It sits
+     centred behind the page's text column under a scrim, like a
+     watermark, and the camera swings slowly round it as you read (a crane
+     orbit driven by scroll progress, a full 360 degrees from the top of
+     the page to the bottom). The holo readouts are not shown:
+     text behind body copy would only be noise.  */
+  HOLOS.forEach(h => { h.mesh.visible = false; });
+  const wide = () => camera.aspect > 1.05;
+  const pos = new THREE.Vector3(), look = new THREE.Vector3();
+  function stageCam(p){
+    const w = wide();
+    const d = C.d*(w ? 1.15*C.fit : 1.55);
+    const az = C.az + p*Math.PI*2;               // one full turn round the machine over the page
+    pos.set(Math.sin(az)*d, C.h*(w ? 1 : 1.25) + (0.5 - p)*C.rise, Math.cos(az)*d);
+    look.set(0, C.ly + (w ? 0 : 1.1), 0);
+  }
+
+  let scrollP = 0;
+  function readScroll(){
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    scrollP = clamp01(window.scrollY/max);
+  }
+  addEventListener('scroll', readScroll, {passive:true});
+  readScroll();
+
+  let ptrNX = 0, ptrNY = 0, smNX = 0, smNY = 0;
+  addEventListener('pointermove', e => {
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // no parallax lurch on touch
+    ptrNX = e.clientX/innerWidth - 0.5; ptrNY = e.clientY/innerHeight - 0.5;
+  }, {passive:true});
+  addEventListener('pointerleave', () => { ptrNX = ptrNY = 0; }, {passive:true});
+
+  /*  THEME: the same stage lit for a light page. Warm lamp skies and
+     floor, more fill; additive glow vanishes on a bright sky, so
+     particles switch to normal blending with deeper tints and the holo
+     panels redraw as dark text on frosted glass.  */
+  const groundM = ground.material, darkGround = groundM.color.clone();
+  const plD = MAT.plinth.color.clone(), plTD = MAT.plTop.color.clone();
+  function applyTheme(light){
+    LIGHT = light;
+    renderer.toneMappingExposure = light ? 0.78 : 0.82;
+    hemi.intensity = light ? 0.75 : 0.38;
+    hemi.groundColor.copy(light ? lin(0x8f7550) : lin(0x05080f));
+    hemi.color.copy(hemiC); if(light) hemi.color.lerp(WARM_SKY, 0.65);
+    key.color.copy(light ? lin(0xffd59a) : new THREE.Color(0xffffff));
+    key.intensity = light ? 2.0 : 2.3;
+    groundM.color.copy(light ? lin(0xc4ad84) : darkGround);
+    MAT.plinth.color.copy(light ? lin(0x8a7552) : plD);
+    MAT.plTop.color.copy(light ? lin(0xbfa880) : plTD);
+    grid.visible = !light && !STAGE.noGround; gridL.visible = light && !STAGE.noGround;
+    const S = light ? skyLt : skyD;
+    skyU.top.value.copy(S[0]); skyU.hor.value.copy(S[1]); scene.fog.color.copy(S[1]);
+    PARTS.forEach(p => {
+      p.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      p.m.color.copy(p.c); if(light) p.m.color.multiplyScalar(0.42);
+      p.m.needsUpdate = true;
+    });
+    SHAFTS.forEach(sh => { sh.userData.op = sh.userData.op0*(light ? 0.3 : 1); sh.material.opacity = sh.userData.op; });
+    HOLOS.forEach(h => { h.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending; h.m.needsUpdate = true; h.reset(); });
+    if(api.theme) api.theme(light);
+  }
+  applyTheme(LIGHT);
+
+  /* power-up on load: glows ramp in and the machine settles to full scale */
+  function power(e){
+    GLOWS.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
+    root.scale.setScalar(0.9 + 0.1*e);
+  }
+
+  function resize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    readScroll();
+    if(reduced) still();
+  }
+  addEventListener('resize', resize, {passive:true});
+  renderer.setSize(innerWidth, innerHeight);
+
+  /* Reduced motion: no rAF loop. The stage is composed as a still and
+     recomposed only when the layout, scroll or theme changes. */
+  function still(){
+    stageCam(scrollP); camera.position.copy(pos); camera.lookAt(look);
+    sky.position.copy(camera.position);
+    power(1);
+    if(api.update){ for(let i=0;i<3;i++) api.update(2.0 + i/60, 1/60); }
+    renderer.render(scene, camera);
+  }
+  window.addEventListener('themechange', e => { applyTheme(e.detail === 'light'); if(reduced) still(); });
+  if(reduced){
+    still();
+    let q = false;
+    addEventListener('scroll', () => { if(q) return; q = true; requestAnimationFrame(() => { q = false; still(); }); }, {passive:true});
+    return;
+  }
+
+  const clock = new THREE.Clock();
+  let t = 0, intro = 0, frames = 0, probe = 0, tuned = false;
+  stageCam(scrollP);
+  const curPos = pos.clone(), curLook = look.clone();
   function animate(){
     requestAnimationFrame(animate);
-    const t=clock.getElapsedTime();
-    if(!reduced){
-      /* fly the course at a steady pace */
-      const u=(t*0.022)%1;
-      curve.getPointAt(u,dp);
-      curve.getPointAt((u+0.01)%1,ahead);
-      drone.position.x=dp.x; drone.position.z=dp.z;
-      drone.position.y=2.1+Math.sin(t*0.9)*0.12;
-      drone.rotation.y=Math.atan2(ahead.x-dp.x,ahead.z-dp.z);
-      drone.rotation.z=Math.sin(t*0.7)*0.05;
-      rotors.forEach((r,i)=>{r.rotation.z+=0.6+(i%2)*0.1;});
-
-      foot.position.x=dp.x; foot.position.z=dp.z; foot.rotation.y=drone.rotation.y;
-
-      /* recast the probes: walk outward until the ray passes near the track */
-      const base=drone.rotation.y;
-      for(let i=0;i<NRAY;i++){
-        const a=base+(i/(NRAY-1)-0.5)*Math.PI*1.35;
-        const sx=Math.sin(a),sz=Math.cos(a);
-        let d=0.12;
-        for(;d<3.2;d+=0.08){
-          if(distToTrack(dp.x+sx*d,dp.z+sz*d)<0.16)break;
+    /* clamped dt: a backgrounded tab resumes where it paused */
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if(document.hidden) return;
+    t += dt;
+    /* one-time quality probe: if this machine can't hold 45 fps, drop
+       to DPR 1 and soften shadows rather than ship a stuttering page */
+    if(!tuned){
+      frames++; probe += dt;
+      if(probe > 2.5){
+        tuned = true;
+        if(frames/probe < 45){
+          if(renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); }
+          key.shadow.mapSize.set(1024, 1024); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; }
         }
-        rayPos[i*6]=dp.x;   rayPos[i*6+1]=0.05; rayPos[i*6+2]=dp.z;
-        rayPos[i*6+3]=dp.x+sx*d; rayPos[i*6+4]=0.05; rayPos[i*6+5]=dp.z+sz*d;
-        hits[i].position.set(dp.x+sx*d,0.06,dp.z+sz*d);
-        hits[i].material.opacity=d<3.2?0.85:0.0;
-        hits[i].scale.setScalar(d<3.2?1:0.001);
       }
-      rayGeo.attributes.position.needsUpdate=true;
-
-      landing.rotation.z=t*0.4;
-      landFill.material.opacity=0.12+Math.sin(t*1.6)*0.05;
     }
-    smooth+=(target-smooth)*0.05;
-    const d=smooth*0.0012;
-    camera.position.x=Math.sin(d*0.42)*7+mx*1.8;
-    camera.position.z=17+Math.cos(d*0.42)*3;
-    camera.position.y=7.2-Math.min(d*1.3,3.6);
-    camera.lookAt(mobile?0.6:3.3,0.3,0);
-    renderer.render(scene,camera);
+    stageCam(scrollP);
+    const kc = damp(0.05, dt);
+    curPos.lerp(pos, kc); curLook.lerp(look, kc);
+    const kp = damp(0.07, dt);
+    smNX += (ptrNX - smNX)*kp; smNY += (ptrNY - smNY)*kp;
+    camera.position.copy(curPos);
+    camera.position.x += Math.sin(t*0.13)*0.3;
+    camera.position.y += Math.cos(t*0.09)*0.18;
+    camera.lookAt(curLook);
+    camera.translateX( smNX*1.4);
+    camera.translateY(-smNY*0.9);
+    camera.lookAt(curLook);
+    sky.position.copy(camera.position);
+    intro = Math.min(1, intro + dt/1.6);
+    power(smoothstep(intro));
+    if(api.update) api.update(t, dt);
+    renderer.render(scene, camera);
   }
   animate();
 })();

@@ -285,10 +285,15 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
   :root[data-theme="light"] .theme-btn .moon{display:block;}
   @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
+<style id="solid-stage-css">
+  /* solid stage: the machine is a watermark behind the text column, under a scrim */
+  .stage-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(var(--ink-rgb),0.62);}
+</style>
 </head>
 <body>
 
 <canvas id="plcscene"></canvas>
+<div class="stage-scrim"></div>
 <div class="vignette"></div>
 
 <nav>
@@ -757,73 +762,6 @@ DIRECTIONSTATE := FB_detectTool_1.DetT_out_EN;      <span class="c">// then repl
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* light theme for the wireframe background, without touching the scene code:
-   each renderer's render() is wrapped so every material it draws is re-inked, same hue
-   darkened to ink depth, glow switched to normal blending, fog turned cream.
-   Colours the scene changes itself (live highlights) are caught each frame.
-   Textured materials (canvas displays) are left alone. */
-(function(){
-  if(!window.THREE) return;
-  const seen = new WeakSet(), mats = [], scenes = [];
-  const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
-  let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
-  function ink(m){
-    const u = m.userData;
-    m.color.copy(u.tc0);
-    if(light){
-      m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
-      // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
-      // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
-      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*fade(m);
-      if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
-    } else {
-      if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
-      if(u.to0 !== undefined) m.opacity = u.to0;
-    }
-    u.tset = m.color.clone(); u.topset = m.opacity;
-  }
-  // the light fade for a base opacity: vertex-coloured grids and edges were built faint on navy, fade them hardest
-  const fade = m => m.vertexColors ? 0.22 : 0.4;
-  function scan(scene){
-    scene.traverse(o => {
-      const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-      list.forEach(m => {
-        if(seen.has(m) || !m.color || m.map) return;
-        if(!m.transparent){ m.transparent = true; m.needsUpdate = true; }
-        seen.add(m); m.userData.tc0 = m.color.clone(); m.userData.tb0 = m.blending; m.userData.to0 = m.opacity; mats.push(m); ink(m);
-      });
-    });
-  }
-  function fog(scene){
-    if(!scene.fog) return;
-    if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
-    scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
-  }
-  function hook(scene){
-    if(scene && scene.isScene){
-      if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
-      else if(++tick % 90 === 0) scan(scene);
-      if(light) for(let i=0;i<mats.length;i++){
-        const m = mats[i];
-        const u = m.userData;
-        if(!m.color.equals(u.tset)){ u.tc0.copy(m.color); ink(m); }
-        else if(m.opacity !== u.topset){ u.to0 = m.opacity; m.opacity = u.to0*fade(m); u.topset = m.opacity; }   // the scene animated its opacity
-      }
-    }
-  }
-  // r128 builds render() inside the constructor, per instance, so patching the
-  // prototype does nothing: wrap the constructor and hook each renderer's own render
-  const Base = THREE.WebGLRenderer;
-  THREE.WebGLRenderer = function(params){
-    const r = new Base(params), render = r.render;
-    r.render = function(scene, cam){ hook(scene); return render.call(this, scene, cam); };
-    return r;
-  };
-  THREE.WebGLRenderer.prototype = Base.prototype;
-  window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
-})();
-</script>
-<script>
 /* 
    Shared: the shortest-path decision, transcribed from FB_DeterminRotation.
    Used by the two interactive widgets AND by the background scene, so all
@@ -1280,167 +1218,536 @@ function arcLen(from,to,dir){return dir===1?(to-from+8)%8:(from-to+8)%8;}
     render();
     setInterval(tick,TICK);
   })();
+})();
+</script>
+<script id="solid-stage">
+(function(){
+  const CANVAS_ID = 'plcscene';
+  /*  SOLID STAGE, the project-page version of the home page's robot
+     stages: one lit plinth with a solid, articulated machine working on
+     it, built from three.js primitives (no model files, so the page
+     still runs from file://). Generated into each page by
+     tools/solid_stage.py from tools/stage/; edit the sources there and
+     re-run the script rather than editing a page's copy.  */
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = innerWidth < 700;
+  const canvas = document.getElementById(CANVAS_ID);
+  if(!canvas || !window.THREE) return;
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  /* 
-     Background: the tool magazine itself, a wireframe carousel whose
-     platter runs the real computeDir over a sequence, sensor posts that
-     fire as the magnet passes, and ladder rails drifting behind it.
-      */
-  var canvas=document.getElementById('plcscene');
-  if(!canvas||typeof THREE==='undefined') return;
-  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  var scene=new THREE.Scene();
-  scene.fog=new THREE.FogExp2(0x060a14,0.045);
-  var camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,140);
-  camera.position.set(0,5.6,14);
-  var CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
-  var mobile=innerWidth<700;
-  function wire(c,o){return new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o===undefined?0.6:o});}
-  var FLOOR=-2.4;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(mobile ? 46 : 36, innerWidth/innerHeight, 0.1, 420);
 
-  var grid=new THREE.GridHelper(90,54,0x1c3a66,0x11223f);
-  grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.42;
-  scene.add(grid);
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const smoothstep = x => x*x*(3-2*x);
+  const ss = (u, a, b) => smoothstep(clamp01((u-a)/(b-a)));
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const angLerp = (a, b, k) => {
+    let d = (b - a) % (Math.PI*2);
+    if(d >  Math.PI) d -= Math.PI*2;
+    if(d < -Math.PI) d += Math.PI*2;
+    return a + d*k;
+  };
+  const R01 = i => { const x = Math.sin(i*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };   // stable hash
 
-  /*  the carousel  */
-  var WR=4.0;                                   // station ring radius
-  var hub=new THREE.Group(); hub.position.set(0,FLOOR+0.6,0); scene.add(hub);
-  hub.add(new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.75,0.5,14),wire(DEEPBLUE,0.5)));
-  var rim=new THREE.Mesh(new THREE.TorusGeometry(WR,0.07,6,64),wire(DEEPBLUE,0.4));
-  rim.rotation.x=Math.PI/2; hub.add(rim);
-  var inner=new THREE.Mesh(new THREE.TorusGeometry(WR-1.5,0.04,6,48),wire(DEEPBLUE,0.25));
-  inner.rotation.x=Math.PI/2; hub.add(inner);
+  /*  MATERIALS: three r128 treats hex as linear, so every authored
+     colour is converted from sRGB first or the palette washes out.  */
+  const lin  = h => new THREE.Color(h).convertSRGBToLinear();
+  const std  = (c, r, m, o) => new THREE.MeshStandardMaterial(Object.assign({color:lin(c), roughness:r, metalness:m}, o||{}));
+  const glow = (c, k) => new THREE.MeshStandardMaterial({color:0x000000, emissive:lin(c), emissiveIntensity:k||1.6, roughness:0.4});
+  const MAT = {
+    shell:  std(0xe2e7ee, 0.34, 0.05),
+    alu:    std(0xb2bcc9, 0.28, 0.9),
+    steel:  std(0x76818f, 0.32, 0.85),
+    dark:   std(0x1c2433, 0.5, 0.55),
+    carbon: std(0x12161e, 0.42, 0.35),
+    rubber: std(0x0b0d12, 0.9, 0.0),
+    cap:    std(0x3f87c6, 0.36, 0.3),
+    amber:  std(0xf5a35c, 0.42, 0.12),
+    red:    std(0xc94a3a, 0.5, 0.2),
+    green:  std(0x4cc35d, 0.4, 0.1),
+    glass:  std(0x0a1a24, 0.08, 0.9),
+    cyanG:  glow(0x4fd8e8, 2.4),
+    amberG: glow(0xf5a35c, 2.0),
+    redG:   glow(0xe5534b, 2.2),
+    greenG: glow(0x3fd17a, 2.0),
+    plinth: std(0x0c1424, 0.42, 0.8),
+    plTop:  std(0x0d1522, 0.78, 0.35)
+  };
 
-  /* sensor posts, fixed to the frame; station 1 at -Z, forward = clockwise seen from above */
-  function stationAngle(p){return -Math.PI/2+(p-1)*Math.PI/4;}
-  var posts=[];
-  for(var s=1;s<=8;s++){
-    var a=stationAngle(s);
-    var g=new THREE.Group();
-    g.position.set(Math.cos(a)*WR,0,Math.sin(a)*WR);
-    var post=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,0.85,6),wire(CYAN,0.32));
-    post.position.y=0.42; g.add(post);
-    var cap=new THREE.Mesh(new THREE.OctahedronGeometry(0.24,0),wire(CYAN,0.4));
-    cap.position.y=0.98; g.add(cap);
-    hub.add(g);
-    posts.push({grp:g,post:post,cap:cap,n:s});
+  /*  GEOMETRY HELPERS  */
+  function add(parent, geo, mat, x, y, z, shadow){
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x||0, y||0, z||0);
+    if(shadow !== false && renderer.shadowMap.enabled){ m.castShadow = true; m.receiveShadow = true; }
+    parent.add(m);
+    return m;
+  }
+  const grp = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x||0, y||0, z||0); parent.add(g); return g; };
+  const cylY = (r1, r2, h, s) => new THREE.CylinderGeometry(r1, r2, h, s||32);
+  function cylX(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateZ(Math.PI/2); return g; }
+  function cylZ(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateX(Math.PI/2); return g; }
+  /* rounded box: a rounded-rect outline, extruded with a bevel of half the radius */
+  function rbox(w, h, d, r){
+    r = Math.min(r, w/2, h/2, d/2) * 0.98;
+    const b = r*0.5, sw = w-2*b, sh = h-2*b, cr = Math.max(r-b, 0.0005);
+    const x0 = -sw/2, y0 = -sh/2, s = new THREE.Shape();
+    s.moveTo(x0+cr, y0); s.lineTo(x0+sw-cr, y0); s.quadraticCurveTo(x0+sw, y0, x0+sw, y0+cr);
+    s.lineTo(x0+sw, y0+sh-cr); s.quadraticCurveTo(x0+sw, y0+sh, x0+sw-cr, y0+sh);
+    s.lineTo(x0+cr, y0+sh); s.quadraticCurveTo(x0, y0+sh, x0, y0+sh-cr);
+    s.lineTo(x0, y0+cr); s.quadraticCurveTo(x0, y0, x0+cr, y0);
+    const g = new THREE.ExtrudeGeometry(s, {depth:Math.max(d-2*b, 0.0005), bevelEnabled:true,
+      bevelThickness:b, bevelSize:b, bevelSegments:3, curveSegments:5, steps:1});
+    g.center();
+    return g;
+  }
+  function canvasTex(w, h, draw){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = 4;
+    return t;
+  }
+  /* a solid rod between two points: a unit cylinder along y, stretched and aimed */
+  const UP = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3();
+  function rod(parent, r, mat, shadow){
+    const m = add(parent, cylY(r, r, 1, 10), mat, 0, 0, 0, shadow);
+    m.userData.set = (a, b) => {
+      _d.subVectors(b, a); const L = _d.length();
+      m.visible = L > 1e-4;
+      if(!m.visible) return;
+      m.position.copy(a).addScaledVector(_d, 0.5);
+      m.scale.set(1, L, 1);
+      m.quaternion.setFromUnitVectors(UP, _d.multiplyScalar(1/L));
+    };
+    return m;
   }
 
-  /* the rotating platter: spokes + the magnet that trips the sensors */
-  var platterG=new THREE.Group(); hub.add(platterG);
-  for(var k=0;k<8;k++){
-    var sp=new THREE.Mesh(new THREE.BoxGeometry(WR-0.9,0.05,0.05),wire(DEEPBLUE,0.28));
-    sp.position.set(Math.cos(k*Math.PI/4)*(WR-0.9)/2,0.18,Math.sin(k*Math.PI/4)*(WR-0.9)/2);
-    sp.rotation.y=-k*Math.PI/4; platterG.add(sp);
-  }
-  var magArm=new THREE.Mesh(new THREE.BoxGeometry(WR,0.07,0.07),wire(AMBER,0.5));
-  magArm.position.set(WR/2,0.34,0); platterG.add(magArm);
-  var mag=new THREE.Mesh(new THREE.OctahedronGeometry(0.3,0),wire(AMBER,0.9));
-  mag.position.set(WR,0.34,0); platterG.add(mag);
-
-  /* the tool being carried back to the base */
-  var tool=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.7,7),wire(AMBER,0.75));
-  tool.position.set(WR,0.95,0); tool.visible=false; platterG.add(tool);
-
-  /* base marker ring */
-  var baseRing=new THREE.Mesh(new THREE.TorusGeometry(0.45,0.05,6,20),wire(AMBER,0.7));
-  baseRing.rotation.x=Math.PI/2; baseRing.position.y=0.06; hub.add(baseRing);
-
-  /*  ladder rails, drifting behind  */
-  var rails=new THREE.Group(); rails.position.set(0,2.2,-13); scene.add(rails);
+  /*  ENVIRONMENT: a small studio rendered once into a PMREM so the
+     metals have something to reflect: a white softbox overhead and a
+     cyan and an amber strip, the site's two accents.  */
   (function(){
-    var railMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.16});
-    var pts=[],H=9,W=13,N=7;
-    pts.push(new THREE.Vector3(-W/2,-H/2,0),new THREE.Vector3(-W/2,H/2,0));
-    pts.push(new THREE.Vector3(W/2,-H/2,0),new THREE.Vector3(W/2,H/2,0));
-    for(var i=0;i<N;i++){
-      var y=-H/2+(i+0.5)*(H/N);
-      pts.push(new THREE.Vector3(-W/2,y,0),new THREE.Vector3(W/2,y,0));
-    }
-    var g=new THREE.BufferGeometry().setFromPoints(pts);
-    rails.add(new THREE.LineSegments(g,railMat));
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24),
+      new THREE.MeshBasicMaterial({color:lin(0x0c1628), side:THREE.BackSide})));
+    const panel = (w, h, col, k, x, y, z, rx, ry) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({color:lin(col).multiplyScalar(k), side:THREE.DoubleSide}));
+      m.position.set(x, y, z); m.rotation.set(rx||0, ry||0, 0); env.add(m);
+    };
+    panel(10, 6, 0xffffff, 3.0, 0, 5.9, 0, Math.PI/2, 0);
+    panel(1.4, 8, 0x4fd8e8, 4.0, -11.9, 1, -2, 0, Math.PI/2);
+    panel(1.4, 8, 0xf5a35c, 3.0, 11.9, 1, 3, 0, -Math.PI/2);
+    panel(14, 2.2, 0x9fbfe6, 1.4, 0, 2, -11.9, 0, 0);
+    scene.environment = pm.fromScene(env, 0.035).texture;
+    pm.dispose();
   })();
 
-  /*  ambient dust  */
-  var PC=mobile?400:1000;
-  var pp=new Float32Array(PC*3);
-  for(var i2=0;i2<PC;i2++){pp[i2*3]=(Math.random()-0.5)*52;pp[i2*3+1]=(Math.random()-0.5)*22;pp[i2*3+2]=(Math.random()-0.5)*28;}
-  var pg=new THREE.BufferGeometry();
-  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
-  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.45})));
+  /*  SKY DOME + FOG share one horizon colour so the floor melts into
+     the sky. In r128 fog is mixed in after tone mapping, so both live
+     in display space: raw hex, no linear conversion, no tone map.  */
+  const skyU = {top:{value:new THREE.Color()}, hor:{value:new THREE.Color()}};
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+    uniforms:skyU, side:THREE.BackSide, depthWrite:false, fog:false,
+    vertexShader:'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:'uniform vec3 top; uniform vec3 hor; varying vec3 vP; void main(){ gl_FragColor = vec4(mix(hor, top, smoothstep(0.0, 0.5, vP.y)), 1.0); }'
+  }));
+  sky.frustumCulled = false; sky.renderOrder = -1;
+  scene.add(sky);
+  scene.fog = new THREE.Fog(0x000000, 16, 60);
 
-  /*  the run: the same decision the controller makes  */
-  var SEQ=[4,7,2,6], sIdx=0, baseSt=1, targetSt=SEQ[0];
-  var legDir=computeDir(baseSt,targetSt), carrying=false;
-  var station=baseSt, frac=0;                    // continuous position, in stations
-  var DWELL=0.55, dwellT=0, SPD=0.72;            // stations per second
-  var flash=new Array(9).fill(0);
+  const ground = add(scene, new THREE.PlaneGeometry(900, 900), std(0x060a13, 0.92, 0.2), 0, 0, 0);
+  ground.rotation.x = -Math.PI/2; ground.castShadow = false;
+  const grid = new THREE.GridHelper(400, 200, 0x1c3a66, 0x13243e);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
+  grid.position.y = 0.003; scene.add(grid);
+  const gridL = new THREE.GridHelper(400, 200, 0x9c8458, 0xc1aa80);
+  gridL.material.transparent = true; gridL.material.opacity = 0.35; gridL.material.depthWrite = false;
+  gridL.position.y = 0.003; gridL.visible = false; scene.add(gridL);
 
-  function atStation(p){
-    if(!carrying&&p===targetSt){                 // pickup: FB_detectTool flips direction
-      carrying=true; dwellT=DWELL;
-      return;
-    }
-    if(carrying&&p===baseSt){                    // place: next target, decide afresh
-      carrying=false; dwellT=DWELL;
-      sIdx=(sIdx+1)%SEQ.length;
-      targetSt=SEQ[sIdx];
-      legDir=computeDir(baseSt,targetSt);
+  const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 2.3);
+  key.castShadow = renderer.shadowMap.enabled;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(lin(0x4fd8e8), 1.6);
+  scene.add(rim, rim.target);
+  const fill = new THREE.DirectionalLight(lin(0xf5a35c), 0.55);
+  scene.add(fill, fill.target);
+
+  const GLOWS = [];   // emissive materials that power up on load
+  /* the plinth every machine stands on; its rings are the "power" lights */
+  function plinth(root, R){
+    add(root, cylY(R, R+0.14, 0.3, 80), MAT.plinth, 0, 0.15, 0);
+    add(root, cylY(R-0.1, R-0.1, 0.02, 80), MAT.plTop, 0, 0.305, 0);
+    const ringM = glow(0x4fd8e8, 2.2);
+    const ring = add(root, new THREE.TorusGeometry(R+0.005, 0.024, 8, 160), ringM, 0, 0.3, 0, false);
+    ring.rotation.x = Math.PI/2;
+    const innerM = glow(0xf5a35c, 0.7);
+    const inner = add(root, new THREE.RingGeometry(R*0.64, R*0.64+0.018, 120), innerM, 0, 0.318, 0, false);
+    inner.rotation.x = -Math.PI/2;
+    GLOWS.push({m:ringM, k:2.2}, {m:innerM, k:0.7});
+  }
+  const TOP = 0.315;   // plinth deck height
+
+  /*  FX TOOLKIT: a soft glow sprite so particles read as light, particle
+     swarms with a per-point step, light shafts that fade toward the
+     floor, and holographic readout panels that print live state.  */
+  const PARTS = [], HOLOS = [], SHAFTS = [];   // re-tinted when the page theme flips
+  let LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const HC = () => LIGHT
+    ? {bg:'rgba(248,239,220,0.8)', edge:'rgba(10,106,116,0.85)', title:'#974607', rule:'rgba(10,106,116,0.4)', label:'#2e2416', val:'#0a6a74', track:'rgba(10,106,116,0.16)', bar:'rgba(10,106,116,0.85)', amb:'#974607'}
+    : {bg:'rgba(79,216,232,0.1)', edge:'rgba(79,216,232,0.8)', title:'#f5a35c', rule:'rgba(79,216,232,0.45)', label:'rgba(235,242,250,0.95)', val:'#4fd8e8', track:'rgba(79,216,232,0.18)', bar:'rgba(79,216,232,0.85)', amb:'#f5a35c'};
+  const dotTex = canvasTex(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  });
+  function swarm(root, n, col, size, op, init, step){
+    const a = new Float32Array(n*3);
+    for(let i=0;i<n;i++) init(a, i);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
+      depthWrite:false, blending:THREE.AdditiveBlending});
+    const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    PARTS.push({m, c:m.color.clone()});
+    return {m, a, geo, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
+  }
+  /* a sprite that glows: additive in the dark theme, ink in the light one */
+  function spark(root, col, size){
+    const m = new THREE.SpriteMaterial({map:dotTex, color:lin(col), transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+    const sp = new THREE.Sprite(m); sp.scale.setScalar(size); root.add(sp);
+    PARTS.push({m, c:m.color.clone()});
+    return sp;
+  }
+  const shaftTex = canvasTex(4, 128, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  function shaft(root, x, z, rTop, rBot, h, col, op){
+    const m = new THREE.MeshBasicMaterial({color:lin(col), map:shaftTex, transparent:true, opacity:op,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
+    sh.position.set(x, h/2, z); root.add(sh);
+    sh.userData.op = sh.userData.op0 = op;
+    SHAFTS.push(sh);
+    return sh;
+  }
+  /* a line set the scene rewrites every frame (beams, links, rays) */
+  function lines(root, maxSeg, col, op, dashed){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSeg*6), 3));
+    const m = new THREE.LineBasicMaterial({color:lin(col), transparent:true, opacity:op, depthWrite:false});
+    const l = new THREE.LineSegments(geo, m); l.frustumCulled = false; root.add(l);
+    PARTS.push({m, c:m.color.clone()});
+    let n = 0;
+    const arr = geo.attributes.position.array;
+    return {l, m,
+      reset(){ n = 0; },
+      seg(a, b){ if(n >= maxSeg) return; const o = n*6; arr[o]=a.x; arr[o+1]=a.y; arr[o+2]=a.z; arr[o+3]=b.x; arr[o+4]=b.y; arr[o+5]=b.z; n++; },
+      done(){ geo.setDrawRange(0, n*2); geo.attributes.position.needsUpdate = true; }};
+  }
+  function holo(root, w, h, x, y, z){
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512*h/w);
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:tex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
+    mesh.position.set(x, y, z); root.add(mesh);
+    let last = -1;
+    HOLOS.push({m:mesh.material, mesh, reset:() => { last = -1; }});
+    const wp = new THREE.Vector3();
+    return {mesh, draw(t, fn){
+      mesh.lookAt(camera.position);
+      mesh.position.y = y + Math.sin(t*0.8)*0.04;
+      if(last >= 0 && t - last < 0.15) return;
+      last = t; g.clearRect(0, 0, c.width, c.height); fn(g, c.width, c.height); tex.needsUpdate = true;
+    }};
+  }
+  function holoFrame(g, w, h, title){
+    const P = HC();
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = P.edge; g.lineWidth = 3;
+    const k = 26;
+    [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
+    });
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = P.title; g.fillText(title, 26, 48);
+    g.fillStyle = P.rule; g.fillRect(26, 62, w - 52, 2);
+    g.font = '400 26px "IBM Plex Mono", monospace';
+  }
+  function holoRow(g, y, label, val, frac){
+    const P = HC();
+    g.fillStyle = P.label; g.fillText(label, 26, y);
+    g.fillStyle = P.val; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    if(frac !== undefined){
+      g.fillStyle = P.track; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = P.bar; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
     }
   }
+  const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
+  const sgn = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d);
 
-  var sTarget=0,smooth=0,mx2=0;
-  addEventListener('scroll',function(){sTarget=scrollY;},{passive:true});
-  addEventListener('mousemove',function(e){mx2=e.clientX/innerWidth-0.5;},{passive:true});
-  addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-  renderer.setSize(innerWidth,innerHeight);
+// parts:
+  /*  CNC TOOL MAGAZINE on the Micro820: a carousel platter with eight
+     stations and a fixed proximity sensor at each. The platter runs the
+     page's own computeDir (transcribed from FB_DeterminRotation) over a
+     sequence of requests: it turns the shorter way to the target, picks
+     the tool up, then runs back to the base station the other way. Each
+     sensor LED fires as the magnet passes; the base station is amber.  */
+  const STAGE = {
+    sky:[0x070806, 0x221b0d], skyL:[0xc9ab7c, 0xe8d5b0], hemi:0xffdca8,
+    cam:{az:0.4, d:9.6, h:5.0, ly:0.9},
+    build(root){
+      plinth(root, 3.1);
+      const WR = 1.9, HY = TOP + 0.5;
+      // frame and drive
+      add(root, cylY(0.5, 0.62, 0.36, 40), MAT.dark, 0, TOP + 0.18, 0);
+      add(root, cylY(0.18, 0.18, 0.3, 24), MAT.steel, 0, TOP + 0.45, 0);
+      const ring = add(root, new THREE.TorusGeometry(WR + 0.35, 0.04, 10, 96), MAT.steel, 0, HY - 0.12, 0); ring.rotation.x = Math.PI/2;
+      const stA = p => -Math.PI/2 + (p - 1)*Math.PI/4;   // station 1 at -z, forward = clockwise from above
+      const posts = [];
+      for(let s=1;s<=8;s++){
+        const a = stA(s), g = grp(root, Math.cos(a)*(WR + 0.35), 0, Math.sin(a)*(WR + 0.35));
+        add(g, cylY(0.03, 0.03, HY - 0.12 - TOP, 10), MAT.steel, 0, (HY - 0.12 + TOP)/2, 0);
+        const body = add(g, cylY(0.05, 0.05, 0.22, 16), MAT.dark, 0, HY + 0.02, 0);
+        const ledM = glow(0x4fd8e8, 0.3);
+        add(g, new THREE.SphereGeometry(0.035, 12, 8), ledM, 0, HY + 0.16, 0, false);
+        posts.push({n:s, ledM, flash:0});
+      }
+      // platter with eight tool pockets, a magnet under station marker
+      const plat = grp(root, 0, HY, 0);
+      add(plat, cylY(WR + 0.12, WR + 0.12, 0.08, 64), std(0x9aa3b0, 0.3, 0.85), 0, 0, 0);
+      add(plat, cylY(0.35, 0.35, 0.12, 32), MAT.cap, 0, 0.06, 0);
+      const holderG = new THREE.ConeGeometry(0.12, 0.26, 24), shankG = cylY(0.05, 0.05, 0.22, 16), flangeG = cylY(0.14, 0.14, 0.05, 24);
+      const tools = [];
+      for(let k=0;k<8;k++){
+        const a = k*Math.PI/4, x = Math.cos(a)*WR*0.82, z = Math.sin(a)*WR*0.82;
+        add(plat, cylY(0.16, 0.16, 0.03, 24), MAT.dark, x, 0.05, z);
+        const tg = grp(plat, x, 0.06, z);
+        add(tg, flangeG, MAT.dark, 0, 0.03, 0);
+        const c = add(tg, holderG, MAT.alu, 0, 0.18, 0); c.rotation.x = Math.PI;
+        add(tg, shankG, k % 2 ? MAT.amber : MAT.steel, 0, 0.42, 0);
+        tools.push(tg);
+      }
+      const magM = glow(0xf5a35c, 2);
+      add(plat, rbox(0.14, 0.06, 0.1, 0.02), magM, WR + 0.06, 0.02, 0, false);
+      // base station marker and the Micro820 with its I/O LEDs
+      const baseRing = add(root, new THREE.TorusGeometry(0.26, 0.025, 8, 40), MAT.amberG, 0, TOP + 0.02, 0, false); baseRing.rotation.x = Math.PI/2;
+      const plc = grp(root, -1.9, TOP, -1.7); plc.rotation.y = 0.7;
+      add(plc, rbox(0.9, 0.55, 0.12, 0.02), std(0x2b2f36, 0.55, 0.3), 0, 0.6, 0);
+      add(plc, rbox(0.04, 0.9, 0.04, 0.01), MAT.steel, -0.5, 0.45, 0);
+      add(plc, rbox(0.04, 0.9, 0.04, 0.01), MAT.steel, 0.5, 0.45, 0);
+      const io = [];
+      for(let i=0;i<8;i++){ const m = glow(i < 4 ? 0x3fd17a : 0xf5a35c, 0.2); add(plc, rbox(0.04, 0.03, 0.02, 0.006), m, -0.32 + i*0.09, 0.78, 0.07, false); io.push(m); }
+      const panel = holo(root, 2.1, 1.4, -0.7, 3.5, -2.0);
+      // the run, with the controller's own decision
+      const dirOf = (b, tt) => typeof computeDir === 'function' ? computeDir(b, tt) : 1;
+      const SEQ = [4, 7, 2, 6];
+      let sIdx = 0, baseSt = 1, targetSt = SEQ[0], legDir = dirOf(baseSt, targetSt), carrying = false, station = baseSt, frac = 0, dwell = 0;
+      const DWELL = 0.55, SPD = 0.72;
+      function atStation(p){
+        if(!carrying && p === targetSt){ carrying = true; dwell = DWELL; return; }
+        if(carrying && p === baseSt){ carrying = false; dwell = DWELL; sIdx = (sIdx + 1) % SEQ.length; targetSt = SEQ[sIdx]; legDir = dirOf(baseSt, targetSt); }
+      }
+      function update(t, dt){
+        dt = Math.min(dt, 0.05);
+        if(dwell > 0) dwell -= dt;
+        else {
+          const dir = carrying ? -legDir : legDir;
+          frac += dir*SPD*dt;
+          while(frac >= 1){ frac -= 1; station = (station % 8) + 1; posts[station - 1].flash = 1; atStation(station); }
+          while(frac < 0){ frac += 1; station = ((station - 2) % 8 + 8) % 8 + 1; posts[station - 1].flash = 1; atStation(station); }
+        }
+        plat.rotation.y = -stA(station + frac);
+        // the pocket that holds the requested tool rides lifted while it is being carried home
+        tools.forEach((tg, k) => { tg.position.y = 0.06 + (carrying && k === 0 ? 0.12 : 0); });
+        posts.forEach(p => {
+          p.flash = Math.max(0, p.flash - dt*2.2);
+          const isB = p.n === baseSt, isT = p.n === targetSt;
+          p.ledM.emissive.copy(lin(isB ? 0xf5a35c : 0x4fd8e8));
+          p.ledM.emissiveIntensity = 0.25 + p.flash*3 + (isT ? 0.8 + 0.6*Math.sin(t*6) : 0) + (isB ? 0.6 : 0);
+        });
+        const ba = stA(baseSt);
+        baseRing.position.set(Math.cos(ba)*(WR + 0.35), TOP + 0.02, Math.sin(ba)*(WR + 0.35));
+        io.forEach((m, i) => { m.emissiveIntensity = (i < 4 ? posts[(station + i) % 8].flash > 0.3 : (i === 4 && dwell <= 0) || (i === 5 && carrying)) ? 2.2 : 0.15; });
+        const dir = carrying ? -legDir : legDir;
+        panel.draw(t, (g, w, h) => {
+          holoFrame(g, w, h, 'FB DETERMINROTATION');
+          holoRow(g, 112, 'base, target', baseSt + ', ' + targetSt);
+          holoRow(g, 170, 'direction', dwell > 0 ? 'DWELL' : dir === 1 ? 'FORWARD' : 'REVERSE');
+          holoRow(g, 228, 'station', String(station), (station - 1)/7);
+          holoRow(g, 286, 'tool', carrying ? 'CARRYING TO BASE' : 'FETCHING');
+        });
+      }
+      return {update};
+    }
+  };
 
-  var clock=new THREE.Clock();
+  /*  BUILD the page's stage  */
+  const root = new THREE.Group(); scene.add(root);
+  root.userData.glows = GLOWS;   // the home-page builders register their glows here
+  const api = STAGE.build(root) || {};
+  const C = Object.assign({az:0.4, d:10.5, h:3.8, ly:1.4, fit:1.2, rise:1.2}, STAGE.cam || {});
+  const SH = STAGE.shadow || 7.5;
+  key.shadow.camera.left = key.shadow.camera.bottom = -SH;
+  key.shadow.camera.right = key.shadow.camera.top = SH;
+  key.shadow.camera.far = 30 + SH*2;
+  key.position.set(5, 12, 7); rim.position.set(-6, 5, -8); fill.position.set(8, 2.5, -2);
+  const fogK = C.d/10.5;
+  scene.fog.near = 16*fogK; scene.fog.far = 60*fogK*(STAGE.fogFar || 1);
+  if(STAGE.noGround){ ground.visible = false; }
+  const skyD = [new THREE.Color(STAGE.sky[0]), new THREE.Color(STAGE.sky[1])];
+  const skyLt = [new THREE.Color(STAGE.skyL[0]), new THREE.Color(STAGE.skyL[1])];
+  const hemiC = lin(STAGE.hemi || 0xa8c8ff), WARM_SKY = lin(0xffd394);
+
+  /*  CAMERA RIG: the machine is a backdrop, not the subject. It sits
+     centred behind the page's text column under a scrim, like a
+     watermark, and the camera swings slowly round it as you read (a crane
+     orbit driven by scroll progress, a full 360 degrees from the top of
+     the page to the bottom). The holo readouts are not shown:
+     text behind body copy would only be noise.  */
+  HOLOS.forEach(h => { h.mesh.visible = false; });
+  const wide = () => camera.aspect > 1.05;
+  const pos = new THREE.Vector3(), look = new THREE.Vector3();
+  function stageCam(p){
+    const w = wide();
+    const d = C.d*(w ? 1.15*C.fit : 1.55);
+    const az = C.az + p*Math.PI*2;               // one full turn round the machine over the page
+    pos.set(Math.sin(az)*d, C.h*(w ? 1 : 1.25) + (0.5 - p)*C.rise, Math.cos(az)*d);
+    look.set(0, C.ly + (w ? 0 : 1.1), 0);
+  }
+
+  let scrollP = 0;
+  function readScroll(){
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    scrollP = clamp01(window.scrollY/max);
+  }
+  addEventListener('scroll', readScroll, {passive:true});
+  readScroll();
+
+  let ptrNX = 0, ptrNY = 0, smNX = 0, smNY = 0;
+  addEventListener('pointermove', e => {
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // no parallax lurch on touch
+    ptrNX = e.clientX/innerWidth - 0.5; ptrNY = e.clientY/innerHeight - 0.5;
+  }, {passive:true});
+  addEventListener('pointerleave', () => { ptrNX = ptrNY = 0; }, {passive:true});
+
+  /*  THEME: the same stage lit for a light page. Warm lamp skies and
+     floor, more fill; additive glow vanishes on a bright sky, so
+     particles switch to normal blending with deeper tints and the holo
+     panels redraw as dark text on frosted glass.  */
+  const groundM = ground.material, darkGround = groundM.color.clone();
+  const plD = MAT.plinth.color.clone(), plTD = MAT.plTop.color.clone();
+  function applyTheme(light){
+    LIGHT = light;
+    renderer.toneMappingExposure = light ? 0.78 : 0.82;
+    hemi.intensity = light ? 0.75 : 0.38;
+    hemi.groundColor.copy(light ? lin(0x8f7550) : lin(0x05080f));
+    hemi.color.copy(hemiC); if(light) hemi.color.lerp(WARM_SKY, 0.65);
+    key.color.copy(light ? lin(0xffd59a) : new THREE.Color(0xffffff));
+    key.intensity = light ? 2.0 : 2.3;
+    groundM.color.copy(light ? lin(0xc4ad84) : darkGround);
+    MAT.plinth.color.copy(light ? lin(0x8a7552) : plD);
+    MAT.plTop.color.copy(light ? lin(0xbfa880) : plTD);
+    grid.visible = !light && !STAGE.noGround; gridL.visible = light && !STAGE.noGround;
+    const S = light ? skyLt : skyD;
+    skyU.top.value.copy(S[0]); skyU.hor.value.copy(S[1]); scene.fog.color.copy(S[1]);
+    PARTS.forEach(p => {
+      p.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      p.m.color.copy(p.c); if(light) p.m.color.multiplyScalar(0.42);
+      p.m.needsUpdate = true;
+    });
+    SHAFTS.forEach(sh => { sh.userData.op = sh.userData.op0*(light ? 0.3 : 1); sh.material.opacity = sh.userData.op; });
+    HOLOS.forEach(h => { h.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending; h.m.needsUpdate = true; h.reset(); });
+    if(api.theme) api.theme(light);
+  }
+  applyTheme(LIGHT);
+
+  /* power-up on load: glows ramp in and the machine settles to full scale */
+  function power(e){
+    GLOWS.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
+    root.scale.setScalar(0.9 + 0.1*e);
+  }
+
+  function resize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    readScroll();
+    if(reduced) still();
+  }
+  addEventListener('resize', resize, {passive:true});
+  renderer.setSize(innerWidth, innerHeight);
+
+  /* Reduced motion: no rAF loop. The stage is composed as a still and
+     recomposed only when the layout, scroll or theme changes. */
+  function still(){
+    stageCam(scrollP); camera.position.copy(pos); camera.lookAt(look);
+    sky.position.copy(camera.position);
+    power(1);
+    if(api.update){ for(let i=0;i<3;i++) api.update(2.0 + i/60, 1/60); }
+    renderer.render(scene, camera);
+  }
+  window.addEventListener('themechange', e => { applyTheme(e.detail === 'light'); if(reduced) still(); });
+  if(reduced){
+    still();
+    let q = false;
+    addEventListener('scroll', () => { if(q) return; q = true; requestAnimationFrame(() => { q = false; still(); }); }, {passive:true});
+    return;
+  }
+
+  const clock = new THREE.Clock();
+  let t = 0, intro = 0, frames = 0, probe = 0, tuned = false;
+  stageCam(scrollP);
+  const curPos = pos.clone(), curLook = look.clone();
   function animate(){
     requestAnimationFrame(animate);
-    var dt=Math.min(clock.getDelta(),0.05), t=clock.getElapsedTime();
-
-    if(!reduced){
-      if(dwellT>0){ dwellT-=dt; }
-      else{
-        var dir=carrying?-legDir:legDir;
-        frac+=dir*SPD*dt;
-        while(frac>=1){ frac-=1; station=(station%8)+1; flash[station]=1; atStation(station); }
-        while(frac<0){ frac+=1; station=((station-2)%8+8)%8+1; flash[station]=1; atStation(station); }
+    /* clamped dt: a backgrounded tab resumes where it paused */
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if(document.hidden) return;
+    t += dt;
+    /* one-time quality probe: if this machine can't hold 45 fps, drop
+       to DPR 1 and soften shadows rather than ship a stuttering page */
+    if(!tuned){
+      frames++; probe += dt;
+      if(probe > 2.5){
+        tuned = true;
+        if(frames/probe < 45){
+          if(renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); }
+          key.shadow.mapSize.set(1024, 1024); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; }
+        }
       }
-      var contPos=station+frac;                                  // 1..9
-      /* the magnet arm is modelled along +X, so rotating by -theta puts it over station */
-      var theta=stationAngle(contPos);
-      platterG.rotation.y=-theta;
-      tool.visible=carrying;
-
-      posts.forEach(function(p){
-        flash[p.n]=Math.max(0,flash[p.n]-dt*2.2);
-        var lit=flash[p.n];
-        var isBase=(p.n===baseSt), isTgt=(p.n===targetSt);
-        p.cap.material.color.setHex(isBase?AMBER:CYAN);
-        p.post.material.color.setHex(isBase?AMBER:CYAN);
-        p.cap.material.opacity=0.28+lit*0.7+(isTgt?0.3:0)+(isBase?0.25:0);
-        p.post.material.opacity=0.2+lit*0.45+(isTgt?0.2:0)+(isBase?0.2:0);
-        p.cap.rotation.y+=dt*(0.6+lit*4);
-        p.cap.scale.setScalar(1+lit*0.5);
-      });
-      var ba=stationAngle(baseSt);
-      baseRing.position.set(Math.cos(ba)*WR,0.06,Math.sin(ba)*WR);
-      mag.rotation.y+=dt*2.4; mag.rotation.x+=dt*1.6;
-      tool.rotation.y+=dt*1.8;
-      rails.rotation.z=Math.sin(t*0.14)*0.03;
-      hub.rotation.y=Math.sin(t*0.08)*0.05;
     }
-
-    smooth+=(sTarget-smooth)*0.05;
-    var d=smooth*0.0012;
-    camera.position.x=Math.sin(d*0.55)*14+mx2*1.8;
-    camera.position.z=Math.cos(d*0.55)*14;
-    camera.position.y=5.6-Math.min(d*1.4,2.8);
-    camera.lookAt(0,FLOOR+3.0,0);
-    renderer.render(scene,camera);
+    stageCam(scrollP);
+    const kc = damp(0.05, dt);
+    curPos.lerp(pos, kc); curLook.lerp(look, kc);
+    const kp = damp(0.07, dt);
+    smNX += (ptrNX - smNX)*kp; smNY += (ptrNY - smNY)*kp;
+    camera.position.copy(curPos);
+    camera.position.x += Math.sin(t*0.13)*0.3;
+    camera.position.y += Math.cos(t*0.09)*0.18;
+    camera.lookAt(curLook);
+    camera.translateX( smNX*1.4);
+    camera.translateY(-smNY*0.9);
+    camera.lookAt(curLook);
+    sky.position.copy(camera.position);
+    intro = Math.min(1, intro + dt/1.6);
+    power(smoothstep(intro));
+    if(api.update) api.update(t, dt);
+    renderer.render(scene, camera);
   }
   animate();
 })();

@@ -158,10 +158,15 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
   :root[data-theme="light"] .theme-btn .moon{display:block;}
   @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
+<style id="solid-stage-css">
+  /* solid stage: the machine is a watermark behind the text column, under a scrim */
+  .stage-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(var(--ink-rgb),0.62);}
+</style>
 </head>
 <body>
 
 <canvas id="sacscene"></canvas>
+<div class="stage-scrim"></div>
 <div class="vignette"></div>
 
 <nav>
@@ -497,225 +502,532 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* light theme for the wireframe background, without touching the scene code:
-   each renderer's render() is wrapped so every material it draws is re-inked, same hue
-   darkened to ink depth, glow switched to normal blending, fog turned cream.
-   Colours the scene changes itself (live highlights) are caught each frame.
-   Textured materials (canvas displays) are left alone. */
-(function(){
-  if(!window.THREE) return;
-  const seen = new WeakSet(), mats = [], scenes = [];
-  const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
-  let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
-  function ink(m){
-    const u = m.userData;
-    m.color.copy(u.tc0);
-    if(light){
-      m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
-      // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
-      // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
-      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*fade(m);
-      if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
-    } else {
-      if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
-      if(u.to0 !== undefined) m.opacity = u.to0;
-    }
-    u.tset = m.color.clone(); u.topset = m.opacity;
-  }
-  // the light fade for a base opacity: vertex-coloured grids and edges were built faint on navy, fade them hardest
-  const fade = m => m.vertexColors ? 0.22 : 0.4;
-  function scan(scene){
-    scene.traverse(o => {
-      const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-      list.forEach(m => {
-        if(seen.has(m) || !m.color || m.map) return;
-        if(!m.transparent){ m.transparent = true; m.needsUpdate = true; }
-        seen.add(m); m.userData.tc0 = m.color.clone(); m.userData.tb0 = m.blending; m.userData.to0 = m.opacity; mats.push(m); ink(m);
-      });
-    });
-  }
-  function fog(scene){
-    if(!scene.fog) return;
-    if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
-    scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
-  }
-  function hook(scene){
-    if(scene && scene.isScene){
-      if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
-      else if(++tick % 90 === 0) scan(scene);
-      if(light) for(let i=0;i<mats.length;i++){
-        const m = mats[i];
-        const u = m.userData;
-        if(!m.color.equals(u.tset)){ u.tc0.copy(m.color); ink(m); }
-        else if(m.opacity !== u.topset){ u.to0 = m.opacity; m.opacity = u.to0*fade(m); u.topset = m.opacity; }   // the scene animated its opacity
-      }
-    }
-  }
-  // r128 builds render() inside the constructor, per instance, so patching the
-  // prototype does nothing: wrap the constructor and hook each renderer's own render
-  const Base = THREE.WebGLRenderer;
-  THREE.WebGLRenderer = function(params){
-    const r = new Base(params), render = r.render;
-    r.render = function(scene, cam){ hook(scene); return render.call(this, scene, cam); };
-    return r;
-  };
-  THREE.WebGLRenderer.prototype = Base.prototype;
-  window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
-})();
-</script>
-<script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+<script id="solid-stage">
+(function(){
+  const CANVAS_ID = 'sacscene';
+  /*  SOLID STAGE, the project-page version of the home page's robot
+     stages: one lit plinth with a solid, articulated machine working on
+     it, built from three.js primitives (no model files, so the page
+     still runs from file://). Generated into each page by
+     tools/solid_stage.py from tools/stage/; edit the sources there and
+     re-run the script rather than editing a page's copy.  */
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = innerWidth < 700;
+  const canvas = document.getElementById(CANVAS_ID);
+  if(!canvas || !window.THREE) return;
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  /* Background: the plant, under a stochastic policy. A ball rolls on a tilting plate driven by
-     two joints (roll about X, pitch about Y); the controller samples its action from a Gaussian
-     each step, the sampling spread is drawn as a cloud around the commanded tilt, so every
-     recovery from the same start takes a different path. Past paths stay ghosted on the plate,
-     which is the report's central finding made visible. */
-  const canvas=document.getElementById('sacscene');
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  const scene=new THREE.Scene();
-  scene.fog=new THREE.FogExp2(0x060a14,0.045);
-  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
-  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
-  const mobile=innerWidth<700;
-  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o});
-  const lineMat=(c,o)=>new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o});
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(mobile ? 46 : 36, innerWidth/innerHeight, 0.1, 420);
 
-  const grid=new THREE.GridHelper(26,26,0x1c3a66,0x11223f);
-  grid.position.y=-2.2; grid.material.transparent=true; grid.material.opacity=0.2; scene.add(grid);
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const smoothstep = x => x*x*(3-2*x);
+  const ss = (u, a, b) => smoothstep(clamp01((u-a)/(b-a)));
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const angLerp = (a, b, k) => {
+    let d = (b - a) % (Math.PI*2);
+    if(d >  Math.PI) d -= Math.PI*2;
+    if(d < -Math.PI) d += Math.PI*2;
+    return a + d*k;
+  };
+  const R01 = i => { const x = Math.sin(i*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };   // stable hash
 
-  /*  the two-joint gimbal: J1 rolls about X, J2 pitches about Y  */
-  const rig=new THREE.Group(); scene.add(rig);
-  const post=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,2.0,8),wire(DEEPBLUE,0.5));
-  post.position.y=-1.2; rig.add(post);
-  const j1=new THREE.Group(); rig.add(j1);                  // roll
-  const j2=new THREE.Group(); j1.add(j2);                   // pitch
-  const R=2.3;                                              // plate half-width
-  const plate=new THREE.Mesh(new THREE.BoxGeometry(R*2,0.07,R*2),wire(CYAN,0.42));
-  j2.add(plate);
-  const rim=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-R,0.05,-R),new THREE.Vector3(R,0.05,-R),
-    new THREE.Vector3(R,0.05,R),new THREE.Vector3(-R,0.05,R)]),lineMat(CYAN,0.6));
-  j2.add(rim);
-  const bullseye=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
-    Array.from({length:28},(_,i)=>{const a=i/28*Math.PI*2;
-      return new THREE.Vector3(Math.cos(a)*0.32,0.06,Math.sin(a)*0.32);})),lineMat(AMBER,0.45));
-  j2.add(bullseye);
-  /* joint axis indicators */
-  j1.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
-    [new THREE.Vector3(-R-0.5,0,0),new THREE.Vector3(R+0.5,0,0)]),lineMat(AMBER,0.22)));
-  j2.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
-    [new THREE.Vector3(0,0,-R-0.5),new THREE.Vector3(0,0,R+0.5)]),lineMat(AMBER,0.22)));
+  /*  MATERIALS: three r128 treats hex as linear, so every authored
+     colour is converted from sRGB first or the palette washes out.  */
+  const lin  = h => new THREE.Color(h).convertSRGBToLinear();
+  const std  = (c, r, m, o) => new THREE.MeshStandardMaterial(Object.assign({color:lin(c), roughness:r, metalness:m}, o||{}));
+  const glow = (c, k) => new THREE.MeshStandardMaterial({color:0x000000, emissive:lin(c), emissiveIntensity:k||1.6, roughness:0.4});
+  const MAT = {
+    shell:  std(0xe2e7ee, 0.34, 0.05),
+    alu:    std(0xb2bcc9, 0.28, 0.9),
+    steel:  std(0x76818f, 0.32, 0.85),
+    dark:   std(0x1c2433, 0.5, 0.55),
+    carbon: std(0x12161e, 0.42, 0.35),
+    rubber: std(0x0b0d12, 0.9, 0.0),
+    cap:    std(0x3f87c6, 0.36, 0.3),
+    amber:  std(0xf5a35c, 0.42, 0.12),
+    red:    std(0xc94a3a, 0.5, 0.2),
+    green:  std(0x4cc35d, 0.4, 0.1),
+    glass:  std(0x0a1a24, 0.08, 0.9),
+    cyanG:  glow(0x4fd8e8, 2.4),
+    amberG: glow(0xf5a35c, 2.0),
+    redG:   glow(0xe5534b, 2.2),
+    greenG: glow(0x3fd17a, 2.0),
+    plinth: std(0x0c1424, 0.42, 0.8),
+    plTop:  std(0x0d1522, 0.78, 0.35)
+  };
 
-  /*  the ball, in plate coordinates  */
-  const ball=new THREE.Mesh(new THREE.SphereGeometry(0.19,12,9),wire(AMBER,0.9));
-  j2.add(ball);
-
-  /*  trails: the current path, plus ghosts of previous attempts  */
-  const TN=mobile?90:170;
-  function mkTrail(op){
-    const p=new Float32Array(TN*3);
-    const g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.BufferAttribute(p,3));
-    const l=new THREE.Line(g,lineMat(CYAN,op)); l.frustumCulled=false; j2.add(l);
-    return {p,g,l,n:0};
+  /*  GEOMETRY HELPERS  */
+  function add(parent, geo, mat, x, y, z, shadow){
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x||0, y||0, z||0);
+    if(shadow !== false && renderer.shadowMap.enabled){ m.castShadow = true; m.receiveShadow = true; }
+    parent.add(m);
+    return m;
   }
-  const GHOSTS=3;
-  const ghosts=[]; for(let i=0;i<GHOSTS;i++) ghosts.push(mkTrail(0.12));
-  const live=mkTrail(0.55); live.l.material.color.setHex(AMBER);
-  let ghostSlot=0;
-
-  /*  action-sampling cloud: the Gaussian the policy draws its torque from  */
-  const NS=mobile?26:44;
-  const sPos=new Float32Array(NS*3);
-  const sGeo=new THREE.BufferGeometry();
-  sGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));
-  const sCloud=new THREE.Points(sGeo,new THREE.PointsMaterial({color:CYAN,size:0.07,transparent:true,opacity:0.4}));
-  sCloud.frustumCulled=false; scene.add(sCloud);
-
-  /*  ball dynamics on a tilting plate + a deliberately noisy policy  */
-  let bx=0.9,by=-0.6,vx=0,vy=0;                 // ball state in plate frame
-  let roll=0,pitch=0;                            // commanded joint angles
-  let settle=0;
-  const GAIN_P=0.85, GAIN_D=0.62, SIGMA=0.10;    // policy mean + sampling spread
-  function randn(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
-    return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v); }
-  function reset(){
-    /* stash the finished path as a ghost, then start a new episode from a similar state */
-    const g=ghosts[ghostSlot%GHOSTS]; ghostSlot++;
-    g.p.set(live.p); g.g.attributes.position.needsUpdate=true; g.n=live.n;
-    live.n=0;
-    bx=0.75+Math.random()*0.5; by=-0.45-Math.random()*0.5;   // near-identical initial condition
-    vx=0; vy=0; settle=0;
+  const grp = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x||0, y||0, z||0); parent.add(g); return g; };
+  const cylY = (r1, r2, h, s) => new THREE.CylinderGeometry(r1, r2, h, s||32);
+  function cylX(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateZ(Math.PI/2); return g; }
+  function cylZ(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateX(Math.PI/2); return g; }
+  /* rounded box: a rounded-rect outline, extruded with a bevel of half the radius */
+  function rbox(w, h, d, r){
+    r = Math.min(r, w/2, h/2, d/2) * 0.98;
+    const b = r*0.5, sw = w-2*b, sh = h-2*b, cr = Math.max(r-b, 0.0005);
+    const x0 = -sw/2, y0 = -sh/2, s = new THREE.Shape();
+    s.moveTo(x0+cr, y0); s.lineTo(x0+sw-cr, y0); s.quadraticCurveTo(x0+sw, y0, x0+sw, y0+cr);
+    s.lineTo(x0+sw, y0+sh-cr); s.quadraticCurveTo(x0+sw, y0+sh, x0+sw-cr, y0+sh);
+    s.lineTo(x0+cr, y0+sh); s.quadraticCurveTo(x0, y0+sh, x0, y0+sh-cr);
+    s.lineTo(x0, y0+cr); s.quadraticCurveTo(x0, y0, x0+cr, y0);
+    const g = new THREE.ExtrudeGeometry(s, {depth:Math.max(d-2*b, 0.0005), bevelEnabled:true,
+      bevelThickness:b, bevelSize:b, bevelSegments:3, curveSegments:5, steps:1});
+    g.center();
+    return g;
+  }
+  function canvasTex(w, h, draw){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = 4;
+    return t;
+  }
+  /* a solid rod between two points: a unit cylinder along y, stretched and aimed */
+  const UP = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3();
+  function rod(parent, r, mat, shadow){
+    const m = add(parent, cylY(r, r, 1, 10), mat, 0, 0, 0, shadow);
+    m.userData.set = (a, b) => {
+      _d.subVectors(b, a); const L = _d.length();
+      m.visible = L > 1e-4;
+      if(!m.visible) return;
+      m.position.copy(a).addScaledVector(_d, 0.5);
+      m.scale.set(1, L, 1);
+      m.quaternion.setFromUnitVectors(UP, _d.multiplyScalar(1/L));
+    };
+    return m;
   }
 
-  let sTarget=0,smooth=0,mx=0;
-  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
-  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
-  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-  renderer.setSize(innerWidth,innerHeight);
+  /*  ENVIRONMENT: a small studio rendered once into a PMREM so the
+     metals have something to reflect: a white softbox overhead and a
+     cyan and an amber strip, the site's two accents.  */
+  (function(){
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24),
+      new THREE.MeshBasicMaterial({color:lin(0x0c1628), side:THREE.BackSide})));
+    const panel = (w, h, col, k, x, y, z, rx, ry) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({color:lin(col).multiplyScalar(k), side:THREE.DoubleSide}));
+      m.position.set(x, y, z); m.rotation.set(rx||0, ry||0, 0); env.add(m);
+    };
+    panel(10, 6, 0xffffff, 3.0, 0, 5.9, 0, Math.PI/2, 0);
+    panel(1.4, 8, 0x4fd8e8, 4.0, -11.9, 1, -2, 0, Math.PI/2);
+    panel(1.4, 8, 0xf5a35c, 3.0, 11.9, 1, 3, 0, -Math.PI/2);
+    panel(14, 2.2, 0x9fbfe6, 1.4, 0, 2, -11.9, 0, 0);
+    scene.environment = pm.fromScene(env, 0.035).texture;
+    pm.dispose();
+  })();
 
-  const clock=new THREE.Clock();
+  /*  SKY DOME + FOG share one horizon colour so the floor melts into
+     the sky. In r128 fog is mixed in after tone mapping, so both live
+     in display space: raw hex, no linear conversion, no tone map.  */
+  const skyU = {top:{value:new THREE.Color()}, hor:{value:new THREE.Color()}};
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+    uniforms:skyU, side:THREE.BackSide, depthWrite:false, fog:false,
+    vertexShader:'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:'uniform vec3 top; uniform vec3 hor; varying vec3 vP; void main(){ gl_FragColor = vec4(mix(hor, top, smoothstep(0.0, 0.5, vP.y)), 1.0); }'
+  }));
+  sky.frustumCulled = false; sky.renderOrder = -1;
+  scene.add(sky);
+  scene.fog = new THREE.Fog(0x000000, 16, 60);
+
+  const ground = add(scene, new THREE.PlaneGeometry(900, 900), std(0x060a13, 0.92, 0.2), 0, 0, 0);
+  ground.rotation.x = -Math.PI/2; ground.castShadow = false;
+  const grid = new THREE.GridHelper(400, 200, 0x1c3a66, 0x13243e);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
+  grid.position.y = 0.003; scene.add(grid);
+  const gridL = new THREE.GridHelper(400, 200, 0x9c8458, 0xc1aa80);
+  gridL.material.transparent = true; gridL.material.opacity = 0.35; gridL.material.depthWrite = false;
+  gridL.position.y = 0.003; gridL.visible = false; scene.add(gridL);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 2.3);
+  key.castShadow = renderer.shadowMap.enabled;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(lin(0x4fd8e8), 1.6);
+  scene.add(rim, rim.target);
+  const fill = new THREE.DirectionalLight(lin(0xf5a35c), 0.55);
+  scene.add(fill, fill.target);
+
+  const GLOWS = [];   // emissive materials that power up on load
+  /* the plinth every machine stands on; its rings are the "power" lights */
+  function plinth(root, R){
+    add(root, cylY(R, R+0.14, 0.3, 80), MAT.plinth, 0, 0.15, 0);
+    add(root, cylY(R-0.1, R-0.1, 0.02, 80), MAT.plTop, 0, 0.305, 0);
+    const ringM = glow(0x4fd8e8, 2.2);
+    const ring = add(root, new THREE.TorusGeometry(R+0.005, 0.024, 8, 160), ringM, 0, 0.3, 0, false);
+    ring.rotation.x = Math.PI/2;
+    const innerM = glow(0xf5a35c, 0.7);
+    const inner = add(root, new THREE.RingGeometry(R*0.64, R*0.64+0.018, 120), innerM, 0, 0.318, 0, false);
+    inner.rotation.x = -Math.PI/2;
+    GLOWS.push({m:ringM, k:2.2}, {m:innerM, k:0.7});
+  }
+  const TOP = 0.315;   // plinth deck height
+
+  /*  FX TOOLKIT: a soft glow sprite so particles read as light, particle
+     swarms with a per-point step, light shafts that fade toward the
+     floor, and holographic readout panels that print live state.  */
+  const PARTS = [], HOLOS = [], SHAFTS = [];   // re-tinted when the page theme flips
+  let LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const HC = () => LIGHT
+    ? {bg:'rgba(248,239,220,0.8)', edge:'rgba(10,106,116,0.85)', title:'#974607', rule:'rgba(10,106,116,0.4)', label:'#2e2416', val:'#0a6a74', track:'rgba(10,106,116,0.16)', bar:'rgba(10,106,116,0.85)', amb:'#974607'}
+    : {bg:'rgba(79,216,232,0.1)', edge:'rgba(79,216,232,0.8)', title:'#f5a35c', rule:'rgba(79,216,232,0.45)', label:'rgba(235,242,250,0.95)', val:'#4fd8e8', track:'rgba(79,216,232,0.18)', bar:'rgba(79,216,232,0.85)', amb:'#f5a35c'};
+  const dotTex = canvasTex(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  });
+  function swarm(root, n, col, size, op, init, step){
+    const a = new Float32Array(n*3);
+    for(let i=0;i<n;i++) init(a, i);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
+      depthWrite:false, blending:THREE.AdditiveBlending});
+    const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    PARTS.push({m, c:m.color.clone()});
+    return {m, a, geo, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
+  }
+  /* a sprite that glows: additive in the dark theme, ink in the light one */
+  function spark(root, col, size){
+    const m = new THREE.SpriteMaterial({map:dotTex, color:lin(col), transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+    const sp = new THREE.Sprite(m); sp.scale.setScalar(size); root.add(sp);
+    PARTS.push({m, c:m.color.clone()});
+    return sp;
+  }
+  const shaftTex = canvasTex(4, 128, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  function shaft(root, x, z, rTop, rBot, h, col, op){
+    const m = new THREE.MeshBasicMaterial({color:lin(col), map:shaftTex, transparent:true, opacity:op,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
+    sh.position.set(x, h/2, z); root.add(sh);
+    sh.userData.op = sh.userData.op0 = op;
+    SHAFTS.push(sh);
+    return sh;
+  }
+  /* a line set the scene rewrites every frame (beams, links, rays) */
+  function lines(root, maxSeg, col, op, dashed){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSeg*6), 3));
+    const m = new THREE.LineBasicMaterial({color:lin(col), transparent:true, opacity:op, depthWrite:false});
+    const l = new THREE.LineSegments(geo, m); l.frustumCulled = false; root.add(l);
+    PARTS.push({m, c:m.color.clone()});
+    let n = 0;
+    const arr = geo.attributes.position.array;
+    return {l, m,
+      reset(){ n = 0; },
+      seg(a, b){ if(n >= maxSeg) return; const o = n*6; arr[o]=a.x; arr[o+1]=a.y; arr[o+2]=a.z; arr[o+3]=b.x; arr[o+4]=b.y; arr[o+5]=b.z; n++; },
+      done(){ geo.setDrawRange(0, n*2); geo.attributes.position.needsUpdate = true; }};
+  }
+  function holo(root, w, h, x, y, z){
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512*h/w);
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:tex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
+    mesh.position.set(x, y, z); root.add(mesh);
+    let last = -1;
+    HOLOS.push({m:mesh.material, mesh, reset:() => { last = -1; }});
+    const wp = new THREE.Vector3();
+    return {mesh, draw(t, fn){
+      mesh.lookAt(camera.position);
+      mesh.position.y = y + Math.sin(t*0.8)*0.04;
+      if(last >= 0 && t - last < 0.15) return;
+      last = t; g.clearRect(0, 0, c.width, c.height); fn(g, c.width, c.height); tex.needsUpdate = true;
+    }};
+  }
+  function holoFrame(g, w, h, title){
+    const P = HC();
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = P.edge; g.lineWidth = 3;
+    const k = 26;
+    [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
+    });
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = P.title; g.fillText(title, 26, 48);
+    g.fillStyle = P.rule; g.fillRect(26, 62, w - 52, 2);
+    g.font = '400 26px "IBM Plex Mono", monospace';
+  }
+  function holoRow(g, y, label, val, frac){
+    const P = HC();
+    g.fillStyle = P.label; g.fillText(label, 26, y);
+    g.fillStyle = P.val; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    if(frac !== undefined){
+      g.fillStyle = P.track; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = P.bar; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
+    }
+  }
+  const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
+  const sgn = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d);
+
+// parts:
+  /*  SAC BALL ON PLATE: a steel ball rolls on a plate tilted by a two
+     joint gimbal (J1 rolls, J2 pitches). The policy is PD-shaped in the
+     mean, but every action is sampled from a Gaussian around it, the way
+     a soft actor-critic policy acts, so each attempt from a near-identical
+     start takes its own route to the centre. The live path is amber;
+     earlier attempts stay as faint ghosts; the cloud above the plate is the
+     action distribution being sampled.  */
+  const STAGE = {
+    sky:[0x050a16, 0x0f2140], skyL:[0xc4ad84, 0xe6d6b4], hemi:0xa8c8ff,
+    cam:{az:0.45, d:8.6, h:4.6, ly:1.4},
+    build(root){
+      plinth(root, 2.6);
+      const K = 0.52, R = 2.3, PY = TOP + 1.25;   // sim units scaled onto the stage
+      // base, column and the two-axis gimbal yoke
+      add(root, cylY(0.45, 0.55, 0.16, 40), MAT.dark, 0, TOP + 0.08, 0);
+      add(root, cylY(0.09, 0.11, PY - TOP - 0.45, 20), MAT.steel, 0, (PY + TOP - 0.45)/2 + 0.08, 0);
+      const fork = grp(root, 0, PY - 0.42, 0);
+      add(fork, rbox(1.75, 0.08, 0.12, 0.03), MAT.dark, 0, 0, 0);
+      [-1, 1].forEach(s => add(fork, rbox(0.1, 0.42, 0.12, 0.03), MAT.dark, s*0.86, 0.21, 0));
+      [-1, 1].forEach(s => { add(fork, cylX(0.11, 0.16, 24), MAT.cap, s*0.98, 0.42, 0); add(fork, cylX(0.06, 0.04, 16), MAT.amberG, s*1.08, 0.42, 0, false); });
+      const j1 = grp(root, 0, PY, 0);                        // roll about x
+      add(j1, new THREE.TorusGeometry(0.88, 0.04, 12, 64), MAT.alu).rotation.x = Math.PI/2;
+      [-1, 1].forEach(s => add(j1, cylX(0.04, 0.2, 12), MAT.steel, s*0.88, 0, 0));
+      [-1, 1].forEach(s => { add(j1, cylZ(0.09, 0.14, 24), MAT.cap, 0, 0, s*0.95); });
+      const j2 = grp(j1, 0, 0, 0);                           // pitch about z
+      const P = R*K;
+      add(j2, rbox(P*2, 0.06, P*2, 0.03), std(0xe2e7ee, 0.25, 0.1), 0, 0.08, 0);
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([x, z]) => add(j2, rbox(x ? 0.04 : P*2, 0.07, z ? 0.04 : P*2, 0.015), MAT.dark, x*P, 0.14, z*P));
+      const bull = add(j2, new THREE.RingGeometry(0.15, 0.17, 48), MAT.amberG, 0, 0.112, 0, false); bull.rotation.x = -Math.PI/2;
+      const bull2 = add(j2, new THREE.CircleGeometry(0.03, 20), MAT.amberG, 0, 0.112, 0, false); bull2.rotation.x = -Math.PI/2;
+      const BR = 0.1;
+      const ball = add(j2, new THREE.SphereGeometry(BR, 32, 24), std(0xd5dbe3, 0.12, 1.0), 0, 0.11 + BR, 0);
+      // trails in plate coordinates: live (amber) and ghosts of earlier attempts (cyan)
+      const TN = mobile ? 90 : 170, GH = 3;
+      const live = swarm(j2, TN, 0xf5a35c, 0.04, 0.9, (a, i) => { a[i*3+1] = -10; });
+      const ghosts = []; for(let i=0;i<GH;i++) ghosts.push(swarm(j2, TN, 0x4fd8e8, 0.03, 0.35, (a, k) => { a[k*3+1] = -10; }));
+      let head = 0, slot = 0, ep = 1;
+      const NS = mobile ? 26 : 44;
+      const cloud = swarm(root, NS, 0x4fd8e8, 0.06, 0.6, (a, i) => { a[i*3+1] = -10; });
+      const panel = holo(root, 2.0, 1.3, -1.3, 3.5, -1.5);
+      let bx = 0.9, by = -0.6, vx = 0, vy = 0, roll = 0, pitch = 0, settle = 0, acc = 0;
+      const GP = 0.85, GD = 0.62, SIG = 0.10;
+      const randn = () => { let u = 0, v = 0; while(!u) u = Math.random(); while(!v) v = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v); };
+      function reset(){
+        // keep the finished path as a ghost, then start again from a near-identical state
+        const g = ghosts[slot % GH]; slot++; ep++;
+        g.a.set(live.a); g.geo.attributes.position.needsUpdate = true;
+        for(let i=0;i<TN;i++) live.a[i*3+1] = -10;
+        bx = 0.75 + Math.random()*0.5; by = -0.45 - Math.random()*0.5; vx = vy = 0; settle = 0;
+      }
+      function update(t, dt){
+        dt = Math.min(dt, 0.04);
+        const mRoll = GP*by + GD*vy, mPitch = -(GP*bx + GD*vx);
+        const aRoll = mRoll + randn()*SIG, aPitch = mPitch + randn()*SIG;
+        roll  += (Math.max(-0.42, Math.min(0.42, aRoll )) - roll )*Math.min(1, dt*3);
+        pitch += (Math.max(-0.42, Math.min(0.42, aPitch)) - pitch)*Math.min(1, dt*3);
+        j1.rotation.x = roll; j2.rotation.z = pitch;
+        const g = 9.81*(5/7);
+        vx += g*Math.sin(pitch)*dt*0.22; vy += -g*Math.sin(roll)*dt*0.22;
+        vx *= 0.995; vy *= 0.995; bx += vx*dt; by += vy*dt;
+        const lim = R - 0.24;
+        if(bx > lim){ bx = lim; vx *= -0.45; } if(bx < -lim){ bx = -lim; vx *= -0.45; }
+        if(by > lim){ by = lim; vy *= -0.45; } if(by < -lim){ by = -lim; vy *= -0.45; }
+        ball.position.set(bx*K, 0.11 + BR, by*K);
+        ball.rotation.z -= vx*K*dt/BR; ball.rotation.x += vy*K*dt/BR;
+        acc += dt;
+        if(acc > 0.03){ acc = 0; live.a[head*3] = bx*K; live.a[head*3+1] = 0.12; live.a[head*3+2] = by*K; head = (head + 1) % TN; live.geo.attributes.position.needsUpdate = true; }
+        for(let i=0;i<NS;i++){
+          cloud.a[i*3] = (mPitch + randn()*SIG)*1.8; cloud.a[i*3+1] = PY + 1.45 + Math.sin(t*1.5 + i)*0.04; cloud.a[i*3+2] = (mRoll + randn()*SIG)*1.8;
+        }
+        cloud.geo.attributes.position.needsUpdate = true;
+        const near = Math.hypot(bx, by) < 0.34 && Math.hypot(vx, vy) < 0.25;
+        settle = near ? settle + dt : 0;
+        if(settle > 1.6) reset();
+        panel.draw(t, (gx, w, h) => {
+          holoFrame(gx, w, h, 'SAC POLICY  EPISODE ' + ep);
+          holoRow(gx, 112, 'J1 roll', deg(roll), 0.5 + roll/0.84);
+          holoRow(gx, 170, 'J2 pitch', deg(pitch), 0.5 + pitch/0.84);
+          holoRow(gx, 228, 'distance to centre', Math.hypot(bx, by).toFixed(2), Math.hypot(bx, by)/2.5);
+          holoRow(gx, 286, 'action noise', 'GAUSSIAN SAMPLE');
+        });
+      }
+      return {update};
+    }
+  };
+
+  /*  BUILD the page's stage  */
+  const root = new THREE.Group(); scene.add(root);
+  root.userData.glows = GLOWS;   // the home-page builders register their glows here
+  const api = STAGE.build(root) || {};
+  const C = Object.assign({az:0.4, d:10.5, h:3.8, ly:1.4, fit:1.2, rise:1.2}, STAGE.cam || {});
+  const SH = STAGE.shadow || 7.5;
+  key.shadow.camera.left = key.shadow.camera.bottom = -SH;
+  key.shadow.camera.right = key.shadow.camera.top = SH;
+  key.shadow.camera.far = 30 + SH*2;
+  key.position.set(5, 12, 7); rim.position.set(-6, 5, -8); fill.position.set(8, 2.5, -2);
+  const fogK = C.d/10.5;
+  scene.fog.near = 16*fogK; scene.fog.far = 60*fogK*(STAGE.fogFar || 1);
+  if(STAGE.noGround){ ground.visible = false; }
+  const skyD = [new THREE.Color(STAGE.sky[0]), new THREE.Color(STAGE.sky[1])];
+  const skyLt = [new THREE.Color(STAGE.skyL[0]), new THREE.Color(STAGE.skyL[1])];
+  const hemiC = lin(STAGE.hemi || 0xa8c8ff), WARM_SKY = lin(0xffd394);
+
+  /*  CAMERA RIG: the machine is a backdrop, not the subject. It sits
+     centred behind the page's text column under a scrim, like a
+     watermark, and the camera swings slowly round it as you read (a crane
+     orbit driven by scroll progress, a full 360 degrees from the top of
+     the page to the bottom). The holo readouts are not shown:
+     text behind body copy would only be noise.  */
+  HOLOS.forEach(h => { h.mesh.visible = false; });
+  const wide = () => camera.aspect > 1.05;
+  const pos = new THREE.Vector3(), look = new THREE.Vector3();
+  function stageCam(p){
+    const w = wide();
+    const d = C.d*(w ? 1.15*C.fit : 1.55);
+    const az = C.az + p*Math.PI*2;               // one full turn round the machine over the page
+    pos.set(Math.sin(az)*d, C.h*(w ? 1 : 1.25) + (0.5 - p)*C.rise, Math.cos(az)*d);
+    look.set(0, C.ly + (w ? 0 : 1.1), 0);
+  }
+
+  let scrollP = 0;
+  function readScroll(){
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    scrollP = clamp01(window.scrollY/max);
+  }
+  addEventListener('scroll', readScroll, {passive:true});
+  readScroll();
+
+  let ptrNX = 0, ptrNY = 0, smNX = 0, smNY = 0;
+  addEventListener('pointermove', e => {
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // no parallax lurch on touch
+    ptrNX = e.clientX/innerWidth - 0.5; ptrNY = e.clientY/innerHeight - 0.5;
+  }, {passive:true});
+  addEventListener('pointerleave', () => { ptrNX = ptrNY = 0; }, {passive:true});
+
+  /*  THEME: the same stage lit for a light page. Warm lamp skies and
+     floor, more fill; additive glow vanishes on a bright sky, so
+     particles switch to normal blending with deeper tints and the holo
+     panels redraw as dark text on frosted glass.  */
+  const groundM = ground.material, darkGround = groundM.color.clone();
+  const plD = MAT.plinth.color.clone(), plTD = MAT.plTop.color.clone();
+  function applyTheme(light){
+    LIGHT = light;
+    renderer.toneMappingExposure = light ? 0.78 : 0.82;
+    hemi.intensity = light ? 0.75 : 0.38;
+    hemi.groundColor.copy(light ? lin(0x8f7550) : lin(0x05080f));
+    hemi.color.copy(hemiC); if(light) hemi.color.lerp(WARM_SKY, 0.65);
+    key.color.copy(light ? lin(0xffd59a) : new THREE.Color(0xffffff));
+    key.intensity = light ? 2.0 : 2.3;
+    groundM.color.copy(light ? lin(0xc4ad84) : darkGround);
+    MAT.plinth.color.copy(light ? lin(0x8a7552) : plD);
+    MAT.plTop.color.copy(light ? lin(0xbfa880) : plTD);
+    grid.visible = !light && !STAGE.noGround; gridL.visible = light && !STAGE.noGround;
+    const S = light ? skyLt : skyD;
+    skyU.top.value.copy(S[0]); skyU.hor.value.copy(S[1]); scene.fog.color.copy(S[1]);
+    PARTS.forEach(p => {
+      p.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      p.m.color.copy(p.c); if(light) p.m.color.multiplyScalar(0.42);
+      p.m.needsUpdate = true;
+    });
+    SHAFTS.forEach(sh => { sh.userData.op = sh.userData.op0*(light ? 0.3 : 1); sh.material.opacity = sh.userData.op; });
+    HOLOS.forEach(h => { h.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending; h.m.needsUpdate = true; h.reset(); });
+    if(api.theme) api.theme(light);
+  }
+  applyTheme(LIGHT);
+
+  /* power-up on load: glows ramp in and the machine settles to full scale */
+  function power(e){
+    GLOWS.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
+    root.scale.setScalar(0.9 + 0.1*e);
+  }
+
+  function resize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    readScroll();
+    if(reduced) still();
+  }
+  addEventListener('resize', resize, {passive:true});
+  renderer.setSize(innerWidth, innerHeight);
+
+  /* Reduced motion: no rAF loop. The stage is composed as a still and
+     recomposed only when the layout, scroll or theme changes. */
+  function still(){
+    stageCam(scrollP); camera.position.copy(pos); camera.lookAt(look);
+    sky.position.copy(camera.position);
+    power(1);
+    if(api.update){ for(let i=0;i<3;i++) api.update(2.0 + i/60, 1/60); }
+    renderer.render(scene, camera);
+  }
+  window.addEventListener('themechange', e => { applyTheme(e.detail === 'light'); if(reduced) still(); });
+  if(reduced){
+    still();
+    let q = false;
+    addEventListener('scroll', () => { if(q) return; q = true; requestAnimationFrame(() => { q = false; still(); }); }, {passive:true});
+    return;
+  }
+
+  const clock = new THREE.Clock();
+  let t = 0, intro = 0, frames = 0, probe = 0, tuned = false;
+  stageCam(scrollP);
+  const curPos = pos.clone(), curLook = look.clone();
   function animate(){
     requestAnimationFrame(animate);
-    const dt=Math.min(clock.getDelta(),0.04);
-    const t=clock.elapsedTime;
-    if(!reduced){
-      /* policy: a PD-shaped mean, then sample the action from a Gaussian around it */
-      const mRoll  = GAIN_P*by + GAIN_D*vy;
-      const mPitch = -(GAIN_P*bx + GAIN_D*vx);
-      const aRoll  = mRoll  + randn()*SIGMA;
-      const aPitch = mPitch + randn()*SIGMA;
-      roll  += (Math.max(-0.42,Math.min(0.42,aRoll )) - roll )*Math.min(1,dt*3.0);
-      pitch += (Math.max(-0.42,Math.min(0.42,aPitch)) - pitch)*Math.min(1,dt*3.0);
-      j1.rotation.x=roll; j2.rotation.z=pitch;
-
-      /* rolling ball on the tilted plate (5/7 factor for a solid sphere) */
-      const g=9.81*(5/7);
-      vx += ( g*Math.sin(pitch))*dt*0.22;
-      vy += (-g*Math.sin(roll ))*dt*0.22;
-      vx*=0.995; vy*=0.995;
-      bx+=vx*dt; by+=vy*dt;
-      const lim=R-0.24;                            // bounce off the plate edge
-      if(bx> lim){bx= lim;vx*=-0.45;} if(bx<-lim){bx=-lim;vx*=-0.45;}
-      if(by> lim){by= lim;vy*=-0.45;} if(by<-lim){by=-lim;vy*=-0.45;}
-      ball.position.set(bx,0.22,by);
-
-      /* live trail in plate coordinates */
-      for(let i=TN-1;i>0;i--){
-        live.p[i*3]=live.p[(i-1)*3];live.p[i*3+1]=live.p[(i-1)*3+1];live.p[i*3+2]=live.p[(i-1)*3+2];
+    /* clamped dt: a backgrounded tab resumes where it paused */
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if(document.hidden) return;
+    t += dt;
+    /* one-time quality probe: if this machine can't hold 45 fps, drop
+       to DPR 1 and soften shadows rather than ship a stuttering page */
+    if(!tuned){
+      frames++; probe += dt;
+      if(probe > 2.5){
+        tuned = true;
+        if(frames/probe < 45){
+          if(renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); }
+          key.shadow.mapSize.set(1024, 1024); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; }
+        }
       }
-      live.p[0]=bx;live.p[1]=0.08;live.p[2]=by;
-      if(live.n<TN){ live.n++;
-        for(let i=live.n;i<TN;i++){live.p[i*3]=bx;live.p[i*3+1]=0.08;live.p[i*3+2]=by;}
-      }
-      live.g.attributes.position.needsUpdate=true;
-
-      /* the sampling cloud, floating above the plate */
-      for(let i=0;i<NS;i++){
-        sPos[i*3]  =mx*0+ (mPitch+randn()*SIGMA)*3.4;
-        sPos[i*3+1]=2.9+Math.sin(t*1.5+i)*0.06;
-        sPos[i*3+2]=(mRoll +randn()*SIGMA)*3.4;
-      }
-      sGeo.attributes.position.needsUpdate=true;
-
-      /* once centered and slow, log the attempt and run it again */
-      const near=Math.hypot(bx,by)<0.34 && Math.hypot(vx,vy)<0.25;
-      settle=near?settle+dt:0;
-      if(settle>1.6) reset();
     }
-    smooth+=(sTarget-smooth)*0.05;
-    const d=smooth*0.0012;
-    camera.position.x=Math.sin(t*0.07+d*0.4)*7.5+mx*1.8;
-    camera.position.z=7.5+Math.cos(t*0.07+d*0.4)*2.5;
-    camera.position.y=4.4+Math.min(d*1.8,2.6);
-    camera.lookAt(0,0.1,0);
-    renderer.render(scene,camera);
+    stageCam(scrollP);
+    const kc = damp(0.05, dt);
+    curPos.lerp(pos, kc); curLook.lerp(look, kc);
+    const kp = damp(0.07, dt);
+    smNX += (ptrNX - smNX)*kp; smNY += (ptrNY - smNY)*kp;
+    camera.position.copy(curPos);
+    camera.position.x += Math.sin(t*0.13)*0.3;
+    camera.position.y += Math.cos(t*0.09)*0.18;
+    camera.lookAt(curLook);
+    camera.translateX( smNX*1.4);
+    camera.translateY(-smNY*0.9);
+    camera.lookAt(curLook);
+    sky.position.copy(camera.position);
+    intro = Math.min(1, intro + dt/1.6);
+    power(smoothstep(intro));
+    if(api.update) api.update(t, dt);
+    renderer.render(scene, camera);
   }
   animate();
 })();

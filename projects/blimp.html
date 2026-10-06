@@ -160,10 +160,15 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
   :root[data-theme="light"] .theme-btn .moon{display:block;}
   @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
+<style id="solid-stage-css">
+  /* solid stage: the machine is a watermark behind the text column, under a scrim */
+  .stage-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(var(--ink-rgb),0.62);}
+</style>
 </head>
 <body>
 
 <canvas id="blimpscene"></canvas>
+<div class="stage-scrim"></div>
 <div class="vignette"></div>
 
 <nav>
@@ -432,219 +437,689 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* light theme for the wireframe background, without touching the scene code:
-   each renderer's render() is wrapped so every material it draws is re-inked, same hue
-   darkened to ink depth, glow switched to normal blending, fog turned cream.
-   Colours the scene changes itself (live highlights) are caught each frame.
-   Textured materials (canvas displays) are left alone. */
-(function(){
-  if(!window.THREE) return;
-  const seen = new WeakSet(), mats = [], scenes = [];
-  const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
-  let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
-  function ink(m){
-    const u = m.userData;
-    m.color.copy(u.tc0);
-    if(light){
-      m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
-      // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
-      // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
-      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*fade(m);
-      if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
-    } else {
-      if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
-      if(u.to0 !== undefined) m.opacity = u.to0;
-    }
-    u.tset = m.color.clone(); u.topset = m.opacity;
-  }
-  // the light fade for a base opacity: vertex-coloured grids and edges were built faint on navy, fade them hardest
-  const fade = m => m.vertexColors ? 0.22 : 0.4;
-  function scan(scene){
-    scene.traverse(o => {
-      const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-      list.forEach(m => {
-        if(seen.has(m) || !m.color || m.map) return;
-        if(!m.transparent){ m.transparent = true; m.needsUpdate = true; }
-        seen.add(m); m.userData.tc0 = m.color.clone(); m.userData.tb0 = m.blending; m.userData.to0 = m.opacity; mats.push(m); ink(m);
-      });
-    });
-  }
-  function fog(scene){
-    if(!scene.fog) return;
-    if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
-    scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
-  }
-  function hook(scene){
-    if(scene && scene.isScene){
-      if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
-      else if(++tick % 90 === 0) scan(scene);
-      if(light) for(let i=0;i<mats.length;i++){
-        const m = mats[i];
-        const u = m.userData;
-        if(!m.color.equals(u.tset)){ u.tc0.copy(m.color); ink(m); }
-        else if(m.opacity !== u.topset){ u.to0 = m.opacity; m.opacity = u.to0*fade(m); u.topset = m.opacity; }   // the scene animated its opacity
-      }
-    }
-  }
-  // r128 builds render() inside the constructor, per instance, so patching the
-  // prototype does nothing: wrap the constructor and hook each renderer's own render
-  const Base = THREE.WebGLRenderer;
-  THREE.WebGLRenderer = function(params){
-    const r = new Base(params), render = r.render;
-    r.render = function(scene, cam){ hook(scene); return render.call(this, scene, cam); };
-    return r;
-  };
-  THREE.WebGLRenderer.prototype = Base.prototype;
-  window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
-})();
-</script>
-<script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+<script id="solid-stage">
+(function(){
+  const CANVAS_ID = 'blimpscene';
+  /*  SOLID STAGE, the project-page version of the home page's robot
+     stages: one lit plinth with a solid, articulated machine working on
+     it, built from three.js primitives (no model files, so the page
+     still runs from file://). Generated into each page by
+     tools/solid_stage.py from tools/stage/; edit the sources there and
+     re-run the script rather than editing a page's copy.  */
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = innerWidth < 700;
+  const canvas = document.getElementById(CANVAS_ID);
+  if(!canvas || !window.THREE) return;
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  /* Background: the vision-autonomy loop itself, a wireframe blimp pursues a drifting
-     balloon target; a camera frustum projects from the gondola onto a quadrant reticle
-     that tracks the balloon, echoing the Q1 to Q4 navigation logic. */
-  const canvas=document.getElementById('blimpscene');
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  const scene=new THREE.Scene();
-  scene.fog=new THREE.FogExp2(0x060a14,0.05);
-  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,120);
-  camera.position.set(0,2.5,13);
-  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0;
-  const mobile=innerWidth<700;
-  const wire=c=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.65});
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(mobile ? 46 : 36, innerWidth/innerHeight, 0.1, 420);
 
-  const grid=new THREE.GridHelper(80,50,0x1c3a66,0x11223f);
-  grid.position.y=-4; grid.material.transparent=true; grid.material.opacity=0.5;
-  scene.add(grid);
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const smoothstep = x => x*x*(3-2*x);
+  const ss = (u, a, b) => smoothstep(clamp01((u-a)/(b-a)));
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const angLerp = (a, b, k) => {
+    let d = (b - a) % (Math.PI*2);
+    if(d >  Math.PI) d -= Math.PI*2;
+    if(d < -Math.PI) d += Math.PI*2;
+    return a + d*k;
+  };
+  const R01 = i => { const x = Math.sin(i*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };   // stable hash
 
-  /*  blimp  */
-  const blimp=new THREE.Group();
-  const hull=new THREE.Mesh(new THREE.SphereGeometry(1.5,16,12),wire(DEEPBLUE));
-  hull.scale.set(1.7,0.64,0.64); blimp.add(hull);
-  const gondola=new THREE.Mesh(new THREE.BoxGeometry(0.85,0.3,0.36),wire(CYAN));
-  gondola.position.y=-1.08; blimp.add(gondola);
-  // camera pod on the gondola nose
-  const camPod=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.22,6),wire(AMBER));
-  camPod.rotation.z=-Math.PI/2; camPod.position.set(0.55,-1.08,0); blimp.add(camPod);
-  // motor booms + props
-  const props=[];
-  [[0.5],[-0.5]].forEach(([z])=>{
-    const boom=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,1.0,5),wire(DEEPBLUE));
-    boom.rotation.x=Math.PI/2; boom.position.set(-0.2,-1.08,z*0.5); blimp.add(boom);
-    const pr=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.5,0.06),wire(AMBER));
-    pr.position.set(-0.2,-1.08,z*1.0);
-    blimp.add(pr); props.push(pr);
+  /*  MATERIALS: three r128 treats hex as linear, so every authored
+     colour is converted from sRGB first or the palette washes out.  */
+  const lin  = h => new THREE.Color(h).convertSRGBToLinear();
+  const std  = (c, r, m, o) => new THREE.MeshStandardMaterial(Object.assign({color:lin(c), roughness:r, metalness:m}, o||{}));
+  const glow = (c, k) => new THREE.MeshStandardMaterial({color:0x000000, emissive:lin(c), emissiveIntensity:k||1.6, roughness:0.4});
+  const MAT = {
+    shell:  std(0xe2e7ee, 0.34, 0.05),
+    alu:    std(0xb2bcc9, 0.28, 0.9),
+    steel:  std(0x76818f, 0.32, 0.85),
+    dark:   std(0x1c2433, 0.5, 0.55),
+    carbon: std(0x12161e, 0.42, 0.35),
+    rubber: std(0x0b0d12, 0.9, 0.0),
+    cap:    std(0x3f87c6, 0.36, 0.3),
+    amber:  std(0xf5a35c, 0.42, 0.12),
+    red:    std(0xc94a3a, 0.5, 0.2),
+    green:  std(0x4cc35d, 0.4, 0.1),
+    glass:  std(0x0a1a24, 0.08, 0.9),
+    cyanG:  glow(0x4fd8e8, 2.4),
+    amberG: glow(0xf5a35c, 2.0),
+    redG:   glow(0xe5534b, 2.2),
+    greenG: glow(0x3fd17a, 2.0),
+    plinth: std(0x0c1424, 0.42, 0.8),
+    plTop:  std(0x0d1522, 0.78, 0.35)
+  };
+
+  /*  GEOMETRY HELPERS  */
+  function add(parent, geo, mat, x, y, z, shadow){
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x||0, y||0, z||0);
+    if(shadow !== false && renderer.shadowMap.enabled){ m.castShadow = true; m.receiveShadow = true; }
+    parent.add(m);
+    return m;
+  }
+  const grp = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x||0, y||0, z||0); parent.add(g); return g; };
+  const cylY = (r1, r2, h, s) => new THREE.CylinderGeometry(r1, r2, h, s||32);
+  function cylX(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateZ(Math.PI/2); return g; }
+  function cylZ(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateX(Math.PI/2); return g; }
+  /* rounded box: a rounded-rect outline, extruded with a bevel of half the radius */
+  function rbox(w, h, d, r){
+    r = Math.min(r, w/2, h/2, d/2) * 0.98;
+    const b = r*0.5, sw = w-2*b, sh = h-2*b, cr = Math.max(r-b, 0.0005);
+    const x0 = -sw/2, y0 = -sh/2, s = new THREE.Shape();
+    s.moveTo(x0+cr, y0); s.lineTo(x0+sw-cr, y0); s.quadraticCurveTo(x0+sw, y0, x0+sw, y0+cr);
+    s.lineTo(x0+sw, y0+sh-cr); s.quadraticCurveTo(x0+sw, y0+sh, x0+sw-cr, y0+sh);
+    s.lineTo(x0+cr, y0+sh); s.quadraticCurveTo(x0, y0+sh, x0, y0+sh-cr);
+    s.lineTo(x0, y0+cr); s.quadraticCurveTo(x0, y0, x0+cr, y0);
+    const g = new THREE.ExtrudeGeometry(s, {depth:Math.max(d-2*b, 0.0005), bevelEnabled:true,
+      bevelThickness:b, bevelSize:b, bevelSegments:3, curveSegments:5, steps:1});
+    g.center();
+    return g;
+  }
+  function canvasTex(w, h, draw){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = 4;
+    return t;
+  }
+  /* a solid rod between two points: a unit cylinder along y, stretched and aimed */
+  const UP = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3();
+  function rod(parent, r, mat, shadow){
+    const m = add(parent, cylY(r, r, 1, 10), mat, 0, 0, 0, shadow);
+    m.userData.set = (a, b) => {
+      _d.subVectors(b, a); const L = _d.length();
+      m.visible = L > 1e-4;
+      if(!m.visible) return;
+      m.position.copy(a).addScaledVector(_d, 0.5);
+      m.scale.set(1, L, 1);
+      m.quaternion.setFromUnitVectors(UP, _d.multiplyScalar(1/L));
+    };
+    return m;
+  }
+
+  /*  ENVIRONMENT: a small studio rendered once into a PMREM so the
+     metals have something to reflect: a white softbox overhead and a
+     cyan and an amber strip, the site's two accents.  */
+  (function(){
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24),
+      new THREE.MeshBasicMaterial({color:lin(0x0c1628), side:THREE.BackSide})));
+    const panel = (w, h, col, k, x, y, z, rx, ry) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({color:lin(col).multiplyScalar(k), side:THREE.DoubleSide}));
+      m.position.set(x, y, z); m.rotation.set(rx||0, ry||0, 0); env.add(m);
+    };
+    panel(10, 6, 0xffffff, 3.0, 0, 5.9, 0, Math.PI/2, 0);
+    panel(1.4, 8, 0x4fd8e8, 4.0, -11.9, 1, -2, 0, Math.PI/2);
+    panel(1.4, 8, 0xf5a35c, 3.0, 11.9, 1, 3, 0, -Math.PI/2);
+    panel(14, 2.2, 0x9fbfe6, 1.4, 0, 2, -11.9, 0, 0);
+    scene.environment = pm.fromScene(env, 0.035).texture;
+    pm.dispose();
+  })();
+
+  /*  SKY DOME + FOG share one horizon colour so the floor melts into
+     the sky. In r128 fog is mixed in after tone mapping, so both live
+     in display space: raw hex, no linear conversion, no tone map.  */
+  const skyU = {top:{value:new THREE.Color()}, hor:{value:new THREE.Color()}};
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+    uniforms:skyU, side:THREE.BackSide, depthWrite:false, fog:false,
+    vertexShader:'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:'uniform vec3 top; uniform vec3 hor; varying vec3 vP; void main(){ gl_FragColor = vec4(mix(hor, top, smoothstep(0.0, 0.5, vP.y)), 1.0); }'
+  }));
+  sky.frustumCulled = false; sky.renderOrder = -1;
+  scene.add(sky);
+  scene.fog = new THREE.Fog(0x000000, 16, 60);
+
+  const ground = add(scene, new THREE.PlaneGeometry(900, 900), std(0x060a13, 0.92, 0.2), 0, 0, 0);
+  ground.rotation.x = -Math.PI/2; ground.castShadow = false;
+  const grid = new THREE.GridHelper(400, 200, 0x1c3a66, 0x13243e);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
+  grid.position.y = 0.003; scene.add(grid);
+  const gridL = new THREE.GridHelper(400, 200, 0x9c8458, 0xc1aa80);
+  gridL.material.transparent = true; gridL.material.opacity = 0.35; gridL.material.depthWrite = false;
+  gridL.position.y = 0.003; gridL.visible = false; scene.add(gridL);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 2.3);
+  key.castShadow = renderer.shadowMap.enabled;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(lin(0x4fd8e8), 1.6);
+  scene.add(rim, rim.target);
+  const fill = new THREE.DirectionalLight(lin(0xf5a35c), 0.55);
+  scene.add(fill, fill.target);
+
+  const GLOWS = [];   // emissive materials that power up on load
+  /* the plinth every machine stands on; its rings are the "power" lights */
+  function plinth(root, R){
+    add(root, cylY(R, R+0.14, 0.3, 80), MAT.plinth, 0, 0.15, 0);
+    add(root, cylY(R-0.1, R-0.1, 0.02, 80), MAT.plTop, 0, 0.305, 0);
+    const ringM = glow(0x4fd8e8, 2.2);
+    const ring = add(root, new THREE.TorusGeometry(R+0.005, 0.024, 8, 160), ringM, 0, 0.3, 0, false);
+    ring.rotation.x = Math.PI/2;
+    const innerM = glow(0xf5a35c, 0.7);
+    const inner = add(root, new THREE.RingGeometry(R*0.64, R*0.64+0.018, 120), innerM, 0, 0.318, 0, false);
+    inner.rotation.x = -Math.PI/2;
+    GLOWS.push({m:ringM, k:2.2}, {m:innerM, k:0.7});
+  }
+  const TOP = 0.315;   // plinth deck height
+
+  /*  FX TOOLKIT: a soft glow sprite so particles read as light, particle
+     swarms with a per-point step, light shafts that fade toward the
+     floor, and holographic readout panels that print live state.  */
+  const PARTS = [], HOLOS = [], SHAFTS = [];   // re-tinted when the page theme flips
+  let LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const HC = () => LIGHT
+    ? {bg:'rgba(248,239,220,0.8)', edge:'rgba(10,106,116,0.85)', title:'#974607', rule:'rgba(10,106,116,0.4)', label:'#2e2416', val:'#0a6a74', track:'rgba(10,106,116,0.16)', bar:'rgba(10,106,116,0.85)', amb:'#974607'}
+    : {bg:'rgba(79,216,232,0.1)', edge:'rgba(79,216,232,0.8)', title:'#f5a35c', rule:'rgba(79,216,232,0.45)', label:'rgba(235,242,250,0.95)', val:'#4fd8e8', track:'rgba(79,216,232,0.18)', bar:'rgba(79,216,232,0.85)', amb:'#f5a35c'};
+  const dotTex = canvasTex(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64);
   });
-  [[1],[-1]].forEach(([s])=>{
-    const fin=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.7,4),wire(DEEPBLUE));
-    fin.rotation.z=Math.PI/2;
-    fin.position.set(-2.45,s*0.35,0);
-    blimp.add(fin);
+  function swarm(root, n, col, size, op, init, step){
+    const a = new Float32Array(n*3);
+    for(let i=0;i<n;i++) init(a, i);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
+      depthWrite:false, blending:THREE.AdditiveBlending});
+    const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    PARTS.push({m, c:m.color.clone()});
+    return {m, a, geo, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
+  }
+  /* a sprite that glows: additive in the dark theme, ink in the light one */
+  function spark(root, col, size){
+    const m = new THREE.SpriteMaterial({map:dotTex, color:lin(col), transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+    const sp = new THREE.Sprite(m); sp.scale.setScalar(size); root.add(sp);
+    PARTS.push({m, c:m.color.clone()});
+    return sp;
+  }
+  const shaftTex = canvasTex(4, 128, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
   });
-  blimp.scale.setScalar(mobile?0.75:1.0);
-  scene.add(blimp);
+  function shaft(root, x, z, rTop, rBot, h, col, op){
+    const m = new THREE.MeshBasicMaterial({color:lin(col), map:shaftTex, transparent:true, opacity:op,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
+    sh.position.set(x, h/2, z); root.add(sh);
+    sh.userData.op = sh.userData.op0 = op;
+    SHAFTS.push(sh);
+    return sh;
+  }
+  /* a line set the scene rewrites every frame (beams, links, rays) */
+  function lines(root, maxSeg, col, op, dashed){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSeg*6), 3));
+    const m = new THREE.LineBasicMaterial({color:lin(col), transparent:true, opacity:op, depthWrite:false});
+    const l = new THREE.LineSegments(geo, m); l.frustumCulled = false; root.add(l);
+    PARTS.push({m, c:m.color.clone()});
+    let n = 0;
+    const arr = geo.attributes.position.array;
+    return {l, m,
+      reset(){ n = 0; },
+      seg(a, b){ if(n >= maxSeg) return; const o = n*6; arr[o]=a.x; arr[o+1]=a.y; arr[o+2]=a.z; arr[o+3]=b.x; arr[o+4]=b.y; arr[o+5]=b.z; n++; },
+      done(){ geo.setDrawRange(0, n*2); geo.attributes.position.needsUpdate = true; }};
+  }
+  function holo(root, w, h, x, y, z){
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512*h/w);
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:tex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
+    mesh.position.set(x, y, z); root.add(mesh);
+    let last = -1;
+    HOLOS.push({m:mesh.material, mesh, reset:() => { last = -1; }});
+    const wp = new THREE.Vector3();
+    return {mesh, draw(t, fn){
+      mesh.lookAt(camera.position);
+      mesh.position.y = y + Math.sin(t*0.8)*0.04;
+      if(last >= 0 && t - last < 0.15) return;
+      last = t; g.clearRect(0, 0, c.width, c.height); fn(g, c.width, c.height); tex.needsUpdate = true;
+    }};
+  }
+  function holoFrame(g, w, h, title){
+    const P = HC();
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = P.edge; g.lineWidth = 3;
+    const k = 26;
+    [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
+    });
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = P.title; g.fillText(title, 26, 48);
+    g.fillStyle = P.rule; g.fillRect(26, 62, w - 52, 2);
+    g.font = '400 26px "IBM Plex Mono", monospace';
+  }
+  function holoRow(g, y, label, val, frac){
+    const P = HC();
+    g.fillStyle = P.label; g.fillText(label, 26, y);
+    g.fillStyle = P.val; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    if(frac !== undefined){
+      g.fillStyle = P.track; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = P.bar; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
+    }
+  }
+  const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
+  const sgn = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d);
 
-  /*  balloon target  */
-  const balloon=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,8),wire(AMBER));
-  const knot=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.18,5),wire(AMBER));
-  knot.position.y=-0.58; balloon.add(knot);
-  scene.add(balloon);
 
-  /*  quadrant reticle tracking the balloon  */
-  const reticle=new THREE.Group();
-  const RW=2.2,RH=1.65;
-  const frameGeo=new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-RW/2,-RH/2,0),new THREE.Vector3(RW/2,-RH/2,0),
-    new THREE.Vector3(RW/2,RH/2,0),new THREE.Vector3(-RW/2,RH/2,0),
-    new THREE.Vector3(-RW/2,-RH/2,0)]);
-  const retMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.55});
-  reticle.add(new THREE.Line(frameGeo,retMat));
-  const crossMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.3});
-  const crossH=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-RW/2,0,0),new THREE.Vector3(RW/2,0,0)]);
-  const crossV=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-RH/2,0),new THREE.Vector3(0,RH/2,0)]);
-  reticle.add(new THREE.Line(crossH,crossMat));
-  reticle.add(new THREE.Line(crossV,crossMat));
-  scene.add(reticle);
+  /*  5. BLIMP, catch and score (the Defend the Republic game AeroFusion
+     flew): a free balloon spawns, the blimp chases it until the net under
+     its gondola scoops it up, carries it to the next goal (circle, then
+     triangle, then square), lines up square to the frame and puts the
+     balloon through it. The nose is the blunt end; the envelope tapers to
+     the tail fins, and the two ducted thrusters ride on the envelope's
+     flanks. */
+  function buildBlimp(root){
+    plinth(root, 3.0);
+    const L = 3.6, R = 0.78, C = 0.68;
+    const pts = [];
+    for(let i=0;i<=48;i++){
+      const v = i/48, y = -L/2 + v*L;          // v: 0 tail, 1 nose
+      const r = v < C ? R*Math.pow(v/C, 0.8) : R*Math.sqrt(Math.max(0, 1 - Math.pow((v - C)/(1 - C), 2)));
+      pts.push(new THREE.Vector2(Math.max(r, 0.002), y));
+    }
+    const envG = new THREE.LatheGeometry(pts, 56); envG.rotateZ(-Math.PI/2);
+    const bl = new THREE.Group(); root.add(bl);
+    add(bl, envG, std(0xc9d2dc, 0.26, 0.72));
+    add(bl, cylX(R*0.99, 0.05, 56), MAT.amber, 0.55, 0, 0);
+    const finG = rbox(0.55, 0.42, 0.03, 0.02), finH = rbox(0.55, 0.03, 0.42, 0.02);
+    add(bl, finG, MAT.amber, -1.45, 0.3, 0); add(bl, finG, MAT.amber, -1.45, -0.3, 0);
+    add(bl, finH, MAT.amber, -1.45, 0, 0.3); add(bl, finH, MAT.amber, -1.45, 0, -0.3);
+    // gondola with the camera, slung under the envelope
+    [[-0.12, 0.12], [0.22, 0.12], [-0.12, -0.12], [0.22, -0.12]].forEach(([x, z]) => add(bl, cylY(0.008, 0.008, 0.2, 6), MAT.steel, x, -0.82, z));
+    add(bl, rbox(0.6, 0.18, 0.3, 0.05), MAT.carbon, 0.05, -0.98, 0);
+    add(bl, rbox(0.04, 0.03, 0.16, 0.008), MAT.cyanG, 0.36, -0.94, 0, false);
+    add(bl, new THREE.SphereGeometry(0.045, 16, 10), MAT.glass, 0.37, -1.02, 0);
+    // side thrusters: a strut off each flank, a duct, a spinning prop
+    const blur = new THREE.MeshBasicMaterial({color:0xcfe6ff, transparent:true, opacity:0.1, depthWrite:false, side:THREE.DoubleSide});
+    const props = [-1, 1].map(s => {
+      const z = s*(R + 0.24);
+      add(bl, cylZ(0.022, 0.3, 10), MAT.steel, 0.05, -0.12, s*(R - 0.02));
+      const duct = add(bl, new THREE.TorusGeometry(0.17, 0.035, 10, 32), MAT.dark, 0.05, -0.12, z);
+      duct.rotation.y = Math.PI/2;
+      add(bl, cylX(0.05, 0.14, 16), MAT.alu, 0.05, -0.12, z);
+      const p = new THREE.Group(); p.position.set(-0.03, -0.12, z); bl.add(p);
+      add(p, rbox(0.012, 0.3, 0.04, 0.004), MAT.dark);
+      const d = new THREE.Mesh(new THREE.CircleGeometry(0.16, 28), blur); d.rotation.y = Math.PI/2; p.add(d);
+      return p;
+    });
+    // the catching net: a hoop under the gondola with a bag of netting
+    const NET = new THREE.Vector3(0.3, -1.42, 0);
+    const hoop = add(bl, new THREE.TorusGeometry(0.42, 0.018, 8, 48), MAT.steel, NET.x, -1.16, 0);
+    hoop.rotation.x = Math.PI/2;
+    add(bl, cylY(0.01, 0.01, 0.2, 6), MAT.steel, 0.3, -1.06, 0);
+    const netPts = [];
+    const bag = (u, a) => new THREE.Vector3(NET.x + Math.cos(a)*0.42*Math.sin(u), -1.16 - 0.4*(1 - Math.cos(u)), Math.sin(a)*0.42*Math.sin(u));
+    for(let m=0;m<12;m++){ const a = m/12*Math.PI*2; for(let k=0;k<6;k++) netPts.push(bag(Math.PI/2*(1 - k/6), a), bag(Math.PI/2*(1 - (k+1)/6), a)); }
+    for(let k=1;k<6;k++){ const u = Math.PI/2*(k/6); for(let m=0;m<24;m++) netPts.push(bag(u, m/24*Math.PI*2), bag(u, (m+1)/24*Math.PI*2)); }
+    bl.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(netPts),
+      new THREE.LineBasicMaterial({color:lin(0xdfe8f4), transparent:true, opacity:0.55})));
 
-  /*  camera frustum: gondola nose -> reticle corners  */
-  const frusGeo=new THREE.BufferGeometry();
-  const frusPos=new Float32Array(8*3);
-  frusGeo.setAttribute('position',new THREE.BufferAttribute(frusPos,3));
-  const frustum=new THREE.LineSegments(frusGeo,new THREE.LineBasicMaterial({
-    color:CYAN,transparent:true,opacity:0.18}));
-  scene.add(frustum);
+    // goals on posts, in an arc behind the plinth, each facing outward
+    const GR = 3.7, GY = 2.5;
+    const frameM = () => glow(0x4fd8e8, 0.9);
+    function bar(g, x0, y0, x1, y1, m){
+      const len = Math.hypot(x1 - x0, y1 - y0), b = add(g, rbox(len + 0.1, 0.1, 0.1, 0.03), m, (x0 + x1)/2, (y0 + y1)/2, 0, false);
+      b.rotation.z = Math.atan2(y1 - y0, x1 - x0);
+    }
+    const goals = [['circle', -2.35], ['triangle', -1.57], ['square', -0.79]].map(([shape, a]) => {
+      const n = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+      const c = new THREE.Vector3(n.x*GR, GY, n.z*GR);
+      add(root, cylY(0.05, 0.07, GY - 0.75, 12), MAT.steel, c.x, (GY - 0.75)/2, c.z);
+      add(root, cylY(0.22, 0.26, 0.08, 20), MAT.dark, c.x, 0.04, c.z);
+      const g = new THREE.Group(); g.position.copy(c); g.rotation.y = Math.atan2(n.x, n.z); root.add(g);
+      const m = frameM();
+      if(shape === 'circle'){ const tr = add(g, new THREE.TorusGeometry(0.62, 0.05, 12, 64), m, 0, 0, 0, false); }
+      else if(shape === 'triangle'){ const r3 = 0.72, P = [0, 1, 2].map(i => [Math.cos(Math.PI/2 + i*2*Math.PI/3)*r3, Math.sin(Math.PI/2 + i*2*Math.PI/3)*r3]);
+        for(let i=0;i<3;i++) bar(g, P[i][0], P[i][1], P[(i+1)%3][0], P[(i+1)%3][1], m); }
+      else { const h = 0.55; bar(g, -h, -h, h, -h, m); bar(g, h, -h, h, h, m); bar(g, h, h, -h, h, m); bar(g, -h, h, -h, -h, m); }
+      root.userData.glows.push({m, k:0.9});
+      return {shape, n, c, m, flash:0};
+    });
 
-  /*  ambient dust  */
-  const PC=mobile?500:1200;
-  const pp=new Float32Array(PC*3);
-  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*50;pp[i*3+1]=(Math.random()-0.5)*22;pp[i*3+2]=(Math.random()-0.5)*26;}
-  const pg=new THREE.BufferGeometry();
-  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
-  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.5})));
+    const ball = add(root, new THREE.SphereGeometry(0.3, 32, 22), std(0x4cc35d, 0.32, 0.05));
+    ball.scale.y = 1.1;
+    const SPAWN = [[1.3, 2.3, 1.4], [-1.5, 2.6, 0.9], [0.4, 2.1, 2.0], [-0.6, 2.4, -0.4], [1.8, 2.7, 0.2]];
+    const st = {phase:'seek', goal:0, scored:0, spawn:0, tp:0};
+    const bp = new THREE.Vector3().fromArray(SPAWN[0]);
+    const netW = new THREE.Vector3(), tgt = new THREE.Vector3(), tmp = new THREE.Vector3(), shotA = new THREE.Vector3();
+    let yaw = 0;
+    bl.position.set(-1.6, 3.2, -0.4);
+    const netWorld = out => out.set(NET.x*Math.cos(yaw), NET.y, -NET.x*Math.sin(yaw)).add(bl.position);
+    function steer(target, wantYaw, dt, vmax){
+      tmp.subVectors(target, bl.position);
+      const d = tmp.length(), v = Math.min(vmax, d*0.9);
+      if(d > 1e-4) bl.position.addScaledVector(tmp, v*dt/d);
+      yaw = angLerp(yaw, wantYaw, damp(0.035, dt));
+      return d;
+    }
+    function update(t, dt){
+      dt = Math.min(dt, 0.05);
+      st.tp += dt;
+      const G = goals[st.goal];
+      if(st.phase === 'seek'){
+        // free balloon drifts; aim the net at it
+        ball.position.set(bp.x + Math.sin(t*0.6)*0.15, bp.y + Math.sin(t*0.9)*0.1, bp.z + Math.cos(t*0.5)*0.15);
+        tmp.subVectors(ball.position, bl.position);
+        const wy = Math.atan2(-tmp.z, tmp.x);
+        tgt.set(ball.position.x - NET.x*Math.cos(yaw), ball.position.y - NET.y + 0.05, ball.position.z + NET.x*Math.sin(yaw));
+        steer(tgt, wy, dt, 0.9);
+        netWorld(netW);
+        if(netW.distanceTo(ball.position) < 0.22){ st.phase = 'carry'; st.tp = 0; }
+      } else if(st.phase === 'carry'){
+        // to the goal's inside face, square to the frame, net level with its centre
+        const wy = Math.atan2(-G.n.z, G.n.x);
+        tgt.copy(G.c).addScaledVector(G.n, -2.2); tgt.y = G.c.y - NET.y;
+        tgt.x -= NET.x*Math.cos(wy); tgt.z += NET.x*Math.sin(wy);
+        const d = steer(tgt, wy, dt, 1.0);
+        netWorld(ball.position); ball.position.y += 0.02;
+        if(d < 0.08 && Math.abs(angLerp(yaw, wy, 1) - yaw) < 0.03){ st.phase = 'shoot'; st.tp = 0; shotA.copy(ball.position); }
+      } else if(st.phase === 'shoot'){
+        // the balloon goes through the frame and out the far side
+        const k = smoothstep(clamp01(st.tp/1.3));
+        tmp.copy(G.c).addScaledVector(G.n, 1.4);
+        ball.position.copy(shotA).lerp(tmp, k);
+        if(k > 0.55 && G.flash === 0){ G.flash = 1; st.scored++; }
+        if(st.tp > 1.6){ st.phase = 'respawn'; st.tp = 0; }
+      } else {
+        // fade out past the goal, back off, and a fresh balloon appears
+        const k = clamp01(st.tp/0.9);
+        ball.scale.setScalar(1 - k); ball.scale.y *= 1.1;
+        tmp.copy(G.c).addScaledVector(G.n, -3.2); tmp.y = 3.0;
+        steer(tmp, yaw, dt, 0.6);
+        if(k >= 1){
+          st.spawn = (st.spawn + 1) % SPAWN.length; bp.fromArray(SPAWN[st.spawn]);
+          ball.scale.set(1, 1.1, 1); st.goal = (st.goal + 1) % goals.length;
+          st.phase = 'seek'; st.tp = 0;
+        }
+      }
+      goals.forEach(g => { if(g.flash > 0){ g.flash = Math.max(0, g.flash - dt*0.8); } g.m.emissiveIntensity = 0.9 + g.flash*4; });
+      bl.rotation.y = yaw;
+      bl.rotation.z = Math.sin(t*0.6)*0.025;
+      props.forEach((p, i) => { p.rotation.x += (i ? -1 : 1)*0.7; });
+    }
+    return {update, focus:[0, 3.0, 0], bl, st, goals, ball};
+  }
 
-  let target=0,smooth=0,mx=0;
-  addEventListener('scroll',()=>{target=scrollY;},{passive:true});
-  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
-  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-  renderer.setSize(innerWidth,innerHeight);
 
-  const clock=new THREE.Clock();
-  const bPos=new THREE.Vector3(), nose=new THREE.Vector3(), toB=new THREE.Vector3();
+  function dressBlimp(root, api){
+    // drifting clouds
+    const cloudM = std(0xdbe5f7, 1.0, 0.0, {transparent:true, opacity:0.11, depthWrite:false, emissive:lin(0x2a3560)});
+    const puff = new THREE.SphereGeometry(1, 18, 12);
+    const clouds = new THREE.Group(); root.add(clouds);
+    for(let c=0;c<(mobile ? 5 : 9);c++){
+      const cg = new THREE.Group(), a = R01(c)*Math.PI*2, r = 6 + R01(c+5)*9;
+      cg.position.set(Math.cos(a)*r, 3.4 + R01(c+9)*4, Math.sin(a)*r - 2);
+      for(let k=0;k<6;k++){
+        const m = new THREE.Mesh(puff, cloudM);
+        const sc = 0.6 + R01(c*7+k)*0.9;
+        m.position.set((k - 2.5)*0.75, R01(c*3+k)*0.4, (R01(c*11+k)-0.5)*0.8);
+        m.scale.set(sc*1.3, sc*0.7, sc); cg.add(m);
+      }
+      cg.userData.ph = R01(c+30)*6; cg.userData.y0 = cg.position.y;
+      clouds.add(cg);
+    }
+    // stars, twinkling as a field
+    const stars = swarm(root, mobile ? 120 : 260, 0xdfe8ff, 0.14, 0.8,
+      (a, i) => { const th = R01(i)*Math.PI*2, ph = 0.15 + R01(i+3)*1.2, r = 40 + R01(i+6)*20;
+        a[i*3] = Math.cos(th)*Math.cos(ph)*r; a[i*3+1] = Math.sin(ph)*r*0.6 + 6; a[i*3+2] = Math.sin(th)*Math.cos(ph)*r - 20; });
+    // ground station with a live uplink to the gondola
+    const gs = new THREE.Group(); gs.position.set(-2.6, TOP, 1.9); root.add(gs);
+    add(gs, rbox(0.5, 0.12, 0.5, 0.03), MAT.dark, 0, 0.06, 0);
+    add(gs, cylY(0.035, 0.05, 1.7, 10), MAT.steel, 0, 0.95, 0);
+    const dish = add(gs, new THREE.SphereGeometry(0.32, 24, 12, 0, Math.PI*2, 0, Math.PI/2.6), std(0xd9dee6, 0.35, 0.4, {side:THREE.DoubleSide}), 0, 1.55, 0);
+    dish.rotation.x = Math.PI*0.62;
+    const bcn = glow(0xe5534b, 2.5);
+    add(gs, new THREE.SphereGeometry(0.045, 12, 8), bcn, 0, 1.85, 0, false);
+    const upG = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const up = new THREE.Line(upG, new THREE.LineDashedMaterial({color:lin(0x4fd8e8), dashSize:0.12, gapSize:0.09, transparent:true, opacity:0.6}));
+    up.frustumCulled = false; root.add(up);
+    const panel = holo(root, 2.1, 1.4, -2.6, 4.6, -1.2);
+    const PHASE = {seek:'CHASING BALLOON', carry:'CARRYING TO GOAL', shoot:'SCORING', respawn:'NEXT BALLOON'};
+    return (t) => {
+      panel.draw(t, (g, w, h) => {
+        holoFrame(g, w, h, 'CATCH AND SCORE');
+        holoRow(g, 112, 'state', PHASE[api.st.phase]);
+        holoRow(g, 170, 'target goal', api.goals[api.st.goal].shape.toUpperCase());
+        holoRow(g, 228, 'balloons scored', String(api.st.scored));
+      });
+      clouds.children.forEach(cg => { cg.position.y = cg.userData.y0 + Math.sin(t*0.2 + cg.userData.ph)*0.25; });
+      clouds.rotation.y = t*0.012;
+      stars.m.opacity = 0.65 + Math.sin(t*1.7)*0.15;
+      bcn.emissiveIntensity = Math.sin(t*3) > 0.6 ? 3 : 0.2;
+      dish.rotation.z = Math.sin(t*0.4)*0.3;
+      const ua = upG.attributes.position.array, b = api.bl.position;
+      ua[0] = -2.6; ua[1] = TOP + 1.85; ua[2] = 1.9; ua[3] = b.x; ua[4] = b.y - 0.95; ua[5] = b.z;
+      upG.attributes.position.needsUpdate = true; up.computeLineDistances();
+      up.material.opacity = 0.35 + Math.sin(t*2.2)*0.2;
+    };
+  }
+
+// parts: buildBlimp dressBlimp
+  /*  AEROFUSION BLIMP, catch and score: the Defend the Republic game this
+     team flew. The blimp chases a free balloon until the net under its
+     gondola scoops it up, carries it to the next goal (circle, triangle,
+     square) and puts it through the frame. While it hunts, the gondola
+     camera's view is drawn: a frustum out to a quadrant reticle locked on
+     the balloon, the same quadrant feed the vision pipeline steered by.  */
+  const STAGE = {
+    sky:[0x070a1c, 0x1e2452], skyL:[0x9a8a86, 0xe3c99c], hemi:0xc0b8ff,
+    cam:{az:0.3, d:12.0, h:3.6, ly:2.6, fit:1.12},
+    build(root){
+      const api = buildBlimp(root);
+      const fx = dressBlimp(root, api);
+      // gondola camera to reticle: four frustum edges, four corner brackets, a quadrant cross
+      const fr = lines(root, 16, 0x4fd8e8, 0.35);
+      const camW = new THREE.Vector3(), ball = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3(), dir = new THREE.Vector3();
+      const C = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], a = new THREE.Vector3(), b = new THREE.Vector3();
+      const camPt = new THREE.Object3D(); camPt.position.set(0.37, -1.02, 0); api.bl.add(camPt);
+      let vis = 0;
+      function update(t, dt){
+        api.update(t, dt); fx(t, dt);
+        const seek = api.st.phase === 'seek';
+        vis += ((seek ? 1 : 0) - vis)*damp(0.1, dt);
+        fr.reset();
+        if(vis > 0.02){
+          root.updateMatrixWorld(true);
+          camPt.getWorldPosition(camW); root.worldToLocal(camW);
+          ball.copy(api.ball.position);
+          dir.subVectors(ball, camW).normalize();
+          right.crossVectors(dir, UP).normalize(); up.crossVectors(right, dir);
+          const r = 0.48, br = 0.16;
+          [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy], i) => C[i].copy(ball).addScaledVector(right, sx*r).addScaledVector(up, sy*r));
+          C.forEach((c, i) => {
+            fr.seg(camW, c);
+            // corner bracket: two short arms pointing back along the square's edges
+            const sx = i === 0 || i === 3 ? 1 : -1, sy = i < 2 ? 1 : -1;
+            a.copy(c).addScaledVector(right, sx*br); fr.seg(c, a);
+            b.copy(c).addScaledVector(up, sy*br); fr.seg(c, b);
+          });
+          // the quadrant cross the controller reads its error from
+          a.copy(ball).addScaledVector(right, -r*0.5); b.copy(ball).addScaledVector(right, r*0.5); fr.seg(a, b);
+          a.copy(ball).addScaledVector(up, -r*0.5); b.copy(ball).addScaledVector(up, r*0.5); fr.seg(a, b);
+        }
+        fr.done();
+        fr.m.opacity = 0.55*vis;
+      }
+      return {update, focus:api.focus};
+    }
+  };
+
+  /*  BUILD the page's stage  */
+  const root = new THREE.Group(); scene.add(root);
+  root.userData.glows = GLOWS;   // the home-page builders register their glows here
+  const api = STAGE.build(root) || {};
+  const C = Object.assign({az:0.4, d:10.5, h:3.8, ly:1.4, fit:1.2, rise:1.2}, STAGE.cam || {});
+  const SH = STAGE.shadow || 7.5;
+  key.shadow.camera.left = key.shadow.camera.bottom = -SH;
+  key.shadow.camera.right = key.shadow.camera.top = SH;
+  key.shadow.camera.far = 30 + SH*2;
+  key.position.set(5, 12, 7); rim.position.set(-6, 5, -8); fill.position.set(8, 2.5, -2);
+  const fogK = C.d/10.5;
+  scene.fog.near = 16*fogK; scene.fog.far = 60*fogK*(STAGE.fogFar || 1);
+  if(STAGE.noGround){ ground.visible = false; }
+  const skyD = [new THREE.Color(STAGE.sky[0]), new THREE.Color(STAGE.sky[1])];
+  const skyLt = [new THREE.Color(STAGE.skyL[0]), new THREE.Color(STAGE.skyL[1])];
+  const hemiC = lin(STAGE.hemi || 0xa8c8ff), WARM_SKY = lin(0xffd394);
+
+  /*  CAMERA RIG: the machine is a backdrop, not the subject. It sits
+     centred behind the page's text column under a scrim, like a
+     watermark, and the camera swings slowly round it as you read (a crane
+     orbit driven by scroll progress, a full 360 degrees from the top of
+     the page to the bottom). The holo readouts are not shown:
+     text behind body copy would only be noise.  */
+  HOLOS.forEach(h => { h.mesh.visible = false; });
+  const wide = () => camera.aspect > 1.05;
+  const pos = new THREE.Vector3(), look = new THREE.Vector3();
+  function stageCam(p){
+    const w = wide();
+    const d = C.d*(w ? 1.15*C.fit : 1.55);
+    const az = C.az + p*Math.PI*2;               // one full turn round the machine over the page
+    pos.set(Math.sin(az)*d, C.h*(w ? 1 : 1.25) + (0.5 - p)*C.rise, Math.cos(az)*d);
+    look.set(0, C.ly + (w ? 0 : 1.1), 0);
+  }
+
+  let scrollP = 0;
+  function readScroll(){
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    scrollP = clamp01(window.scrollY/max);
+  }
+  addEventListener('scroll', readScroll, {passive:true});
+  readScroll();
+
+  let ptrNX = 0, ptrNY = 0, smNX = 0, smNY = 0;
+  addEventListener('pointermove', e => {
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // no parallax lurch on touch
+    ptrNX = e.clientX/innerWidth - 0.5; ptrNY = e.clientY/innerHeight - 0.5;
+  }, {passive:true});
+  addEventListener('pointerleave', () => { ptrNX = ptrNY = 0; }, {passive:true});
+
+  /*  THEME: the same stage lit for a light page. Warm lamp skies and
+     floor, more fill; additive glow vanishes on a bright sky, so
+     particles switch to normal blending with deeper tints and the holo
+     panels redraw as dark text on frosted glass.  */
+  const groundM = ground.material, darkGround = groundM.color.clone();
+  const plD = MAT.plinth.color.clone(), plTD = MAT.plTop.color.clone();
+  function applyTheme(light){
+    LIGHT = light;
+    renderer.toneMappingExposure = light ? 0.78 : 0.82;
+    hemi.intensity = light ? 0.75 : 0.38;
+    hemi.groundColor.copy(light ? lin(0x8f7550) : lin(0x05080f));
+    hemi.color.copy(hemiC); if(light) hemi.color.lerp(WARM_SKY, 0.65);
+    key.color.copy(light ? lin(0xffd59a) : new THREE.Color(0xffffff));
+    key.intensity = light ? 2.0 : 2.3;
+    groundM.color.copy(light ? lin(0xc4ad84) : darkGround);
+    MAT.plinth.color.copy(light ? lin(0x8a7552) : plD);
+    MAT.plTop.color.copy(light ? lin(0xbfa880) : plTD);
+    grid.visible = !light && !STAGE.noGround; gridL.visible = light && !STAGE.noGround;
+    const S = light ? skyLt : skyD;
+    skyU.top.value.copy(S[0]); skyU.hor.value.copy(S[1]); scene.fog.color.copy(S[1]);
+    PARTS.forEach(p => {
+      p.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      p.m.color.copy(p.c); if(light) p.m.color.multiplyScalar(0.42);
+      p.m.needsUpdate = true;
+    });
+    SHAFTS.forEach(sh => { sh.userData.op = sh.userData.op0*(light ? 0.3 : 1); sh.material.opacity = sh.userData.op; });
+    HOLOS.forEach(h => { h.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending; h.m.needsUpdate = true; h.reset(); });
+    if(api.theme) api.theme(light);
+  }
+  applyTheme(LIGHT);
+
+  /* power-up on load: glows ramp in and the machine settles to full scale */
+  function power(e){
+    GLOWS.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
+    root.scale.setScalar(0.9 + 0.1*e);
+  }
+
+  function resize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    readScroll();
+    if(reduced) still();
+  }
+  addEventListener('resize', resize, {passive:true});
+  renderer.setSize(innerWidth, innerHeight);
+
+  /* Reduced motion: no rAF loop. The stage is composed as a still and
+     recomposed only when the layout, scroll or theme changes. */
+  function still(){
+    stageCam(scrollP); camera.position.copy(pos); camera.lookAt(look);
+    sky.position.copy(camera.position);
+    power(1);
+    if(api.update){ for(let i=0;i<3;i++) api.update(2.0 + i/60, 1/60); }
+    renderer.render(scene, camera);
+  }
+  window.addEventListener('themechange', e => { applyTheme(e.detail === 'light'); if(reduced) still(); });
+  if(reduced){
+    still();
+    let q = false;
+    addEventListener('scroll', () => { if(q) return; q = true; requestAnimationFrame(() => { q = false; still(); }); }, {passive:true});
+    return;
+  }
+
+  const clock = new THREE.Clock();
+  let t = 0, intro = 0, frames = 0, probe = 0, tuned = false;
+  stageCam(scrollP);
+  const curPos = pos.clone(), curLook = look.clone();
   function animate(){
     requestAnimationFrame(animate);
-    const t=clock.getElapsedTime();
-    if(!reduced){
-      /* balloon wanders (lissajous) */
-      balloon.position.set(
-        Math.sin(t*0.21)*7.5,
-        1.6+Math.sin(t*0.5)*1.1+Math.sin(t*0.13)*0.8,
-        Math.sin(t*0.34+1.4)*3-2.5);
-      balloon.rotation.y=t*0.3;
-
-      /* blimp pursues with lag: trails the balloon's position */
-      bPos.set(
-        Math.sin((t-6)*0.21)*7.5*0.8-1.5,
-        1.9+Math.sin((t-6)*0.5)*0.6,
-        Math.sin((t-6)*0.34+1.4)*3*0.8+1.0);
-      blimp.position.lerp(bPos,0.02);
-      // yaw toward the balloon
-      toB.subVectors(balloon.position,blimp.position);
-      const desiredYaw=Math.atan2(-toB.z,toB.x);
-      let dy=desiredYaw-blimp.rotation.y;
-      while(dy>Math.PI)dy-=Math.PI*2; while(dy<-Math.PI)dy+=Math.PI*2;
-      blimp.rotation.y+=dy*0.015;
-      blimp.rotation.z=Math.sin(t*0.4)*0.04;
-      props.forEach(p=>{p.rotation.z+=0.45;});
-
-      /* reticle hovers between blimp and balloon, facing the blimp */
-      reticle.position.lerp(balloon.position,0.08);
-      reticle.lookAt(blimp.position);
-      retMat.opacity=0.4+Math.sin(t*2.2)*0.15;
-
-      /* frustum lines from camera pod to reticle corners */
-      nose.set(0.55,-1.08,0).applyMatrix4(blimp.matrixWorld);
-      const corners=[[-RW/2,-RH/2],[RW/2,-RH/2],[RW/2,RH/2],[-RW/2,RH/2]];
-      corners.forEach((c,i)=>{
-        const p=new THREE.Vector3(c[0],c[1],0).applyMatrix4(reticle.matrixWorld);
-        frusPos[i*6]=nose.x; frusPos[i*6+1]=nose.y; frusPos[i*6+2]=nose.z;
-        frusPos[i*6+3]=p.x;  frusPos[i*6+4]=p.y;  frusPos[i*6+5]=p.z;
-      });
-      frusGeo.attributes.position.needsUpdate=true;
-      frustum.material.opacity=0.12+Math.sin(t*2.2)*0.05;
+    /* clamped dt: a backgrounded tab resumes where it paused */
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if(document.hidden) return;
+    t += dt;
+    /* one-time quality probe: if this machine can't hold 45 fps, drop
+       to DPR 1 and soften shadows rather than ship a stuttering page */
+    if(!tuned){
+      frames++; probe += dt;
+      if(probe > 2.5){
+        tuned = true;
+        if(frames/probe < 45){
+          if(renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); }
+          key.shadow.mapSize.set(1024, 1024); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; }
+        }
+      }
     }
-    smooth+=(target-smooth)*0.05;
-    const d=smooth*0.0012;
-    camera.position.x=Math.sin(d*0.6)*13+mx*1.6;
-    camera.position.z=Math.cos(d*0.6)*13;
-    camera.position.y=2.5-Math.min(d*1.5,3);
-    camera.lookAt(blimp.position.x*0.4,1,0);
-    renderer.render(scene,camera);
+    stageCam(scrollP);
+    const kc = damp(0.05, dt);
+    curPos.lerp(pos, kc); curLook.lerp(look, kc);
+    const kp = damp(0.07, dt);
+    smNX += (ptrNX - smNX)*kp; smNY += (ptrNY - smNY)*kp;
+    camera.position.copy(curPos);
+    camera.position.x += Math.sin(t*0.13)*0.3;
+    camera.position.y += Math.cos(t*0.09)*0.18;
+    camera.lookAt(curLook);
+    camera.translateX( smNX*1.4);
+    camera.translateY(-smNY*0.9);
+    camera.lookAt(curLook);
+    sky.position.copy(camera.position);
+    intro = Math.min(1, intro + dt/1.6);
+    power(smoothstep(intro));
+    if(api.update) api.update(t, dt);
+    renderer.render(scene, camera);
   }
   animate();
 })();

@@ -157,10 +157,15 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
   :root[data-theme="light"] .theme-btn .moon{display:block;}
   @media (prefers-reduced-motion:reduce){ .theme-btn{transition:none;} .theme-btn:hover{transform:none;} }
 </style>
+<style id="solid-stage-css">
+  /* solid stage: the machine is a watermark behind the text column, under a scrim */
+  .stage-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(var(--ink-rgb),0.62);}
+</style>
 </head>
 <body>
 
 <canvas id="whscene"></canvas>
+<div class="stage-scrim"></div>
 <div class="vignette"></div>
 
 <nav>
@@ -439,333 +444,635 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* light theme for the wireframe background, without touching the scene code:
-   each renderer's render() is wrapped so every material it draws is re-inked, same hue
-   darkened to ink depth, glow switched to normal blending, fog turned cream.
-   Colours the scene changes itself (live highlights) are caught each frame.
-   Textured materials (canvas displays) are left alone. */
-(function(){
-  if(!window.THREE) return;
-  const seen = new WeakSet(), mats = [], scenes = [];
-  const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
-  let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
-  function ink(m){
-    const u = m.userData;
-    m.color.copy(u.tc0);
-    if(light){
-      m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
-      // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
-      // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
-      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*fade(m);
-      if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
-    } else {
-      if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
-      if(u.to0 !== undefined) m.opacity = u.to0;
-    }
-    u.tset = m.color.clone(); u.topset = m.opacity;
-  }
-  // the light fade for a base opacity: vertex-coloured grids and edges were built faint on navy, fade them hardest
-  const fade = m => m.vertexColors ? 0.22 : 0.4;
-  function scan(scene){
-    scene.traverse(o => {
-      const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-      list.forEach(m => {
-        if(seen.has(m) || !m.color || m.map) return;
-        if(!m.transparent){ m.transparent = true; m.needsUpdate = true; }
-        seen.add(m); m.userData.tc0 = m.color.clone(); m.userData.tb0 = m.blending; m.userData.to0 = m.opacity; mats.push(m); ink(m);
-      });
-    });
-  }
-  function fog(scene){
-    if(!scene.fog) return;
-    if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
-    scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
-  }
-  function hook(scene){
-    if(scene && scene.isScene){
-      if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
-      else if(++tick % 90 === 0) scan(scene);
-      if(light) for(let i=0;i<mats.length;i++){
-        const m = mats[i];
-        const u = m.userData;
-        if(!m.color.equals(u.tset)){ u.tc0.copy(m.color); ink(m); }
-        else if(m.opacity !== u.topset){ u.to0 = m.opacity; m.opacity = u.to0*fade(m); u.topset = m.opacity; }   // the scene animated its opacity
-      }
-    }
-  }
-  // r128 builds render() inside the constructor, per instance, so patching the
-  // prototype does nothing: wrap the constructor and hook each renderer's own render
-  const Base = THREE.WebGLRenderer;
-  THREE.WebGLRenderer = function(params){
-    const r = new Base(params), render = r.render;
-    r.render = function(scene, cam){ hook(scene); return render.call(this, scene, cam); };
-    return r;
-  };
-  THREE.WebGLRenderer.prototype = Base.prototype;
-  window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
-})();
-</script>
-<script>
 (function(){
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced){document.querySelectorAll('video[autoplay]').forEach(v=>{v.removeAttribute('autoplay');v.pause();});}
   const io = new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+<script id="solid-stage">
+(function(){
+  const CANVAS_ID = 'whscene';
+  /*  SOLID STAGE, the project-page version of the home page's robot
+     stages: one lit plinth with a solid, articulated machine working on
+     it, built from three.js primitives (no model files, so the page
+     still runs from file://). Generated into each page by
+     tools/solid_stage.py from tools/stage/; edit the sources there and
+     re-run the script rather than editing a page's copy.  */
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = innerWidth < 700;
+  const canvas = document.getElementById(CANVAS_ID);
+  if(!canvas || !window.THREE) return;
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  /* Background: the warehouse twin, wireframe shelf racks form aisles, a mecanum rover runs an
-     A* waypoint route through them with a 360° LiDAR fan sweeping, an AMCL particle cloud
-     trailing its pose estimate, and marker posts that stop it (red) or slow it (amber). */
-  const canvas=document.getElementById('whscene');
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  const scene=new THREE.Scene();
-  scene.fog=new THREE.FogExp2(0x060a14,0.018);
-  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,160);
-  const CYAN=0x4fd8e8,AMBER=0xf5a35c,DEEPBLUE=0x2a6bb0,RED=0xe8544f;
-  const mobile=innerWidth<700;
-  const wire=(c,o)=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:o===undefined?0.6:o});
-  const FLOOR=0;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(mobile ? 46 : 36, innerWidth/innerHeight, 0.1, 420);
 
-  const grid=new THREE.GridHelper(90,60,0x1c3a66,0x11223f);
-  grid.position.y=FLOOR; grid.material.transparent=true; grid.material.opacity=0.45;
-  scene.add(grid);
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const smoothstep = x => x*x*(3-2*x);
+  const ss = (u, a, b) => smoothstep(clamp01((u-a)/(b-a)));
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const angLerp = (a, b, k) => {
+    let d = (b - a) % (Math.PI*2);
+    if(d >  Math.PI) d -= Math.PI*2;
+    if(d < -Math.PI) d += Math.PI*2;
+    return a + d*k;
+  };
+  const R01 = i => { const x = Math.sin(i*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };   // stable hash
 
-  /*  warehouse layout: rack blocks on a grid, with the aisles between them as the
-     only free space. Every route waypoint below sits on an aisle centerline, so the
-     rover physically cannot cut through a rack.  */
-  const BLOCK_W=5.4, BLOCK_D=2.6, BLOCK_H=2.2;   // one rack block
-  const AISLE=3.6;                                // clear width between blocks
-  const nCols=mobile?2:3, nRows=2;
-  const PITCH_X=BLOCK_W+AISLE, PITCH_Z=BLOCK_D+AISLE;
-  const blockX=i=>(i-(nCols-1)/2)*PITCH_X;
-  const blockZ=j=>(j-(nRows-1)/2)*PITCH_Z;
-  /* aisle centerlines: one outside each end, one between every pair of blocks */
-  const aisleX=k=>blockX(0)-PITCH_X/2+k*PITCH_X;  // k = 0 .. nCols
-  const aisleZ=k=>blockZ(0)-PITCH_Z/2+k*PITCH_Z;  // k = 0 .. nRows
+  /*  MATERIALS: three r128 treats hex as linear, so every authored
+     colour is converted from sRGB first or the palette washes out.  */
+  const lin  = h => new THREE.Color(h).convertSRGBToLinear();
+  const std  = (c, r, m, o) => new THREE.MeshStandardMaterial(Object.assign({color:lin(c), roughness:r, metalness:m}, o||{}));
+  const glow = (c, k) => new THREE.MeshStandardMaterial({color:0x000000, emissive:lin(c), emissiveIntensity:k||1.6, roughness:0.4});
+  const MAT = {
+    shell:  std(0xe2e7ee, 0.34, 0.05),
+    alu:    std(0xb2bcc9, 0.28, 0.9),
+    steel:  std(0x76818f, 0.32, 0.85),
+    dark:   std(0x1c2433, 0.5, 0.55),
+    carbon: std(0x12161e, 0.42, 0.35),
+    rubber: std(0x0b0d12, 0.9, 0.0),
+    cap:    std(0x3f87c6, 0.36, 0.3),
+    amber:  std(0xf5a35c, 0.42, 0.12),
+    red:    std(0xc94a3a, 0.5, 0.2),
+    green:  std(0x4cc35d, 0.4, 0.1),
+    glass:  std(0x0a1a24, 0.08, 0.9),
+    cyanG:  glow(0x4fd8e8, 2.4),
+    amberG: glow(0xf5a35c, 2.0),
+    redG:   glow(0xe5534b, 2.2),
+    greenG: glow(0x3fd17a, 2.0),
+    plinth: std(0x0c1424, 0.42, 0.8),
+    plTop:  std(0x0d1522, 0.78, 0.35)
+  };
 
-  const bayMat=new THREE.LineBasicMaterial({color:DEEPBLUE,transparent:true,opacity:0.5});
-  const shelfMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.2});
-  const BAYS=3, BAY_W=BLOCK_W/BAYS-0.2;
-  const obstacles=[];                              // block footprints, for the LiDAR to hit
-  for(let i=0;i<nCols;i++){
-    for(let j=0;j<nRows;j++){
-      obstacles.push({x0:blockX(i)-BLOCK_W/2,x1:blockX(i)+BLOCK_W/2,
-                      z0:blockZ(j)-BLOCK_D/2,z1:blockZ(j)+BLOCK_D/2});
-      for(let b=0;b<BAYS;b++){
-        const x=blockX(i)+(b-(BAYS-1)/2)*(BLOCK_W/BAYS), z=blockZ(j);
-        const bay=new THREE.LineSegments(
-          new THREE.EdgesGeometry(new THREE.BoxGeometry(BAY_W,BLOCK_H,BLOCK_D)),bayMat);
-        bay.position.set(x,FLOOR+BLOCK_H/2,z);
-        scene.add(bay);
-        /* two shelf plates per bay so the racks read as storage, not empty boxes */
-        [0.38,0.72].forEach(h=>{
-          const plate=new THREE.LineSegments(
-            new THREE.EdgesGeometry(new THREE.BoxGeometry(BAY_W*0.94,0.04,BLOCK_D*0.88)),shelfMat);
-          plate.position.set(x,FLOOR+BLOCK_H*h,z);
-          scene.add(plate);
+  /*  GEOMETRY HELPERS  */
+  function add(parent, geo, mat, x, y, z, shadow){
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x||0, y||0, z||0);
+    if(shadow !== false && renderer.shadowMap.enabled){ m.castShadow = true; m.receiveShadow = true; }
+    parent.add(m);
+    return m;
+  }
+  const grp = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x||0, y||0, z||0); parent.add(g); return g; };
+  const cylY = (r1, r2, h, s) => new THREE.CylinderGeometry(r1, r2, h, s||32);
+  function cylX(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateZ(Math.PI/2); return g; }
+  function cylZ(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateX(Math.PI/2); return g; }
+  /* rounded box: a rounded-rect outline, extruded with a bevel of half the radius */
+  function rbox(w, h, d, r){
+    r = Math.min(r, w/2, h/2, d/2) * 0.98;
+    const b = r*0.5, sw = w-2*b, sh = h-2*b, cr = Math.max(r-b, 0.0005);
+    const x0 = -sw/2, y0 = -sh/2, s = new THREE.Shape();
+    s.moveTo(x0+cr, y0); s.lineTo(x0+sw-cr, y0); s.quadraticCurveTo(x0+sw, y0, x0+sw, y0+cr);
+    s.lineTo(x0+sw, y0+sh-cr); s.quadraticCurveTo(x0+sw, y0+sh, x0+sw-cr, y0+sh);
+    s.lineTo(x0+cr, y0+sh); s.quadraticCurveTo(x0, y0+sh, x0, y0+sh-cr);
+    s.lineTo(x0, y0+cr); s.quadraticCurveTo(x0, y0, x0+cr, y0);
+    const g = new THREE.ExtrudeGeometry(s, {depth:Math.max(d-2*b, 0.0005), bevelEnabled:true,
+      bevelThickness:b, bevelSize:b, bevelSegments:3, curveSegments:5, steps:1});
+    g.center();
+    return g;
+  }
+  function canvasTex(w, h, draw){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = 4;
+    return t;
+  }
+  /* a solid rod between two points: a unit cylinder along y, stretched and aimed */
+  const UP = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3();
+  function rod(parent, r, mat, shadow){
+    const m = add(parent, cylY(r, r, 1, 10), mat, 0, 0, 0, shadow);
+    m.userData.set = (a, b) => {
+      _d.subVectors(b, a); const L = _d.length();
+      m.visible = L > 1e-4;
+      if(!m.visible) return;
+      m.position.copy(a).addScaledVector(_d, 0.5);
+      m.scale.set(1, L, 1);
+      m.quaternion.setFromUnitVectors(UP, _d.multiplyScalar(1/L));
+    };
+    return m;
+  }
+
+  /*  ENVIRONMENT: a small studio rendered once into a PMREM so the
+     metals have something to reflect: a white softbox overhead and a
+     cyan and an amber strip, the site's two accents.  */
+  (function(){
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24),
+      new THREE.MeshBasicMaterial({color:lin(0x0c1628), side:THREE.BackSide})));
+    const panel = (w, h, col, k, x, y, z, rx, ry) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({color:lin(col).multiplyScalar(k), side:THREE.DoubleSide}));
+      m.position.set(x, y, z); m.rotation.set(rx||0, ry||0, 0); env.add(m);
+    };
+    panel(10, 6, 0xffffff, 3.0, 0, 5.9, 0, Math.PI/2, 0);
+    panel(1.4, 8, 0x4fd8e8, 4.0, -11.9, 1, -2, 0, Math.PI/2);
+    panel(1.4, 8, 0xf5a35c, 3.0, 11.9, 1, 3, 0, -Math.PI/2);
+    panel(14, 2.2, 0x9fbfe6, 1.4, 0, 2, -11.9, 0, 0);
+    scene.environment = pm.fromScene(env, 0.035).texture;
+    pm.dispose();
+  })();
+
+  /*  SKY DOME + FOG share one horizon colour so the floor melts into
+     the sky. In r128 fog is mixed in after tone mapping, so both live
+     in display space: raw hex, no linear conversion, no tone map.  */
+  const skyU = {top:{value:new THREE.Color()}, hor:{value:new THREE.Color()}};
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+    uniforms:skyU, side:THREE.BackSide, depthWrite:false, fog:false,
+    vertexShader:'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:'uniform vec3 top; uniform vec3 hor; varying vec3 vP; void main(){ gl_FragColor = vec4(mix(hor, top, smoothstep(0.0, 0.5, vP.y)), 1.0); }'
+  }));
+  sky.frustumCulled = false; sky.renderOrder = -1;
+  scene.add(sky);
+  scene.fog = new THREE.Fog(0x000000, 16, 60);
+
+  const ground = add(scene, new THREE.PlaneGeometry(900, 900), std(0x060a13, 0.92, 0.2), 0, 0, 0);
+  ground.rotation.x = -Math.PI/2; ground.castShadow = false;
+  const grid = new THREE.GridHelper(400, 200, 0x1c3a66, 0x13243e);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
+  grid.position.y = 0.003; scene.add(grid);
+  const gridL = new THREE.GridHelper(400, 200, 0x9c8458, 0xc1aa80);
+  gridL.material.transparent = true; gridL.material.opacity = 0.35; gridL.material.depthWrite = false;
+  gridL.position.y = 0.003; gridL.visible = false; scene.add(gridL);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 2.3);
+  key.castShadow = renderer.shadowMap.enabled;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(lin(0x4fd8e8), 1.6);
+  scene.add(rim, rim.target);
+  const fill = new THREE.DirectionalLight(lin(0xf5a35c), 0.55);
+  scene.add(fill, fill.target);
+
+  const GLOWS = [];   // emissive materials that power up on load
+  /* the plinth every machine stands on; its rings are the "power" lights */
+  function plinth(root, R){
+    add(root, cylY(R, R+0.14, 0.3, 80), MAT.plinth, 0, 0.15, 0);
+    add(root, cylY(R-0.1, R-0.1, 0.02, 80), MAT.plTop, 0, 0.305, 0);
+    const ringM = glow(0x4fd8e8, 2.2);
+    const ring = add(root, new THREE.TorusGeometry(R+0.005, 0.024, 8, 160), ringM, 0, 0.3, 0, false);
+    ring.rotation.x = Math.PI/2;
+    const innerM = glow(0xf5a35c, 0.7);
+    const inner = add(root, new THREE.RingGeometry(R*0.64, R*0.64+0.018, 120), innerM, 0, 0.318, 0, false);
+    inner.rotation.x = -Math.PI/2;
+    GLOWS.push({m:ringM, k:2.2}, {m:innerM, k:0.7});
+  }
+  const TOP = 0.315;   // plinth deck height
+
+  /*  FX TOOLKIT: a soft glow sprite so particles read as light, particle
+     swarms with a per-point step, light shafts that fade toward the
+     floor, and holographic readout panels that print live state.  */
+  const PARTS = [], HOLOS = [], SHAFTS = [];   // re-tinted when the page theme flips
+  let LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const HC = () => LIGHT
+    ? {bg:'rgba(248,239,220,0.8)', edge:'rgba(10,106,116,0.85)', title:'#974607', rule:'rgba(10,106,116,0.4)', label:'#2e2416', val:'#0a6a74', track:'rgba(10,106,116,0.16)', bar:'rgba(10,106,116,0.85)', amb:'#974607'}
+    : {bg:'rgba(79,216,232,0.1)', edge:'rgba(79,216,232,0.8)', title:'#f5a35c', rule:'rgba(79,216,232,0.45)', label:'rgba(235,242,250,0.95)', val:'#4fd8e8', track:'rgba(79,216,232,0.18)', bar:'rgba(79,216,232,0.85)', amb:'#f5a35c'};
+  const dotTex = canvasTex(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  });
+  function swarm(root, n, col, size, op, init, step){
+    const a = new Float32Array(n*3);
+    for(let i=0;i<n;i++) init(a, i);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const m = new THREE.PointsMaterial({color:lin(col), size, map:dotTex, transparent:true, opacity:op,
+      depthWrite:false, blending:THREE.AdditiveBlending});
+    const pts = new THREE.Points(geo, m); pts.frustumCulled = false; root.add(pts);
+    PARTS.push({m, c:m.color.clone()});
+    return {m, a, geo, update(t, dt){ if(!step) return; for(let i=0;i<n;i++) step(a, i, t, dt); geo.attributes.position.needsUpdate = true; }};
+  }
+  /* a sprite that glows: additive in the dark theme, ink in the light one */
+  function spark(root, col, size){
+    const m = new THREE.SpriteMaterial({map:dotTex, color:lin(col), transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+    const sp = new THREE.Sprite(m); sp.scale.setScalar(size); root.add(sp);
+    PARTS.push({m, c:m.color.clone()});
+    return sp;
+  }
+  const shaftTex = canvasTex(4, 128, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#000000');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  function shaft(root, x, z, rTop, rBot, h, col, op){
+    const m = new THREE.MeshBasicMaterial({color:lin(col), map:shaftTex, transparent:true, opacity:op,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 32, 1, true), m);
+    sh.position.set(x, h/2, z); root.add(sh);
+    sh.userData.op = sh.userData.op0 = op;
+    SHAFTS.push(sh);
+    return sh;
+  }
+  /* a line set the scene rewrites every frame (beams, links, rays) */
+  function lines(root, maxSeg, col, op, dashed){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSeg*6), 3));
+    const m = new THREE.LineBasicMaterial({color:lin(col), transparent:true, opacity:op, depthWrite:false});
+    const l = new THREE.LineSegments(geo, m); l.frustumCulled = false; root.add(l);
+    PARTS.push({m, c:m.color.clone()});
+    let n = 0;
+    const arr = geo.attributes.position.array;
+    return {l, m,
+      reset(){ n = 0; },
+      seg(a, b){ if(n >= maxSeg) return; const o = n*6; arr[o]=a.x; arr[o+1]=a.y; arr[o+2]=a.z; arr[o+3]=b.x; arr[o+4]=b.y; arr[o+5]=b.z; n++; },
+      done(){ geo.setDrawRange(0, n*2); geo.attributes.position.needsUpdate = true; }};
+  }
+  function holo(root, w, h, x, y, z){
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512*h/w);
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:tex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, toneMapped:false}));
+    mesh.position.set(x, y, z); root.add(mesh);
+    let last = -1;
+    HOLOS.push({m:mesh.material, mesh, reset:() => { last = -1; }});
+    const wp = new THREE.Vector3();
+    return {mesh, draw(t, fn){
+      mesh.lookAt(camera.position);
+      mesh.position.y = y + Math.sin(t*0.8)*0.04;
+      if(last >= 0 && t - last < 0.15) return;
+      last = t; g.clearRect(0, 0, c.width, c.height); fn(g, c.width, c.height); tex.needsUpdate = true;
+    }};
+  }
+  function holoFrame(g, w, h, title){
+    const P = HC();
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = P.edge; g.lineWidth = 3;
+    const k = 26;
+    [[4,4,1,1],[w-4,4,-1,1],[4,h-4,1,-1],[w-4,h-4,-1,-1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x + sx*k, y); g.lineTo(x, y); g.lineTo(x, y + sy*k); g.stroke();
+    });
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillStyle = P.title; g.fillText(title, 26, 48);
+    g.fillStyle = P.rule; g.fillRect(26, 62, w - 52, 2);
+    g.font = '400 26px "IBM Plex Mono", monospace';
+  }
+  function holoRow(g, y, label, val, frac){
+    const P = HC();
+    g.fillStyle = P.label; g.fillText(label, 26, y);
+    g.fillStyle = P.val; g.textAlign = 'right'; g.fillText(val, 486, y); g.textAlign = 'left';
+    if(frac !== undefined){
+      g.fillStyle = P.track; g.fillRect(26, y + 10, 460, 5);
+      g.fillStyle = P.bar; g.fillRect(26, y + 10, 460*Math.max(0, Math.min(1, frac)), 5);
+    }
+  }
+  const deg = r => ((r*180/Math.PI) >= 0 ? '+' : '') + (r*180/Math.PI).toFixed(1) + '°';
+  const sgn = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d);
+
+  /*  MECANUM ROVER (ROSMASTER X3 class): chassis, deck, LiDAR puck and a
+     camera, on four wheels with real 45 degree rollers. drive() takes the
+     body-frame velocity and spins each wheel by mecanum inverse kinematics.  */
+  function makeMecanum(parent, o){
+    o = Object.assign({k:1.45, fan:2.4}, o||{});
+    const g = grp(parent, 0, TOP, 0);
+    const car = grp(g, 0, 0, 0); car.scale.setScalar(o.k);
+    const WR = 0.15, WY = 0.15;
+    add(car, rbox(0.86, 0.06, 0.5, 0.02), MAT.carbon, 0, WY + 0.04, 0);
+    add(car, rbox(0.7, 0.12, 0.34, 0.03), MAT.dark, 0, WY + 0.13, 0);
+    add(car, rbox(0.3, 0.08, 0.2, 0.02), MAT.amber, -0.12, WY + 0.23, 0);
+    [[0.3, 0.18], [0.3, -0.18], [-0.3, 0.18], [-0.3, -0.18]].forEach(([x, z]) => add(car, cylY(0.012, 0.012, 0.16, 8), MAT.alu, x, WY + 0.27, z));
+    add(car, rbox(0.8, 0.025, 0.46, 0.012), std(0x1b2a44, 0.3, 0.4, {transparent:true, opacity:0.85}), 0, WY + 0.36, 0);
+    add(car, rbox(0.18, 0.012, 0.14, 0.004), MAT.cap, 0.12, WY + 0.38, 0);
+    add(car, cylY(0.085, 0.09, 0.06, 32), MAT.dark, -0.12, WY + 0.4, 0);
+    const lidar = grp(car, -0.12, WY + 0.46, 0);
+    add(lidar, cylY(0.075, 0.075, 0.06, 32), MAT.carbon);
+    add(lidar, cylY(0.077, 0.077, 0.012, 32), MAT.cyanG, 0, 0.005, 0, false);
+    add(lidar, rbox(0.03, 0.03, 0.05, 0.008), MAT.glass, 0.065, 0.005, 0);
+    add(car, rbox(0.06, 0.06, 0.24, 0.015), MAT.carbon, 0.37, WY + 0.4, 0);
+    [-0.06, 0.06].forEach(z => add(car, cylX(0.018, 0.012, 16), MAT.glass, 0.4, WY + 0.4, z));
+    add(car, new THREE.SphereGeometry(0.012, 8, 6), MAT.cyanG, 0.4, WY + 0.4, 0, false);
+    let fan = null;
+    if(o.fan){
+      fan = new THREE.Mesh(new THREE.CircleGeometry(o.fan, 24, -0.18, 0.36),
+        new THREE.MeshBasicMaterial({color:lin(0x4fd8e8), transparent:true, opacity:0.08, depthWrite:false, side:THREE.DoubleSide}));
+      fan.rotation.x = -Math.PI/2; lidar.add(fan);
+    }
+    const roller = cylY(0.026, 0.026, 0.11, 10), Y = new THREE.Vector3(0, 1, 0);
+    const wheels = [[0.3, 0.31, 1], [0.3, -0.31, -1], [-0.3, 0.31, -1], [-0.3, -0.31, 1]].map(([x, z, hand]) => {
+      const w = grp(car, x, WY, z);
+      add(w, cylZ(0.07, 0.1, 20), MAT.alu);
+      [-0.045, 0.045].forEach(off => add(w, cylZ(WR - 0.02, 0.012, 28), MAT.dark, 0, 0, off));
+      for(let k=0;k<10;k++){
+        const a = k/10*Math.PI*2;
+        const m = add(w, roller, MAT.rubber, Math.cos(a)*(WR - 0.028), Math.sin(a)*(WR - 0.028), 0);
+        m.quaternion.setFromUnitVectors(Y, new THREE.Vector3(-Math.sin(a), Math.cos(a), hand).normalize());
+      }
+      return w;
+    });
+    // body-frame velocity (bx forward, bz left) plus yaw rate wz, through mecanum IK
+    function drive(bx, bz, wz, dt){
+      wheels.forEach((w, i) => {
+        const sgn = (i === 0 || i === 3) ? 1 : -1, side = (i % 2 === 0) ? 1 : -1;
+        w.rotation.z -= (bx + sgn*bz - side*wz*0.6) / (WR*o.k) * dt;
+      });
+    }
+    return {g, car, lidar, fan, drive, wheels};
+  }
+
+// parts: mecanum
+  /*  ROSMASTER X3 IN THE WAREHOUSE: rack blocks on a grid, the aisles
+     between them the only free space. The rover runs the A* route, a
+     serpentine down the cross aisles turning on the end aisles, holds at
+     the red stop marker and crawls through the amber caution zone. Its
+     LiDAR scan is really ray-cast against the rack footprints, and the
+     AMCL particle cloud tightens while it dwells and spreads when it runs.  */
+  const STAGE = {
+    sky:[0x050912, 0x10203a], skyL:[0xbfa883, 0xe1d0ae], hemi:0xa8c8ff,
+    cam:{az:0.45, d:12.5, h:7.2, ly:0.4, fit:1.08},
+    build(root){
+      plinth(root, 4.6);
+      const BW = 2.0, BD = 0.8, BH = 1.35, AISLE = 1.15, nCols = 2, nRows = 2;
+      const PX = BW + AISLE, PZ = BD + AISLE;
+      const bx = i => (i - (nCols - 1)/2)*PX, bz = j => (j - (nRows - 1)/2)*PZ;
+      const ax = k => bx(0) - PX/2 + k*PX, az = k => bz(0) - PZ/2 + k*PZ;
+      // racks: blue uprights, orange beams, steel decks, cartons
+      const box = std(0xa9825a, 0.85, 0.0), upr = std(0x2c62a6, 0.45, 0.5), beam = std(0xe08a3c, 0.45, 0.4);
+      const obstacles = [];
+      for(let i=0;i<nCols;i++) for(let j=0;j<nRows;j++){
+        const cx = bx(i), cz = bz(j);
+        obstacles.push({x0:cx - BW/2, x1:cx + BW/2, z0:cz - BD/2, z1:cz + BD/2});
+        const rk = grp(root, cx, TOP, cz);
+        [-BW/2, -BW/6, BW/6, BW/2].forEach(ux => [-BD/2, BD/2].forEach(uz => add(rk, new THREE.BoxGeometry(0.05, BH, 0.05), upr, ux, BH/2, uz)));
+        [0.38, 0.85, 1.3].forEach((y, l) => {
+          [-BD/2, BD/2].forEach(z => add(rk, new THREE.BoxGeometry(BW, 0.05, 0.035), beam, 0, y, z));
+          add(rk, new THREE.BoxGeometry(BW - 0.04, 0.02, BD - 0.04), MAT.steel, 0, y + 0.02, 0);
+          if(l < 2) for(let b=0;b<5;b++){
+            if(R01(i*31 + j*7 + l*5 + b) < 0.3) continue;
+            const sx = 0.22 + R01(b + l + i)*0.12, sy = 0.18 + R01(b*2 + l + j)*0.16;
+            add(rk, new THREE.BoxGeometry(sx, sy, 0.5), box, -BW/2 + 0.22 + b*0.39, y + 0.03 + sy/2, 0);
+          }
         });
       }
+      // the A* route on the aisle centrelines
+      const XL = ax(0), XR = ax(nCols), WP = [];
+      for(let k=0;k<=nRows;k++){
+        const z = az(k);
+        if(k % 2 === 0) WP.push(new THREE.Vector3(XL, 0, z), new THREE.Vector3(XR, 0, z));
+        else WP.push(new THREE.Vector3(XR, 0, z), new THREE.Vector3(XL, 0, z));
+      }
+      if(Math.abs(WP[WP.length-1].x - WP[0].x) > 0.01) WP.push(new THREE.Vector3(WP[WP.length-1].x, 0, WP[0].z));
+      const LEGS = WP.length, nextWP = i => WP[(i+1) % LEGS];
+      const Y = TOP + 0.012;
+      for(let i=0;i<LEGS;i++){
+        const a = WP[i], b = nextWP(i), n = Math.round(a.distanceTo(b)/0.32);
+        for(let s=0;s<n;s+=2){ const r = rod(root, 0.012, MAT.cyanG, false); r.userData.set(a.clone().lerp(b, s/n).setY(Y), a.clone().lerp(b, (s + 1)/n).setY(Y)); }
+      }
+      const beacons = WP.map(p => add(root, new THREE.SphereGeometry(0.06, 16, 12), glow(0x4fd8e8, 1.4), p.x, Y + 0.06, p.z, false));
+      // marker posts: red octagon (stop) and amber triangle (caution)
+      function sign(x, z, col, sides, rot, r){
+        const g = grp(root, x, TOP, z);
+        add(g, cylY(0.025, 0.025, 1.1, 10), MAT.steel, 0, 0.55, 0);
+        add(g, cylY(0.12, 0.14, 0.04, 16), MAT.dark, 0, 0.02, 0);
+        const head = grp(g, 0, 1.25, 0);
+        const sh = new THREE.Shape();
+        for(let i=0;i<sides;i++){ const a = rot + i/sides*Math.PI*2; i ? sh.lineTo(Math.cos(a)*r, Math.sin(a)*r) : sh.moveTo(Math.cos(a)*r, Math.sin(a)*r); }
+        const faceG = new THREE.ExtrudeGeometry(sh, {depth:0.03, bevelEnabled:true, bevelThickness:0.008, bevelSize:0.008, bevelSegments:2}); faceG.center();
+        const m = glow(col, 0.6); m.color = lin(col).multiplyScalar(0.6);
+        add(head, faceG, m);
+        const rim = add(head, new THREE.RingGeometry(r*0.68, r*0.74, sides, 1, rot), MAT.shell, 0, 0, 0.026, false);
+        return {g, head, m, x, z};
+      }
+      const stop = sign(bx(0)*0.35, az(0) - 0.42, 0xe5534b, 8, Math.PI/8, 0.26);
+      const warn = sign(bx(nCols - 1)*0.35, az(1) + 0.42, 0xf5a35c, 3, Math.PI/2, 0.3);
+      const STOP_PT = new THREE.Vector3(stop.x, 0, az(0)), WARN_PT = new THREE.Vector3(warn.x, 0, az(1));
+
+      const rv = makeMecanum(root, {k:0.7, fan:0});
+      // LiDAR: rays cast against the rack footprints in the deck plane
+      const RAYS = mobile ? 48 : 96, MAXR = 5;
+      const rays = lines(root, RAYS, 0x4fd8e8, 0.2);
+      const hits = swarm(root, RAYS, 0xff6a55, 0.07, 0.95, (a, i) => { a[i*3+1] = -10; });
+      function rayHit(ox, oz, dx, dz){
+        let best = MAXR;
+        for(const b of obstacles){
+          let tmin = 0, tmax = best;
+          if(Math.abs(dx) < 1e-6){ if(ox < b.x0 || ox > b.x1) continue; }
+          else { let t1 = (b.x0 - ox)/dx, t2 = (b.x1 - ox)/dx; if(t1 > t2){ const s = t1; t1 = t2; t2 = s; } tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2); }
+          if(Math.abs(dz) < 1e-6){ if(oz < b.z0 || oz > b.z1) continue; }
+          else { let t1 = (b.z0 - oz)/dz, t2 = (b.z1 - oz)/dz; if(t1 > t2){ const s = t1; t1 = t2; t2 = s; } tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2); }
+          if(tmax >= tmin && tmin > 0 && tmin < best) best = tmin;
+        }
+        return best;
+      }
+      // AMCL particles
+      const NP = mobile ? 70 : 160, seed = [];
+      for(let i=0;i<NP;i++) seed.push({a:R01(i)*Math.PI*2, r:R01(i+300), p:R01(i+600)*6.28});
+      const cloud = swarm(root, NP, 0xf5a35c, 0.06, 0.8, (a, i) => { a[i*3+1] = -10; });
+      const shafts = [[-1.6, -1.0], [1.5, 0.9]].map(([x, z]) => shaft(root, x, z, 0.5, 1.0, 7, 0xbfd6ff, 0.05));
+      const panel = holo(root, 2.0, 1.3, -2.6, 3.4, -2.2);
+
+      const legLen = WP.map((p, i) => p.distanceTo(nextWP(i)));
+      let leg = 0, legT = 0, heading = 0, holdT = 0, mode = 'CRUISE', spread = 0.5;
+      const CRUISE = 0.95, pos = WP[0].clone(), tmp = new THREE.Vector3(), o = new THREE.Vector3(), e = new THREE.Vector3();
+      function update(t, dt){
+        const atStop = pos.distanceTo(STOP_PT) < 0.12, inWarn = pos.distanceTo(WARN_PT) < 0.8;
+        let speed = CRUISE; mode = 'CRUISE';
+        if(atStop && holdT < 2.2){ holdT += dt; speed = 0; mode = 'HOLD AT STOP'; }
+        else if(inWarn){ speed = CRUISE*0.3; mode = 'CAUTION ZONE'; }
+        if(!atStop) holdT = 0;
+        legT += speed*dt/legLen[leg];
+        if(legT >= 1){ legT -= 1; leg = (leg + 1) % LEGS; }
+        const a = WP[leg], b = nextWP(leg);
+        pos.copy(a).lerp(b, legT);
+        tmp.subVectors(b, a);
+        // mecanum: the body keeps one heading through the turns and strafes the cross legs
+        rv.g.position.set(pos.x, TOP, pos.z); rv.g.rotation.y = heading;
+        const c = Math.cos(heading), s = Math.sin(heading), vx = tmp.x/(legLen[leg] || 1)*speed, vz = tmp.z/(legLen[leg] || 1)*speed;
+        rv.drive(c*vx - s*vz, s*vx + c*vz, 0, dt);
+        rv.lidar.rotation.y = t*6;
+        rays.reset();
+        o.set(pos.x, TOP + 0.33, pos.z);
+        const spin = t*0.9;
+        for(let i=0;i<RAYS;i++){
+          const ang = i/RAYS*Math.PI*2 + spin, dx = Math.cos(ang), dz = Math.sin(ang), r = rayHit(pos.x, pos.z, dx, dz);
+          e.set(pos.x + dx*r, o.y, pos.z + dz*r); rays.seg(o, e);
+          hits.a[i*3] = e.x; hits.a[i*3+1] = r < MAXR ? e.y : -10; hits.a[i*3+2] = e.z;
+        }
+        rays.done(); hits.geo.attributes.position.needsUpdate = true;
+        spread += ((speed < 0.05 ? 0.12 : 0.42) - spread)*damp(0.05, dt);
+        for(let i=0;i<NP;i++){
+          const sd = seed[i], r = sd.r*spread + 0.02*Math.sin(t*1.6 + sd.p);
+          cloud.a[i*3] = pos.x + Math.cos(sd.a + t*0.25)*r; cloud.a[i*3+1] = TOP + 0.03; cloud.a[i*3+2] = pos.z + Math.sin(sd.a + t*0.25)*r;
+        }
+        cloud.geo.attributes.position.needsUpdate = true;
+        [stop, warn].forEach(sg => { sg.head.rotation.y = Math.atan2(camera.position.x - sg.x, camera.position.z - sg.z); });
+        stop.m.emissiveIntensity = atStop ? 1.2 + Math.sin(t*8)*0.8 : 0.5;
+        warn.m.emissiveIntensity = inWarn ? 1.2 + Math.sin(t*6)*0.8 : 0.5;
+        beacons.forEach((m, i) => { m.material.emissiveIntensity = i === (leg + 1) % LEGS ? 2 + Math.sin(t*5) : 0.6; });
+        panel.draw(t, (g, w, h) => {
+          holoFrame(g, w, h, 'NAV2  A* ROUTE');
+          holoRow(g, 112, 'waypoint', ((leg + 1) % LEGS + 1) + ' / ' + LEGS, (leg + legT)/LEGS);
+          holoRow(g, 170, 'speed policy', mode);
+          holoRow(g, 228, 'AMCL spread', spread.toFixed(2), spread/0.45);
+        });
+      }
+      return {update};
     }
+  };
+
+  /*  BUILD the page's stage  */
+  const root = new THREE.Group(); scene.add(root);
+  root.userData.glows = GLOWS;   // the home-page builders register their glows here
+  const api = STAGE.build(root) || {};
+  const C = Object.assign({az:0.4, d:10.5, h:3.8, ly:1.4, fit:1.2, rise:1.2}, STAGE.cam || {});
+  const SH = STAGE.shadow || 7.5;
+  key.shadow.camera.left = key.shadow.camera.bottom = -SH;
+  key.shadow.camera.right = key.shadow.camera.top = SH;
+  key.shadow.camera.far = 30 + SH*2;
+  key.position.set(5, 12, 7); rim.position.set(-6, 5, -8); fill.position.set(8, 2.5, -2);
+  const fogK = C.d/10.5;
+  scene.fog.near = 16*fogK; scene.fog.far = 60*fogK*(STAGE.fogFar || 1);
+  if(STAGE.noGround){ ground.visible = false; }
+  const skyD = [new THREE.Color(STAGE.sky[0]), new THREE.Color(STAGE.sky[1])];
+  const skyLt = [new THREE.Color(STAGE.skyL[0]), new THREE.Color(STAGE.skyL[1])];
+  const hemiC = lin(STAGE.hemi || 0xa8c8ff), WARM_SKY = lin(0xffd394);
+
+  /*  CAMERA RIG: the machine is a backdrop, not the subject. It sits
+     centred behind the page's text column under a scrim, like a
+     watermark, and the camera swings slowly round it as you read (a crane
+     orbit driven by scroll progress, a full 360 degrees from the top of
+     the page to the bottom). The holo readouts are not shown:
+     text behind body copy would only be noise.  */
+  HOLOS.forEach(h => { h.mesh.visible = false; });
+  const wide = () => camera.aspect > 1.05;
+  const pos = new THREE.Vector3(), look = new THREE.Vector3();
+  function stageCam(p){
+    const w = wide();
+    const d = C.d*(w ? 1.15*C.fit : 1.55);
+    const az = C.az + p*Math.PI*2;               // one full turn round the machine over the page
+    pos.set(Math.sin(az)*d, C.h*(w ? 1 : 1.25) + (0.5 - p)*C.rise, Math.cos(az)*d);
+    look.set(0, C.ly + (w ? 0 : 1.1), 0);
   }
 
-  /*  the A* route: a serpentine down the cross-aisles, turning on the end aisles  */
-  const XL=aisleX(0), XR=aisleX(nCols);           // leftmost / rightmost aisle centerlines
-  const WP=[];
-  for(let k=0;k<=nRows;k++){                      // each cross-aisle, alternating direction
-    const z=aisleZ(k);
-    if(k%2===0){ WP.push(new THREE.Vector3(XL,0,z)); WP.push(new THREE.Vector3(XR,0,z)); }
-    else       { WP.push(new THREE.Vector3(XR,0,z)); WP.push(new THREE.Vector3(XL,0,z)); }
+  let scrollP = 0;
+  function readScroll(){
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    scrollP = clamp01(window.scrollY/max);
   }
-  /* close the loop along the end aisle rather than diagonally across the racks */
-  if(Math.abs(WP[WP.length-1].x-WP[0].x)>0.01) WP.push(new THREE.Vector3(WP[WP.length-1].x,0,WP[0].z));
-  const LEGS=WP.length;                              // closed loop
-  const nextWP=i=>WP[(i+1)%LEGS];
-  /* dashed plan line on the floor */
-  const planPts=[];
-  for(let i=0;i<LEGS;i++){
-    const a=WP[i],b=nextWP(i);
-    const segs=24;
-    for(let s=0;s<segs;s+=2){
-      const t0=s/segs,t1=(s+1)/segs;
-      planPts.push(a.clone().lerp(b,t0).setY(0.03),a.clone().lerp(b,t1).setY(0.03));
-    }
-  }
-  const planGeo=new THREE.BufferGeometry().setFromPoints(planPts);
-  const planMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.5});
-  scene.add(new THREE.LineSegments(planGeo,planMat));
-  /* waypoint beacons */
-  const beacons=WP.map(p=>{
-    const m=new THREE.Mesh(new THREE.SphereGeometry(0.13,7,6),wire(CYAN,0.6));
-    m.position.set(p.x,0.13,p.z); scene.add(m); return m;
-  });
+  addEventListener('scroll', readScroll, {passive:true});
+  readScroll();
 
-  /*  marker posts: a red octagon (stop) and an amber triangle (caution). Both are read
-     at a glance, so they get a filled face plus a bright outline, and they billboard about
-     their post so the shape stays legible as the camera orbits.  */
-  const signs=[];
-  function marker(x,z,color,sides,rot,r){
-    const g=new THREE.Group();
-    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.5,6),wire(DEEPBLUE,0.5));
-    post.position.y=0.75; g.add(post);
-    const head=new THREE.Group(); head.position.y=1.85; g.add(head);
-    const face=new THREE.Mesh(new THREE.CircleGeometry(r,sides),
-      new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.34,side:THREE.DoubleSide}));
-    const ring=new THREE.BufferGeometry().setFromPoints(
-      Array.from({length:sides},(_,i)=>{const a=i/sides*Math.PI*2;
-        return new THREE.Vector3(Math.cos(a)*r,Math.sin(a)*r,0);}));
-    const rim=new THREE.LineLoop(ring,new THREE.LineBasicMaterial({color,transparent:true,opacity:0.95}));
-    const inner=new THREE.LineLoop(ring,
-      new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
-    inner.scale.setScalar(0.72);
-    face.rotation.z=rot; rim.rotation.z=rot; inner.rotation.z=rot;
-    head.add(face); head.add(rim); head.add(inner);
-    g.position.set(x,0,z); scene.add(g);
-    const s={head,face,rim,x,z};
-    signs.push(s); return s;
-  }
-  /* placed beside the route, in the aisle they govern */
-  const stopSign=marker(blockX(0)*0.35,aisleZ(0)-1.15,RED,8,Math.PI/8,0.62);      // octagon
-  const warnSign=marker(blockX(nCols-1)*0.35,aisleZ(1)+1.15,AMBER,3,Math.PI/2,0.72); // triangle
-  /* the point on the route each sign governs, checked by distance, so the rule applies on
-     every pass through that spot rather than on one hard-coded leg */
-  const STOP_PT=new THREE.Vector3(stopSign.x,0,stopSign.z+1.15);
-  const WARN_PT=new THREE.Vector3(warnSign.x,0,warnSign.z-1.15);
+  let ptrNX = 0, ptrNY = 0, smNX = 0, smNY = 0;
+  addEventListener('pointermove', e => {
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // no parallax lurch on touch
+    ptrNX = e.clientX/innerWidth - 0.5; ptrNY = e.clientY/innerHeight - 0.5;
+  }, {passive:true});
+  addEventListener('pointerleave', () => { ptrNX = ptrNY = 0; }, {passive:true});
 
-  /*  the rover: mecanum chassis, LiDAR puck, camera stub  */
-  const rover=new THREE.Group(); scene.add(rover);
-  const chassis=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.24,0.62),wire(AMBER,0.75));
-  chassis.position.y=0.24; rover.add(chassis);
-  const puck=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,0.11,10),wire(CYAN,0.85));
-  puck.position.y=0.44; rover.add(puck);
-  const cam=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.09,0.06),wire(CYAN,0.7));
-  cam.position.set(0,0.36,0.33); rover.add(cam);
-  [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([sx,sz])=>{
-    const w=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.09,8),wire(DEEPBLUE,0.6));
-    w.rotation.z=Math.PI/2; w.position.set(sx*0.34,0.13,sz*0.24); rover.add(w);
-  });
-
-  /*  360° LiDAR fan: each ray is actually cast against the rack footprints, so the scan
-     genuinely traces the aisle walls instead of faking a range profile  */
-  const RAYS=mobile?48:96, MAX_RANGE=12;   // the real RPLIDAR A1 tops out at 12 m
-  const rayPos=new Float32Array(RAYS*6);
-  const rayGeo=new THREE.BufferGeometry();
-  rayGeo.setAttribute('position',new THREE.BufferAttribute(rayPos,3));
-  const rayMat=new THREE.LineBasicMaterial({color:CYAN,transparent:true,opacity:0.17});
-  scene.add(new THREE.LineSegments(rayGeo,rayMat));   // world-space, not parented to the rover
-  function rayHit(ox,oz,dx,dz){        // nearest slab intersection across all rack footprints
-    let best=MAX_RANGE;
-    for(let k=0;k<obstacles.length;k++){
-      const b=obstacles[k];
-      let tmin=0,tmax=best;
-      if(Math.abs(dx)<1e-6){ if(ox<b.x0||ox>b.x1) continue; }
-      else{ let t1=(b.x0-ox)/dx,t2=(b.x1-ox)/dx; if(t1>t2){const s=t1;t1=t2;t2=s;}
-            tmin=Math.max(tmin,t1); tmax=Math.min(tmax,t2); }
-      if(Math.abs(dz)<1e-6){ if(oz<b.z0||oz>b.z1) continue; }
-      else{ let t1=(b.z0-oz)/dz,t2=(b.z1-oz)/dz; if(t1>t2){const s=t1;t1=t2;t2=s;}
-            tmin=Math.max(tmin,t1); tmax=Math.min(tmax,t2); }
-      if(tmax>=tmin && tmin>0 && tmin<best) best=tmin;
-    }
-    return best;
+  /*  THEME: the same stage lit for a light page. Warm lamp skies and
+     floor, more fill; additive glow vanishes on a bright sky, so
+     particles switch to normal blending with deeper tints and the holo
+     panels redraw as dark text on frosted glass.  */
+  const groundM = ground.material, darkGround = groundM.color.clone();
+  const plD = MAT.plinth.color.clone(), plTD = MAT.plTop.color.clone();
+  function applyTheme(light){
+    LIGHT = light;
+    renderer.toneMappingExposure = light ? 0.78 : 0.82;
+    hemi.intensity = light ? 0.75 : 0.38;
+    hemi.groundColor.copy(light ? lin(0x8f7550) : lin(0x05080f));
+    hemi.color.copy(hemiC); if(light) hemi.color.lerp(WARM_SKY, 0.65);
+    key.color.copy(light ? lin(0xffd59a) : new THREE.Color(0xffffff));
+    key.intensity = light ? 2.0 : 2.3;
+    groundM.color.copy(light ? lin(0xc4ad84) : darkGround);
+    MAT.plinth.color.copy(light ? lin(0x8a7552) : plD);
+    MAT.plTop.color.copy(light ? lin(0xbfa880) : plTD);
+    grid.visible = !light && !STAGE.noGround; gridL.visible = light && !STAGE.noGround;
+    const S = light ? skyLt : skyD;
+    skyU.top.value.copy(S[0]); skyU.hor.value.copy(S[1]); scene.fog.color.copy(S[1]);
+    PARTS.forEach(p => {
+      p.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+      p.m.color.copy(p.c); if(light) p.m.color.multiplyScalar(0.42);
+      p.m.needsUpdate = true;
+    });
+    SHAFTS.forEach(sh => { sh.userData.op = sh.userData.op0*(light ? 0.3 : 1); sh.material.opacity = sh.userData.op; });
+    HOLOS.forEach(h => { h.m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending; h.m.needsUpdate = true; h.reset(); });
+    if(api.theme) api.theme(light);
   }
-  function updateRays(t,p){
-    const spin=t*0.9;                  // the scan origin index rotates like a spinning head
-    for(let i=0;i<RAYS;i++){
-      const a=(i/RAYS)*Math.PI*2+spin;
-      const dx=Math.cos(a),dz=Math.sin(a);
-      const r=rayHit(p.x,p.z,dx,dz);
-      rayPos[i*6]=p.x; rayPos[i*6+1]=0.44; rayPos[i*6+2]=p.z;
-      rayPos[i*6+3]=p.x+dx*r; rayPos[i*6+4]=0.44; rayPos[i*6+5]=p.z+dz*r;
-    }
-    rayGeo.attributes.position.needsUpdate=true;
+  applyTheme(LIGHT);
+
+  /* power-up on load: glows ramp in and the machine settles to full scale */
+  function power(e){
+    GLOWS.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
+    root.scale.setScalar(0.9 + 0.1*e);
   }
 
-  /*  AMCL particle cloud: a scatter of pose hypotheses around the rover  */
-  const NP=mobile?60:140;
-  const partPos=new Float32Array(NP*3);
-  const partSeed=[];
-  for(let i=0;i<NP;i++){partSeed.push({a:Math.random()*Math.PI*2,r:Math.random(),p:Math.random()*Math.PI*2});}
-  const partGeo=new THREE.BufferGeometry();
-  partGeo.setAttribute('position',new THREE.BufferAttribute(partPos,3));
-  const partCloud=new THREE.Points(partGeo,new THREE.PointsMaterial({color:AMBER,size:0.075,transparent:true,opacity:0.75}));
-  scene.add(partCloud);
+  function resize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    readScroll();
+    if(reduced) still();
+  }
+  addEventListener('resize', resize, {passive:true});
+  renderer.setSize(innerWidth, innerHeight);
 
-  /*  ambient dust  */
-  const PC=mobile?350:900;
-  const pp=new Float32Array(PC*3);
-  for(let i=0;i<PC;i++){pp[i*3]=(Math.random()-0.5)*60;pp[i*3+1]=Math.random()*14;pp[i*3+2]=(Math.random()-0.5)*40;}
-  const pg=new THREE.BufferGeometry();
-  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
-  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x3b6ea8,size:0.05,transparent:true,opacity:0.45})));
+  /* Reduced motion: no rAF loop. The stage is composed as a still and
+     recomposed only when the layout, scroll or theme changes. */
+  function still(){
+    stageCam(scrollP); camera.position.copy(pos); camera.lookAt(look);
+    sky.position.copy(camera.position);
+    power(1);
+    if(api.update){ for(let i=0;i<3;i++) api.update(2.0 + i/60, 1/60); }
+    renderer.render(scene, camera);
+  }
+  window.addEventListener('themechange', e => { applyTheme(e.detail === 'light'); if(reduced) still(); });
+  if(reduced){
+    still();
+    let q = false;
+    addEventListener('scroll', () => { if(q) return; q = true; requestAnimationFrame(() => { q = false; still(); }); }, {passive:true});
+    return;
+  }
 
-  /*  drive: constant-speed traversal of the route, with stop/slow zones  */
-  const legLen=WP.map((p,i)=>p.distanceTo(nextWP(i)));
-  let leg=0,legT=0,heading=0,holdT=0;
-  const CRUISE=3.4;                      // m/s in scene units
-  const pos=new THREE.Vector3().copy(WP[0]);
-  const tmp=new THREE.Vector3();
-
-  let sTarget=0,smooth=0,mx=0;
-  addEventListener('scroll',()=>{sTarget=scrollY;},{passive:true});
-  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-0.5;},{passive:true});
-  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-  renderer.setSize(innerWidth,innerHeight);
-
-  const clock=new THREE.Clock();
+  const clock = new THREE.Clock();
+  let t = 0, intro = 0, frames = 0, probe = 0, tuned = false;
+  stageCam(scrollP);
+  const curPos = pos.clone(), curLook = look.clone();
   function animate(){
     requestAnimationFrame(animate);
-    const dt=Math.min(clock.getDelta(),0.05); // delta first, getElapsedTime() would consume it
-    const t=clock.elapsedTime;
-
-    if(!reduced){
-      /* speed policy: hold at the red marker, crawl through the amber zone */
-      const atStop=pos.distanceTo(STOP_PT)<0.45;
-      const inWarn=pos.distanceTo(WARN_PT)<2.4;
-      let speed=CRUISE;
-      if(atStop && holdT<2.2){ holdT+=dt; speed=0; }
-      else if(inWarn){ speed=CRUISE*0.3; }
-      if(!atStop) holdT=0;
-
-      legT+=(speed*dt)/legLen[leg];
-      if(legT>=1){ legT-=1; leg=(leg+1)%LEGS; }
-
-      const a=WP[leg],b=nextWP(leg);
-      pos.copy(a).lerp(b,legT); pos.y=0;
-      rover.position.copy(pos);
-      tmp.subVectors(b,a);
-      heading+=(Math.atan2(tmp.x,tmp.z)-heading)*Math.min(1,dt*6);
-      rover.rotation.y=heading;
-      puck.rotation.y=t*3.4;
-      updateRays(t,pos);
-
-      /* particles: spread wide when moving fast, tighten when the robot dwells (more scan matches) */
-      const spread=speed<0.2?0.35:0.95;
-      for(let i=0;i<NP;i++){
-        const s=partSeed[i];
-        const r=s.r*spread+0.05*Math.sin(t*1.6+s.p);
-        partPos[i*3]=pos.x+Math.cos(s.a+t*0.25)*r;
-        partPos[i*3+1]=0.09;
-        partPos[i*3+2]=pos.z+Math.sin(s.a+t*0.25)*r;
+    /* clamped dt: a backgrounded tab resumes where it paused */
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if(document.hidden) return;
+    t += dt;
+    /* one-time quality probe: if this machine can't hold 45 fps, drop
+       to DPR 1 and soften shadows rather than ship a stuttering page */
+    if(!tuned){
+      frames++; probe += dt;
+      if(probe > 2.5){
+        tuned = true;
+        if(frames/probe < 45){
+          if(renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); }
+          key.shadow.mapSize.set(1024, 1024); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; }
+        }
       }
-      partGeo.attributes.position.needsUpdate=true;
-
-      /* billboard each sign about its post so the octagon/triangle stays readable */
-      signs.forEach(s=>{s.head.rotation.y=Math.atan2(camera.position.x-s.x,camera.position.z-s.z);});
-      stopSign.face.material.opacity=atStop?0.4+Math.sin(t*8)*0.25:0.3;
-      stopSign.rim.material.opacity=atStop?0.75+Math.sin(t*8)*0.25:0.85;
-      warnSign.face.material.opacity=inWarn?0.4+Math.sin(t*6)*0.25:0.3;
-      warnSign.rim.material.opacity=inWarn?0.75+Math.sin(t*6)*0.25:0.85;
-      beacons.forEach((m,i)=>{m.material.opacity=0.35+(i===(leg+1)%LEGS?0.45+Math.sin(t*5)*0.2:0.1);});
-      planMat.opacity=0.42+Math.sin(t*1.4)*0.1;
     }
-
-    smooth+=(sTarget-smooth)*0.05;
-    const d=smooth*0.0011;
-    const orbit=mobile?30:24;
-    camera.position.x=Math.sin(d*0.5)*orbit*0.75+mx*2.6;
-    camera.position.z=orbit+Math.cos(d*0.5)*8;
-    camera.position.y=10+Math.min(d*2.6,6);
-    camera.lookAt(0,0.9,0);
-    renderer.render(scene,camera);
+    stageCam(scrollP);
+    const kc = damp(0.05, dt);
+    curPos.lerp(pos, kc); curLook.lerp(look, kc);
+    const kp = damp(0.07, dt);
+    smNX += (ptrNX - smNX)*kp; smNY += (ptrNY - smNY)*kp;
+    camera.position.copy(curPos);
+    camera.position.x += Math.sin(t*0.13)*0.3;
+    camera.position.y += Math.cos(t*0.09)*0.18;
+    camera.lookAt(curLook);
+    camera.translateX( smNX*1.4);
+    camera.translateY(-smNY*0.9);
+    camera.lookAt(curLook);
+    sky.position.copy(camera.position);
+    intro = Math.min(1, intro + dt/1.6);
+    power(smoothstep(intro));
+    if(api.update) api.update(t, dt);
+    renderer.render(scene, camera);
   }
   animate();
 })();
