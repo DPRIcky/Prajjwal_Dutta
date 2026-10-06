@@ -433,13 +433,12 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* light theme for the wireframe background, without touching the scene code:
-   render() is wrapped so every material the scene draws is re-inked, same hue
+   each renderer's render() is wrapped so every material it draws is re-inked, same hue
    darkened to ink depth, glow switched to normal blending, fog turned cream.
    Colours the scene changes itself (live highlights) are caught each frame.
    Textured materials (canvas displays) are left alone. */
 (function(){
   if(!window.THREE) return;
-  const render = THREE.WebGLRenderer.prototype.render;
   const seen = new WeakSet(), mats = [], scenes = [];
   const FOG_L = new THREE.Color(0xe6d8bc), hsl = {h:0, s:0, l:0};
   let light = document.documentElement.getAttribute('data-theme') === 'light', tick = 0;
@@ -450,14 +449,16 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
       m.color.getHSL(hsl); m.color.setHSL(hsl.h, Math.min(1, hsl.s*1.1), Math.min(hsl.l, 0.3));
       // dark ink on cream reads far stronger than glow on navy: thin it so copy stays on top
       // grids and graph edges are vertex-coloured navy, built to be faint on navy: fade them hardest
-      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*(m.vertexColors ? 0.22 : 0.4);
+      if(m.transparent && u.to0 !== undefined) m.opacity = u.to0*fade(m);
       if(u.tb0 === THREE.AdditiveBlending){ m.blending = THREE.NormalBlending; m.needsUpdate = true; }
     } else {
       if(m.blending !== u.tb0){ m.blending = u.tb0; m.needsUpdate = true; }
       if(u.to0 !== undefined) m.opacity = u.to0;
     }
-    u.tset = m.color.clone();
+    u.tset = m.color.clone(); u.topset = m.opacity;
   }
+  // the light fade for a base opacity: vertex-coloured grids and edges were built faint on navy, fade them hardest
+  const fade = m => m.vertexColors ? 0.22 : 0.4;
   function scan(scene){
     scene.traverse(o => {
       const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
@@ -473,17 +474,27 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
     if(!scene.userData.tf0) scene.userData.tf0 = scene.fog.color.clone();
     scene.fog.color.copy(light ? FOG_L : scene.userData.tf0);
   }
-  THREE.WebGLRenderer.prototype.render = function(scene, cam){
+  function hook(scene){
     if(scene && scene.isScene){
       if(scenes.indexOf(scene) < 0){ scenes.push(scene); fog(scene); scan(scene); }
       else if(++tick % 90 === 0) scan(scene);
       if(light) for(let i=0;i<mats.length;i++){
         const m = mats[i];
-        if(!m.color.equals(m.userData.tset)){ m.userData.tc0.copy(m.color); ink(m); }
+        const u = m.userData;
+        if(!m.color.equals(u.tset)){ u.tc0.copy(m.color); ink(m); }
+        else if(m.opacity !== u.topset){ u.to0 = m.opacity; m.opacity = u.to0*fade(m); u.topset = m.opacity; }   // the scene animated its opacity
       }
     }
-    return render.call(this, scene, cam);
+  }
+  // r128 builds render() inside the constructor, per instance, so patching the
+  // prototype does nothing: wrap the constructor and hook each renderer's own render
+  const Base = THREE.WebGLRenderer;
+  THREE.WebGLRenderer = function(params){
+    const r = new Base(params), render = r.render;
+    r.render = function(scene, cam){ hook(scene); return render.call(this, scene, cam); };
+    return r;
   };
+  THREE.WebGLRenderer.prototype = Base.prototype;
   window.addEventListener('themechange', e => { light = e.detail === 'light'; mats.forEach(ink); scenes.forEach(fog); });
 })();
 </script>
