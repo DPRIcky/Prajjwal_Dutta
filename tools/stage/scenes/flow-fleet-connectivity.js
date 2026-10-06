@@ -19,7 +19,7 @@
         const m = add(root, new THREE.DodecahedronGeometry(0.2 + ((i*37)%10)/16, 0), rockM, Math.cos(a)*r, 0.06, Math.sin(a)*r);
         m.scale.y = 0.5; m.rotation.set(i, i*0.7, 0);
       }
-      const S = 0.6, sim = grp(root, 0, 2.7, 0); sim.scale.setScalar(S);
+      const S = 0.95, sim = grp(root, 0, 2.6, 0); sim.scale.setScalar(S);
       function flow(x, y, z, t){
         const r = Math.hypot(x, z) + 0.001, w = 0.10*Math.exp(-r*r/160);
         return [-z*w*1.3 + 0.10*Math.sin(0.08*t) + 0.035*y, 0.02*Math.sin(0.35*x + 0.2*t), x*w*1.3 + 0.06*Math.cos(0.06*t)];
