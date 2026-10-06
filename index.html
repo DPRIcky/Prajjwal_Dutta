@@ -510,6 +510,62 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
     background:linear-gradient(180deg,rgba(var(--card-rgb),0) 62%,rgba(var(--card-rgb),0.55));}
   :root[data-theme="light"] .award::after{text-shadow:0 1px 6px rgba(var(--card-rgb),0.95),0 0 2px rgba(var(--card-rgb),0.9);}
 
+
+  /*  PROJECT DECK: the Featured Work cards as a fanned stack, one card at a
+     time. Every card shares one grid cell, so the deck is as tall as the
+     tallest card; the next card peeks out washed beside the main one, and the
+     ones already seen wait off to the side away from the 3D robot
+     (data-depth="out", side set by --exit: 1 right, -1 left).  */
+  /* the main card plus its peek (about 1.2 card widths) are centred as one
+     group in the column, so wide screens don't pile the spare room on one side */
+  .deck-wrap{--dw:min(680px,72%);width:var(--dw);outline:none;
+    margin:3rem 0 0 max(0px,calc((100% - var(--dw)*1.2)/2));}
+  .deck-wrap.exit-l{margin:3rem max(0px,calc((100% - var(--dw)*1.2)/2)) 0 auto;}
+  /* featured cards carry big image banners: give the main card more of the column */
+  #work .deck-wrap{--dw:min(640px,82%);}
+  .deck > .project{margin:0;}
+  .deck{display:grid;grid-template-columns:1fr;gap:0;margin:0;position:relative;
+    touch-action:pan-y;user-select:none;-webkit-user-select:none;}
+  .deck > .deck-card{grid-area:1/1;transform-origin:50% 50%;
+    transition:transform .55s cubic-bezier(.2,.75,.25,1),opacity .45s ease,box-shadow .3s;
+    background-color:var(--panel);}
+  .deck > .deck-card[data-depth="0"]{transform:none;opacity:1;box-shadow:0 18px 44px rgba(var(--shadow-rgb),0.35);}
+  /* the next card peeks out washed beside the main one, so the deck reads as more than one card */
+  .deck > .deck-card[data-depth="1"]{transform:translateX(calc(19% * var(--exit,1))) scale(.9);opacity:.6;filter:saturate(.55);}
+  .deck > .deck-card[data-depth="2"]{transform:translateX(calc(28% * var(--exit,1))) scale(.8);opacity:.14;filter:saturate(.4);}
+  .deck > .deck-card[data-depth="x"]{transform:translateX(calc(34% * var(--exit,1))) scale(.74);opacity:0;pointer-events:none;}
+  .deck > .deck-card[data-depth="out"]{transform:translateX(calc(125% * var(--exit,1))) rotate(calc(11deg * var(--exit,1)));opacity:0;pointer-events:none;}
+  /* hover only steadies the main card: a generic :hover would pin a departing card in place */
+  .deck > .deck-card[data-depth="0"]:hover{transform:none;}
+  .deck > .deck-card[data-depth="1"]:hover{transform:translateX(calc(19% * var(--exit,1))) scale(.9);opacity:.8;cursor:pointer;}
+  .deck > .deck-card[data-depth="2"]:hover{transform:translateX(calc(28% * var(--exit,1))) scale(.8);}
+  @media (max-width:680px){
+    .deck-wrap,.deck-wrap.exit-l{width:auto;margin:3rem 12% 0 0;}
+    .deck-wrap.exit-l{margin:3rem 0 0 12%;}
+    .deck-track{display:none;}
+    .deck > .deck-card[data-depth="1"],.deck > .deck-card[data-depth="1"]:hover{transform:translateX(calc(10% * var(--exit,1))) scale(.92);}
+    .deck > .deck-card[data-depth="2"],.deck > .deck-card[data-depth="2"]:hover{transform:translateX(calc(17% * var(--exit,1))) scale(.84);}
+  }
+  .deck > .deck-card.dragging{transition:none;}
+  .deck img{-webkit-user-drag:none;user-drag:none;}
+  .deck-meta{display:flex;align-items:center;justify-content:space-between;gap:0.9rem;margin-top:1rem;}
+  .deck-mid{display:flex;align-items:center;gap:0.9rem;}
+  .deck-btn{display:inline-flex;align-items:center;gap:0.45rem;font-family:var(--mono);font-size:0.62rem;
+    letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);background:rgba(var(--ink-rgb),0.4);
+    border:1px solid var(--line);border-radius:999px;padding:0.45rem 0.9rem;cursor:pointer;
+    transition:color .25s,border-color .25s,opacity .25s;}
+  .deck-btn:hover,.deck-btn:focus-visible{color:var(--cyan);border-color:rgba(var(--cyan-rgb),0.5);}
+  .deck-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+  .deck-btn:disabled{opacity:.35;cursor:default;color:var(--muted);border-color:var(--line);}
+  .deck-btn svg{width:0.8rem;height:0.8rem;}
+  .deck-count{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;color:var(--muted);white-space:nowrap;}
+  .deck-count b{color:var(--cyan);font-weight:500;}
+  .deck-track{width:140px;height:2px;background:var(--line);border-radius:2px;overflow:hidden;}
+  .deck-fill{height:100%;background:var(--cyan);transition:width .45s ease;}
+  @media (prefers-reduced-motion:reduce){
+    .deck > .deck-card,.deck-fill{transition:none;}
+  }
+
   /*  theme toggle  */
   .nav-right{display:flex;align-items:center;gap:1.8rem;}
   .theme-btn{display:inline-flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;
@@ -1465,6 +1521,176 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
 })();
 </script>
 
+<script>
+/*  PROJECT DECK. The Featured Work cards as a one-card-at-a-time stack.
+    Laptop: with the pointer over the deck, the scroll wheel or trackpad
+    moves through it, down for the next card and up for the one before.
+    Phone: swipe the card towards its exit side for the next one, back the
+    other way for the one before. Cards always leave on the side away from
+    the section's 3D robot (read from the section's dock-r class; Featured
+    Work has its robot on the right, so they leave to the left): forward, the top card slides off that way; back, it
+    slides in again from there, following the finger while you drag.
+    Prev and Next stay as a failsafe. The deck
+    runs first to last without looping, so at either end the wheel and the
+    swipe hand straight back to normal page scrolling. Arrow keys work on
+    the focused deck. The card HTML is untouched.  */
+(function(){
+  // the four featured articles sit straight in the section: gather them into one deck
+  const cards = Array.from(document.querySelectorAll('#work > .project'));
+  const N = cards.length;
+  if(N < 2) return;
+  const grid = document.createElement('div');
+  cards[0].parentNode.insertBefore(grid, cards[0]);
+  cards.forEach(c => { grid.appendChild(c); c.classList.add('deck-card'); });
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'deck-wrap reveal';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-roledescription', 'carousel');
+  wrap.setAttribute('aria-label', 'Featured projects, one card at a time. Scroll, swipe or use the arrow keys.');
+  grid.parentNode.insertBefore(wrap, grid);
+  wrap.appendChild(grid);
+  grid.classList.add('deck');
+  // exit side: away from the robot. dock-r copy means the robot is on the left
+  const EXIT = grid.closest('section').classList.contains('dock-r') ? 1 : -1;
+  grid.style.setProperty('--exit', String(EXIT));
+  if(EXIT < 0) wrap.classList.add('exit-l');
+  cards.forEach(c => c.classList.remove('reveal', 'd1', 'd2', 'd3'));
+  const meta = document.createElement('div');
+  meta.className = 'deck-meta';
+  const chev = d => '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="' + d + '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  meta.innerHTML =
+    '<button class="deck-btn" type="button" data-step="-1" aria-label="Previous project">' + chev('M7.5 2.5 4 6l3.5 3.5') + 'Prev</button>' +
+    '<div class="deck-mid"><div class="deck-count" aria-live="polite"></div><div class="deck-track"><div class="deck-fill"></div></div></div>' +
+    '<button class="deck-btn" type="button" data-step="1" aria-label="Next project">Next' + chev('M4.5 2.5 8 6 4.5 9.5') + '</button>';
+  wrap.appendChild(meta);
+  if('IntersectionObserver' in window){
+    new IntersectionObserver((es, o) => { if(es[0].isIntersecting){ wrap.classList.add('in'); o.disconnect(); } }, {threshold:0.15}).observe(wrap);
+  } else wrap.classList.add('in');
+
+  const count = meta.querySelector('.deck-count'), fill = meta.querySelector('.deck-fill');
+  const prevB = meta.querySelector('[data-step="-1"]'), nextB = meta.querySelector('[data-step="1"]');
+  meta.addEventListener('click', e => { const b = e.target.closest('.deck-btn'); if(b) go(+b.dataset.step); });
+  const pad = n => String(n).padStart(2, '0');
+  let i = 0, lockUntil = 0;
+  function layout(){
+    cards.forEach((c, k) => {
+      const d = k - i;
+      c.dataset.depth = d < 0 ? 'out' : d < 3 ? String(d) : 'x';
+      c.style.zIndex = String(d < 0 ? N + 1 : N - d);       // a returning card travels over the top
+      const top = d === 0;
+      c.inert = !(top || d === 1);
+      c.querySelectorAll('a, button').forEach(el => {
+        if(!('tab0' in el.dataset)) el.dataset.tab0 = el.getAttribute('tabindex') || '';
+        if(top && el.dataset.tab0 === '') el.removeAttribute('tabindex');
+        else el.setAttribute('tabindex', top ? el.dataset.tab0 : '-1');
+      });
+      if(top) c.removeAttribute('aria-hidden'); else c.setAttribute('aria-hidden', 'true');
+    });
+    const title = cards[i].querySelector('h3, h4');
+    count.innerHTML = '<b>' + pad(i + 1) + '</b> / ' + pad(N);
+    count.setAttribute('aria-label', 'Project ' + (i + 1) + ' of ' + N + (title ? ': ' + title.textContent.trim() : ''));
+    fill.style.width = ((i + 1)/N*100) + '%';
+    prevB.disabled = i === 0; nextB.disabled = i === N - 1;
+  }
+  layout();
+  const ANIM = reduced ? 60 : 520;
+  function go(step){
+    const j = Math.max(0, Math.min(N - 1, i + step));
+    if(j === i) return false;
+    i = j; layout(); lockUntil = performance.now() + ANIM;
+    return true;
+  }
+
+  // wheel and trackpad: one card per gesture; at either end the page scrolls on
+  let acc = 0, accT = 0;
+  wrap.addEventListener('wheel', e => {
+    if(e.ctrlKey) return;                                       // pinch zoom
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    const atEnd = (d > 0 && i === N - 1) || (d < 0 && i === 0);
+    if(atEnd) return;                                           // let the page have it
+    e.preventDefault();
+    const now = performance.now();
+    if(now < lockUntil){ acc = 0; return; }                     // swallow inertia mid-animation
+    if(now - accT > 260) acc = 0;
+    accT = now;
+    acc += e.deltaMode === 1 ? d*32 : d;                        // lines to pixels
+    if(Math.abs(acc) >= 50){ go(acc > 0 ? 1 : -1); acc = 0; }
+  }, {passive:false});
+
+  // the washed card beside the main one is a shortcut forward
+  grid.addEventListener('click', e => {
+    const c = e.target.closest('.deck-card');
+    if(c && c.dataset.depth === '1' && !suppress){ e.preventDefault(); go(1); }
+  });
+  wrap.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ if(go(1)) e.preventDefault(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ if(go(-1)) e.preventDefault(); }
+  });
+
+  // swipe: horizontal intent only. Towards the exit side drags the top card
+  // away (next); the other way pulls the previous card back in, under the finger.
+  grid.querySelectorAll('a, img, video').forEach(el => el.setAttribute('draggable', 'false'));
+  grid.addEventListener('dragstart', e => e.preventDefault());
+  let sx = 0, sy = 0, dx = 0, t0 = 0, armed = false, moved = false, suppress = false, moving = null, W = 1;
+  const outX = () => EXIT*1.25*W;
+  grid.addEventListener('pointerdown', e => {
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    if(!cards[i].contains(e.target) || e.target.closest('.vbadge')) return;
+    armed = true; moved = false; sx = e.clientX; sy = e.clientY; dx = 0; t0 = performance.now();
+    W = cards[i].offsetWidth || 1;
+  });
+  window.addEventListener('pointermove', e => {
+    if(!armed) return;
+    const mx = e.clientX - sx, my = e.clientY - sy;
+    if(!moved){
+      if(Math.abs(my) > 10 && Math.abs(my) > Math.abs(mx)){ armed = false; return; }   // a scroll
+      if(Math.abs(mx) < 8) return;
+      moved = true;
+      try{ grid.setPointerCapture(e.pointerId); }catch(_){}
+    }
+    dx = mx;
+    const fwd = dx*EXIT;                         // > 0: moving towards the exit side
+    if(fwd > 0 && i < N - 1){
+      if(moving && moving !== cards[i]) settle();
+      moving = cards[i]; moving.classList.add('dragging');
+      moving.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx/W*11) + 'deg)';
+    } else if(fwd < 0 && i > 0){
+      if(moving && moving !== cards[i - 1]) settle();
+      moving = cards[i - 1]; moving.classList.add('dragging');
+      const k = Math.min(1, Math.abs(dx)/(1.25*W));
+      moving.style.transform = 'translateX(' + (outX() + dx) + 'px) rotate(' + (EXIT*11*(1 - k)) + 'deg)';
+      moving.style.opacity = String(Math.min(1, k*1.6));
+    } else {
+      if(moving) settle();
+      cards[i].classList.add('dragging');
+      cards[i].style.transform = 'translateX(' + (dx*0.15) + 'px)';                 // nothing that way: resist
+      moving = cards[i];
+    }
+  });
+  function settle(){
+    if(!moving) return;
+    moving.classList.remove('dragging'); moving.style.transform = ''; moving.style.opacity = '';
+    moving = null;
+  }
+  function release(){
+    if(!armed) return;
+    armed = false;
+    if(!moved){ settle(); return; }
+    suppress = true; setTimeout(() => { suppress = false; }, 0);
+    const v = Math.abs(dx)/Math.max(1, performance.now() - t0);
+    const far = Math.abs(dx) > 0.28*W || (Math.abs(dx) > 40 && v > 0.6);
+    const m = moving;
+    if(m){ m.classList.remove('dragging'); m.style.transform = ''; m.style.opacity = ''; moving = null; }
+    if(far) go(dx*EXIT > 0 ? 1 : -1);    // layout() carries the card on from where the finger left it
+  }
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+  grid.addEventListener('click', e => { if(suppress){ e.preventDefault(); e.stopPropagation(); } }, true);
+})();
+</script>
 <script>
 /* theme toggle: dark by default, the visitor's choice is saved site-wide */
 (function(){
@@ -2799,9 +3025,9 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
     {sel:'.hero',     build:buildArm,   dress:dressArm,   cam:{az: 0.35, d:10.5, h:3.9, ly:1.55}, skyL:[0xc4ad84, 0xe6d6b4], sky:[0x050a16, 0x0f2140], hemi:0xa8c8ff, label:'Six-axis arm · pick and place'},
     {sel:'#research', build:buildFleet, dress:dressFleet, cam:{az: 0.12, d:12.5, h:3.4, ly:1.9, fit:1.25}, skyL:[0x3f6f6c, 0x93ac98], sky:[0x020a12, 0x0b3a4c], hemi:0x9fe8f5, label:'AUV fleet under ice · connectivity tree'},
     {sel:'#work',     build:buildScara, dress:dressScara, cam:{az: 0.62, d:12.0, h:5.4, ly:1.0, sh:0.64}, skyL:[0xc9ab7c, 0xe8d5b0], sky:[0x090705, 0x2a1b0f], hemi:0xffcf9a, label:'SCARA · wafer transfer cell'},
-    // the blimp takes over from the SCARA at the Tube-MPC card (third in Featured Work)
-    {sel:'#work > .project:nth-of-type(3)', build:buildBlimp, dress:dressBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6}, skyL:[0x9a8a86, 0xe3c99c], sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · catch and score'},
     {sel:'#projects', build:buildRover, dress:dressRover, cam:{az:-0.55, d:10.0, h:5.0, ly:1.1, sh:0.6, fit:1.22}, skyL:[0xbfa883, 0xe1d0ae], sky:[0x050912, 0x10203a], hemi:0xa8c8ff, label:'Rover, quadrotor and flapping wing'},
+    // the blimp has Skills to itself: Featured Work is one deck now, so its cards no longer get scroll positions of their own
+    {sel:'#skills',   build:buildBlimp, dress:dressBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6, fit:2.0, nx:0.2}, skyL:[0x9a8a86, 0xe3c99c], sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · catch and score'},
     {sel:'#contact',  build:buildTB4,   dress:dressTB4,   cam:{az:-0.1,  d:10.5, h:4.2, ly:0.75, sh:0.55}, skyL:[0xc6b08a, 0xe8d9b9], sky:[0x04070f, 0x0c1830], hemi:0xa8c8ff, label:'TurtleBot 4 · patrol'}
   ];
   const stages = DEFS.filter(s => document.querySelector(s.sel));
@@ -2911,11 +3137,12 @@ document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}
     const c = s.cam, w = wide(), dk = docked();
     // docked: pull back until the machine fits its lane, with margin to spare
     const d = c.d*(w ? (dk ? 1.38*(c.fit || 1)*Math.min(1.25, Math.max(0.9, 0.4/s.laneW)) : 1) : 1.55);
+    // c.nx (NDC) nudges a lopsided scene back toward its lane centre
     // left-hand stages mirror the orbit so the machine faces into the page, not off its edge
     const az = w ? c.az*s.side : c.az;
     const sa = Math.sin(az), ca = Math.cos(az);
     pos.set(s.p.x + sa*d, c.h*(w ? 1 : 1.25), s.p.z + ca*d);
-    const shift = w ? d*Math.tan(camera.fov*Math.PI/360)*camera.aspect*(dk ? Math.abs(s.laneC) : (c.sh || 0.5))*s.side : 0;
+    const shift = w ? d*Math.tan(camera.fov*Math.PI/360)*camera.aspect*(dk ? Math.abs(s.laneC) - (c.nx || 0) : (c.sh || 0.5))*s.side : 0;
     look.set(s.p.x - ca*shift, c.ly + (w ? 0 : 1.1), s.p.z + sa*shift);
   }
 
