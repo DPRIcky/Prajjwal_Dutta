@@ -25,19 +25,32 @@
         return [-z*w*1.3 + 0.10*Math.sin(0.08*t) + 0.035*y, 0.02*Math.sin(0.35*x + 0.2*t), x*w*1.3 + 0.06*Math.cos(0.06*t)];
       }
       const N = mobile ? 12 : 20, RMAX = 3.0, DMIN = 0.9, UMAX = 1.4, GAMMA = 1.6, SIGMA = 0.16, BOUND = 9;
-      // a small ROV: open frame, buoyancy foam, electronics tube, vectored thrusters
-      const frameG = rbox(0.62, 0.34, 0.86, 0.05), foamG = rbox(0.56, 0.12, 0.66, 0.05), tubeG = cylZ(0.11, 0.6, 24), capG = cylZ(0.115, 0.03, 24);
-      const ductG = new THREE.TorusGeometry(0.075, 0.025, 8, 20);
-      const foamRoot = std(0xf5a35c, 0.45, 0.1), foamM = std(0x3f87c6, 0.5, 0.15), frameM = std(0x1c2433, 0.5, 0.5);
+      // BlueROV2 Heavy, the vehicle the paper's HoloOcean runs use: black side plates, two blue
+      // foam blocks either side of the white electronics tube (red front cap, glass dome), battery
+      // tube below, four vectored horizontal thrusters at the corners and four vertical ones on top
+      const plateG = rbox(0.025, 0.3, 0.8, 0.04), barG = rbox(0.6, 0.025, 0.04, 0.01);
+      const foamG = rbox(0.17, 0.12, 0.66, 0.035), tubeG = cylZ(0.07, 0.6, 24), ringG = cylZ(0.076, 0.035, 24);
+      const domeG = new THREE.SphereGeometry(0.068, 20, 10, 0, Math.PI*2, 0, Math.PI/2); domeG.rotateX(Math.PI/2);
+      const battG = cylZ(0.045, 0.46, 18), ductG = new THREE.TorusGeometry(0.055, 0.016, 8, 20), hubG = cylZ(0.022, 0.1, 12);
+      const lampG = new THREE.CircleGeometry(0.026, 16);
+      const foamRoot = std(0xf5a35c, 0.45, 0.1), foamM = std(0x2fa6d6, 0.5, 0.1), frameM = std(0x11151c, 0.62, 0.2), tubeM = std(0xdfe4ea, 0.3, 0.1);
+      const thruster = (g, x, y, z, ry, rx) => {
+        const t = grp(g, x, y, z); t.rotation.set(rx, ry, 0);
+        add(t, ductG, frameM); add(t, hubG, MAT.carbon);
+      };
       const bots = [];
       for(let i=0;i<N;i++){
         const g = grp(sim, 0, 0, 0);
-        add(g, frameG, frameM);
-        add(g, foamG, i === 0 ? foamRoot : foamM, 0, 0.23, 0);
-        add(g, tubeG, MAT.glass, 0, -0.02, 0.05);
-        add(g, capG, i === 0 ? MAT.amberG : MAT.cyanG, 0, -0.02, 0.36, false);
-        [-1, 1].forEach(s => { const d = add(g, ductG, MAT.dark, s*0.36, 0, -0.32); d.rotation.y = Math.PI/2 + s*0.4; });
-        [-1, 1].forEach(s => { const d = add(g, ductG, MAT.dark, s*0.36, 0.1, 0.1); d.rotation.x = Math.PI/2; });
+        [-1, 1].forEach(s => add(g, plateG, frameM, s*0.29, 0, 0));
+        [-1, 1].forEach(z => { add(g, barG, frameM, 0, -0.14, z*0.38); add(g, barG, frameM, 0, 0.09, z*0.38); });
+        [-1, 1].forEach(s => add(g, foamG, i === 0 ? foamRoot : foamM, s*0.165, 0.16, -0.02));
+        add(g, tubeG, tubeM, 0, 0.13, 0);
+        add(g, ringG, MAT.red, 0, 0.13, 0.31);
+        add(g, domeG, MAT.glass, 0, 0.13, 0.325, false);
+        add(g, battG, MAT.dark, 0, -0.07, -0.02);
+        [-1, 1].forEach(s => [-1, 1].forEach(z => thruster(g, s*0.36, -0.03, z*0.33, s*z*Math.PI/4, 0)));
+        [-1, 1].forEach(s => [-1, 1].forEach(z => thruster(g, s*0.36, 0.13, z*0.15, 0, Math.PI/2)));
+        [-1, 1].forEach(s => add(g, lampG, i === 0 ? MAT.amberG : MAT.cyanG, s*0.1, -0.06, 0.401, false));
         g.scale.setScalar(1.15);
         bots.push({id:i, g, ph:R01(i)*6.28, yaw:0, x:0, y:0, z:0, vx:0, vy:0, vz:0, ux:0, uy:0, uz:0});
       }
