@@ -33,6 +33,16 @@
   #roboscene{position:fixed;inset:0;z-index:0;pointer-events:none;}
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
     background:radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(4,7,14,0.6) 100%);}
+  /* the robots alternate sides; a scrim on the copy's side keeps it legible.
+     The scene script crossfades the two as the camera flies between stages. */
+  .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;display:none;opacity:0;}
+  .scrim-l{background:linear-gradient(90deg,rgba(5,8,16,0.78) 0%,rgba(5,8,16,0.6) 44%,rgba(5,8,16,0.22) 62%,rgba(5,8,16,0) 72%);opacity:1;}
+  .scrim-r{background:linear-gradient(270deg,rgba(5,8,16,0.78) 0%,rgba(5,8,16,0.6) 44%,rgba(5,8,16,0.22) 62%,rgba(5,8,16,0) 72%);}
+  @media (min-aspect-ratio:21/20){ .scrim{display:block;} }
+  @media (max-aspect-ratio:21/20){
+    .vignette{background:linear-gradient(180deg,rgba(5,8,16,0.62),rgba(5,8,16,0.48) 50%,rgba(5,8,16,0.62)),
+      radial-gradient(ellipse at 50% 38%,transparent 38%,rgba(4,7,14,0.6) 100%);}
+  }
   main{position:relative;z-index:2;}
 
   /*  nav  */
@@ -76,6 +86,24 @@
 
   /*  sections  */
   section{padding:8.5rem 6vw;max-width:1200px;margin:0 auto;}
+  /* wide screens: dock the copy to one side and keep the other side of the
+     viewport as a clear lane for the 3D stage. The scene script measures
+     each section's box and centres its robot in whatever lane is left. */
+  @media (min-width:1100px){
+    section{max-width:none;width:58vw;margin:0 0 0 6vw;padding-left:0;padding-right:0;}
+    /* dock-r sections put the copy on the right and their robot on the left */
+    section.dock-r{margin:0 6vw 0 auto;}
+    /* featured and research cards carry big image banners: a narrower column */
+    #work,#research{width:min(760px,44vw);}
+    #work .metrics,#research .metrics{grid-template-columns:repeat(2,1fr);}
+    .hero{padding-right:0;}
+    .hero > *{max-width:58vw;}
+    .hero h1{font-size:clamp(2.5rem,5.2vw,5.6rem);}
+    .hero .hero-sub{max-width:min(58ch,50vw);}
+  }
+  @media (min-width:1700px){
+    #work .metrics,#research .metrics{grid-template-columns:repeat(4,1fr);}
+  }
   .sec-label{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.28em;color:var(--cyan);
     text-transform:uppercase;margin-bottom:1.1rem;display:flex;align-items:center;gap:0.9rem;}
   .sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
@@ -294,6 +322,17 @@
     border:1px solid rgba(79,216,232,0.35);border-radius:999px;padding:0.34rem 0.72rem;
     white-space:nowrap;opacity:0;transition:opacity .28s ease;}
   #focusTag.on{opacity:1;}
+  #stageTag{position:fixed;right:4vw;bottom:1.6rem;z-index:5;pointer-events:none;
+    display:flex;align-items:center;gap:0.8rem;
+    font-family:var(--mono);font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--muted);opacity:0;transform:translateY(6px);transition:opacity .5s ease,transform .5s ease;}
+  #stageTag::before{content:"";width:2.4rem;height:1px;background:rgba(79,216,232,0.45);}
+  #stageTag .n{color:var(--cyan);}
+  #stageTag.left{right:auto;left:4vw;flex-direction:row-reverse;}
+  #stageTag.left::before{display:none;}
+  #stageTag.left::after{content:"";width:2.4rem;height:1px;background:rgba(79,216,232,0.45);}
+  #stageTag.on{opacity:0.9;transform:none;}
+  body.lb-lock #stageTag{opacity:0;}
 
   /*  inline video previews on the cards  */
   .thumb-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
@@ -422,6 +461,7 @@
     .btn:active,.reel-cta:active,.vbadge:active,.lb-sm:active,.icon-link:active{transform:none;}
     .nav-links a::after{transition:none;}
     #focusTag{display:none;}
+    #stageTag{display:none;}
   }
 </style>
 </head>
@@ -429,7 +469,10 @@
 
 <canvas id="roboscene"></canvas>
 <div class="vignette"></div>
+<div class="scrim scrim-l" aria-hidden="true"></div>
+<div class="scrim scrim-r" aria-hidden="true"></div>
 <div id="focusTag" aria-hidden="true"></div>
+<div id="stageTag" aria-hidden="true"><span class="n"></span><span class="t"></span></div>
 
 <nav>
   <a class="nav-mark" href="#top"><svg class="mark-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 2 58 17v30L32 62 6 47V17Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".5"/><g stroke="currentColor" stroke-width="1.6" opacity=".4" stroke-dasharray="3 3"><path d="M24 18 43 27"/><path d="M24 36 43 27"/></g><path d="M24 46V18h10a9 9 0 0 1 0 18H24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="24" cy="18" r="3.4"/><circle cx="24" cy="36" r="3.4"/><circle cx="24" cy="46" r="3.4"/></g><circle class="mark-node" cx="43" cy="27" r="3.9"/></svg>P.DUTTA</a>
@@ -467,7 +510,7 @@
         <span class="tri"></span>Watch the demo reel <em>· 43 clips</em>
       </button>
     </div>
-    <div class="scroll-cue"><span class="pulse"></span> Keep scrolling, the swarm holds its formation</div>
+    <div class="scroll-cue"><span class="pulse"></span> Keep scrolling, every section brings in a different robot</div>
   </section>
 
   <!-- ABOUT -->
@@ -488,7 +531,7 @@
   </section>
 
   <!-- RESEARCH -->
-  <section id="research">
+  <section id="research" class="dock-r">
     <div class="sec-label reveal"><span class="num">02</span>Research &amp; Publications</div>
     <h2 class="reveal">Where the research has landed so far.</h2>
 
@@ -670,7 +713,7 @@
   </section>
 
   <!-- PROJECT GRID -->
-  <section id="projects">
+  <section id="projects" class="dock-r">
     <div class="sec-label reveal"><span class="num">04</span>More Projects</div>
     <h2 class="reveal">More things I've built along the way.</h2>
 
@@ -791,7 +834,7 @@
   </section>
 
   <!-- SKILLS -->
-  <section id="skills">
+  <section id="skills" class="dock-r">
     <div class="sec-label reveal"><span class="num">05</span>Skills</div>
     <h2 class="reveal">What I reach for</h2>
     <div class="skills-grid">
@@ -958,7 +1001,7 @@
       {f:'minidrone-sim', po:'assets/minidrone/sim-poster.jpg', t:'Flying the track in simulation',
        x:'A run in the simulated arena. The left window looks down on the track with the drone as a blue marker, and the right window is what the drone sees: the red line picked out of the floor, the probe rays fanning out, and the path it decided to fly.'},
       {f:'minidrone-presentation', po:'assets/minidrone/presentation-poster.jpg', t:'The Round 2 presentation',
-       x:'Team-One's recorded Round 2 walkthrough, just under seven minutes. Rajdeep Adak, Vivek Kulkarni, Yashas Karthik and Prajjwal Dutta each take a part of the model, from red colour detection to the control system.'}]},
+       x:'Team-One\'s recorded Round 2 walkthrough, just under seven minutes. Rajdeep Adak, Vivek Kulkarni, Yashas Karthik and Prajjwal Dutta each take a part of the model, from red colour detection to the control system.'}]},
 
     {k:'blimp', page:'projects/blimp.html', proj:'AeroFusion: Autonomous Blimp', clips:[
       {f:'blimp-vision-chase', po:'assets/blimp/chase-poster.jpg', t:'The loop closed on a balloon',
@@ -1363,666 +1406,1108 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = innerWidth < 700;
 
-  /*  ROBOTICS SCENE 
-     Layers:
-     1. Swarm of robot agents moving in a flow field,
-        with live connectivity-graph edges (LOS links)
-     2. Wireframe scanning ground grid with a LiDAR sweep
-     3. Articulated wireframe robot arm, slowly working
-     4. Sparse ambient particles for depth
+  /*  ROBOT STAGES
+     Every section of the page owns a stage in one long world: a lit
+     plinth with a solid, articulated machine working on it. Scrolling
+     flies the camera from stage to stage on a crane arc, the sky and
+     fog re-tint to that stage's mood, and the machine being left
+     powers down while the next one powers up. Everything is built
+     from primitives here, no model files, so the page still runs
+     from file:// with nothing but three.js.
+       hero (holds through about)   six-axis arm, IK pick and place
+       research                     AUV fleet in a gyre, live delta-BFS tree
+       work, wafer cell to CLF      SCARA wafer transfer, cassette to edge-belt conveyor
+       work, from Tube-MPC          blimp tracking a green balloon
+       projects (holds through skills)  mecanum rover + quadrotor escort
+       contact                      TurtleBot 4 on patrol beside its dock
    */
   const canvas = document.getElementById('roboscene');
-  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x060a14, 0.048);
-  const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 120);
-  camera.position.set(0, 2.2, 15);
+  const camera = new THREE.PerspectiveCamera(mobile ? 46 : 36, innerWidth/innerHeight, 0.1, 420);
 
-  const CYAN = 0x4fd8e8, AMBER = 0xf5a35c, DEEPBLUE = 0x2a6bb0;
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const smoothstep = x => x*x*(3-2*x);
+  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
+  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const angLerp = (a, b, k) => {
+    let d = (b - a) % (Math.PI*2);
+    if(d >  Math.PI) d -= Math.PI*2;
+    if(d < -Math.PI) d += Math.PI*2;
+    return a + d*k;
+  };
 
-  /*  1. SWARM + CONNECTIVITY GRAPH  */
-  const N = mobile ? 26 : 46;
-  const BOUND = {x:16, y:5.5, z:8};
-  const agents = [];
-  const agentGeo = new THREE.OctahedronGeometry(0.13, 0);
-  for(let i=0;i<N;i++){
-    const isLeader = i % 12 === 0;
-    const mat = new THREE.MeshBasicMaterial({
-      color: isLeader ? AMBER : CYAN, wireframe:true,
-      transparent:true, opacity: isLeader ? 0.95 : 0.8
-    });
-    const m = new THREE.Mesh(agentGeo, mat);
-    m.position.set(
-      (Math.random()-0.5)*BOUND.x*2,
-      (Math.random()-0.5)*BOUND.y*2 + 1.5,
-      (Math.random()-0.5)*BOUND.z*2
-    );
-    m.userData.vel = new THREE.Vector3();
-    m.userData.leader = isLeader;
-    // small glow sprite behind each agent
-    scene.add(m);
-    agents.push(m);
+  /*  MATERIALS
+     three r128 treats hex as linear, so every authored colour is
+     converted from sRGB first or the palette washes out on output. */
+  const lin  = h => new THREE.Color(h).convertSRGBToLinear();
+  const std  = (c, r, m, o) => new THREE.MeshStandardMaterial(Object.assign({color:lin(c), roughness:r, metalness:m}, o||{}));
+  const glow = (c, k) => new THREE.MeshStandardMaterial({color:0x000000, emissive:lin(c), emissiveIntensity:k||1.6, roughness:0.4});
+  const MAT = {
+    shell:  std(0xe2e7ee, 0.34, 0.05),
+    alu:    std(0xb2bcc9, 0.28, 0.9),
+    steel:  std(0x76818f, 0.32, 0.85),
+    dark:   std(0x1c2433, 0.5, 0.55),
+    carbon: std(0x12161e, 0.42, 0.35),
+    rubber: std(0x0b0d12, 0.9, 0.0),
+    cap:    std(0x3f87c6, 0.36, 0.3),
+    amber:  std(0xf5a35c, 0.42, 0.12),
+    glass:  std(0x0a1a24, 0.08, 0.9),
+    cyanG:  glow(0x4fd8e8, 2.4),
+    amberG: glow(0xf5a35c, 2.0),
+    plinth: std(0x0c1424, 0.42, 0.8),
+    plTop:  std(0x0d1522, 0.78, 0.35)
+  };
+
+  /*  GEOMETRY HELPERS  */
+  function add(parent, geo, mat, x, y, z, shadow){
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x||0, y||0, z||0);
+    if(shadow !== false && renderer.shadowMap.enabled){ m.castShadow = true; m.receiveShadow = true; }
+    parent.add(m);
+    return m;
+  }
+  const cylY = (r1, r2, h, s) => new THREE.CylinderGeometry(r1, r2, h, s||32);
+  function cylX(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateZ(Math.PI/2); return g; }
+  function cylZ(r, len, s){ const g = new THREE.CylinderGeometry(r, r, len, s||28); g.rotateX(Math.PI/2); return g; }
+  /* rounded box: a rounded-rect outline, extruded with a bevel of half the radius */
+  function rbox(w, h, d, r){
+    r = Math.min(r, w/2, h/2, d/2) * 0.98;
+    const b = r*0.5, sw = w-2*b, sh = h-2*b, cr = Math.max(r-b, 0.0005);
+    const x0 = -sw/2, y0 = -sh/2, s = new THREE.Shape();
+    s.moveTo(x0+cr, y0); s.lineTo(x0+sw-cr, y0); s.quadraticCurveTo(x0+sw, y0, x0+sw, y0+cr);
+    s.lineTo(x0+sw, y0+sh-cr); s.quadraticCurveTo(x0+sw, y0+sh, x0+sw-cr, y0+sh);
+    s.lineTo(x0+cr, y0+sh); s.quadraticCurveTo(x0, y0+sh, x0, y0+sh-cr);
+    s.lineTo(x0, y0+cr); s.quadraticCurveTo(x0, y0, x0+cr, y0);
+    const g = new THREE.ExtrudeGeometry(s, {depth:Math.max(d-2*b, 0.0005), bevelEnabled:true,
+      bevelThickness:b, bevelSize:b, bevelSegments:3, curveSegments:5, steps:1});
+    g.center();
+    return g;
+  }
+  function canvasTex(w, h, draw){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = 4;
+    return t;
   }
 
-  // connectivity edges, rebuilt every frame like an LOS graph
-  const MAXE = N*4;
-  const edgePos = new Float32Array(MAXE*2*3);
-  const edgeGeo = new THREE.BufferGeometry();
-  edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgePos,3));
-  const edgeMat = new THREE.LineBasicMaterial({color:CYAN, transparent:true, opacity:0.28});
-  const edges = new THREE.LineSegments(edgeGeo, edgeMat);
-  scene.add(edges);
-  const R_COMM = 3.4; // comm radius
+  /*  ENVIRONMENT: a small studio rendered once into a PMREM so the
+     metals have something to reflect: a white softbox overhead and
+     a cyan and an amber strip, the site's two accents. */
+  (function(){
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24),
+      new THREE.MeshBasicMaterial({color:lin(0x0c1628), side:THREE.BackSide})));
+    const panel = (w, h, col, k, x, y, z, rx, ry) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({color:lin(col).multiplyScalar(k), side:THREE.DoubleSide}));
+      m.position.set(x, y, z); m.rotation.set(rx||0, ry||0, 0); env.add(m);
+    };
+    panel(10, 6, 0xffffff, 3.0, 0, 5.9, 0, Math.PI/2, 0);
+    panel(1.4, 8, 0x4fd8e8, 4.0, -11.9, 1, -2, 0, Math.PI/2);
+    panel(1.4, 8, 0xf5a35c, 3.0, 11.9, 1, 3, 0, -Math.PI/2);
+    panel(14, 2.2, 0x9fbfe6, 1.4, 0, 2, -11.9, 0, 0);
+    scene.environment = pm.fromScene(env, 0.035).texture;
+    pm.dispose();
+  })();
 
-  function flow(x,y,z,t){
-    const s=0.14;
-    return [
-      Math.sin(y*s + t*0.3) + Math.cos(z*s*1.2 - t*0.2),
-      (Math.sin(z*s - t*0.25) + Math.cos(x*s + t*0.17))*0.4,
-      Math.sin(x*s*1.1 + t*0.22) + Math.cos(y*s*0.9 + t*0.14)
-    ];
-  }
+  /*  SKY DOME + FOG share one horizon colour so distant stages melt
+     into the sky instead of ending at a hard fog line. In r128 fog is
+     mixed in after tone mapping and encoding, so both live in display
+     space: raw hex, no linear conversion, no tone map on the dome. */
+  const skyU = {top:{value:new THREE.Color()}, hor:{value:new THREE.Color()}};
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+    uniforms:skyU, side:THREE.BackSide, depthWrite:false, fog:false,
+    vertexShader:'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:[
+      'uniform vec3 top; uniform vec3 hor; varying vec3 vP;',
+      'void main(){',
+      '  float h = vP.y;',
+      '  vec3 c = mix(hor, top, smoothstep(0.0, 0.5, h));',
+      '  gl_FragColor = vec4(c, 1.0);',
+      '}'].join('\n')
+  }));
+  sky.frustumCulled = false; sky.renderOrder = -1;
+  scene.add(sky);
+  scene.fog = new THREE.Fog(0x000000, 16, 60);
 
-  /*  2. GROUND GRID + LIDAR SWEEP  */
-  const grid = new THREE.GridHelper(90, 60, 0x1c3a66, 0x11223f);
-  grid.position.y = -4.4;
-  grid.material.transparent = true;
-  grid.material.opacity = 0.55;
+  // one long floor under every stage, with a faint survey grid
+  const WORLD_X = 140;
+  const ground = add(scene, new THREE.PlaneGeometry(900, 900), std(0x060a13, 0.92, 0.2), WORLD_X, 0, 0);
+  ground.rotation.x = -Math.PI/2; ground.castShadow = false;
+  const grid = new THREE.GridHelper(900, 450, 0x1c3a66, 0x13243e);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false;
+  grid.position.set(WORLD_X, 0.003, 0);
   scene.add(grid);
 
-  // radial LiDAR sweep on the ground
-  const sweepGeo = new THREE.RingGeometry(0.1, 14, 48, 1, 0, Math.PI/5);
-  const sweepMat = new THREE.MeshBasicMaterial({
-    color:CYAN, transparent:true, opacity:0.07, side:THREE.DoubleSide
-  });
-  const sweep = new THREE.Mesh(sweepGeo, sweepMat);
-  sweep.rotation.x = -Math.PI/2;
-  sweep.position.y = -4.38;
-  scene.add(sweep);
+  // lights travel with the active stage
+  const hemi = new THREE.HemisphereLight(0xffffff, lin(0x05080f), 0.38);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 2.3);
+  key.castShadow = renderer.shadowMap.enabled;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.left = key.shadow.camera.bottom = -7.5;
+  key.shadow.camera.right = key.shadow.camera.top = 7.5;
+  key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(lin(0x4fd8e8), 1.6);
+  scene.add(rim, rim.target);
+  const fill = new THREE.DirectionalLight(lin(0xf5a35c), 0.55);
+  scene.add(fill, fill.target);
 
-  // expanding scan rings (sonar pings)
-  const rings = [];
-  for(let i=0;i<3;i++){
-    const rg = new THREE.RingGeometry(0.98, 1, 64);
-    const rm = new THREE.MeshBasicMaterial({color:AMBER, transparent:true, opacity:0, side:THREE.DoubleSide});
-    const ring = new THREE.Mesh(rg, rm);
-    ring.rotation.x = -Math.PI/2;
-    ring.position.y = -4.36;
-    ring.userData.phase = i/3;
-    scene.add(ring);
-    rings.push(ring);
-  }
-
-  /*  3. WIREFRAME ROBOT ARM  */
-  const arm = new THREE.Group();
-  const wire = c => new THREE.MeshBasicMaterial({color:c, wireframe:true, transparent:true, opacity:0.65});
-
-  // base
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.75,0.95,0.5,10), wire(DEEPBLUE));
-  arm.add(base);
-  // shoulder joint pivot
-  const shoulder = new THREE.Group(); shoulder.position.y = 0.35; arm.add(shoulder);
-  const shoulderJ = new THREE.Mesh(new THREE.SphereGeometry(0.32,10,8), wire(CYAN));
-  shoulder.add(shoulderJ);
-  const link1 = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.2,2.4,8), wire(CYAN));
-  link1.position.y = 1.2; shoulder.add(link1);
-  // elbow
-  const elbow = new THREE.Group(); elbow.position.y = 2.4; shoulder.add(elbow);
-  const elbowJ = new THREE.Mesh(new THREE.SphereGeometry(0.26,10,8), wire(CYAN));
-  elbow.add(elbowJ);
-  const link2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.16,2.0,8), wire(CYAN));
-  link2.position.y = 1.0; elbow.add(link2);
-  // wrist + gripper
-  const wristG = new THREE.Group(); wristG.position.y = 2.0; elbow.add(wristG);
-  const wristJ = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6), wire(AMBER));
-  wristG.add(wristJ);
-  const f1 = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.5,0.14), wire(AMBER));
-  const f2 = f1.clone();
-  f1.position.set(0.14,0.32,0); f2.position.set(-0.14,0.32,0);
-  wristG.add(f1); wristG.add(f2);
-
-  arm.position.set(mobile ? 0 : 8.5, -4.15, mobile ? -6 : -2.5);
-  arm.scale.setScalar(mobile ? 0.8 : 1.15);
-  scene.add(arm);
-
-  /*  3b. QUADCOPTER DRONE  */
-  const drone = new THREE.Group();
-  const dBody = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.16,0.5), wire(CYAN));
-  drone.add(dBody);
-  const dRotors = [];
-  [[0.55,0.55],[0.55,-0.55],[-0.55,0.55],[-0.55,-0.55]].forEach(([x,z],i)=>{
-    const armBar = new THREE.Mesh(new THREE.BoxGeometry(0.78,0.05,0.07), wire(DEEPBLUE));
-    armBar.position.set(x/2, 0.02, z/2);
-    armBar.rotation.y = Math.atan2(z, x);
-    drone.add(armBar);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28,0.02,6,18), wire(CYAN));
+  /* the plinth every machine stands on; its rings are the "power" lights */
+  function plinth(root, R){
+    add(root, cylY(R, R+0.14, 0.3, 80), MAT.plinth, 0, 0.15, 0);
+    add(root, cylY(R-0.1, R-0.1, 0.02, 80), MAT.plTop, 0, 0.305, 0);
+    const ringM = glow(0x4fd8e8, 2.2);
+    const ring = add(root, new THREE.TorusGeometry(R+0.005, 0.024, 8, 160), ringM, 0, 0.3, 0, false);
     ring.rotation.x = Math.PI/2;
-    ring.position.set(x, 0.08, z);
-    drone.add(ring);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.015,0.05), wire(AMBER));
-    blade.position.set(x, 0.1, z);
-    blade.userData.dir = i%2===0 ? 1 : -1;
-    drone.add(blade);
-    dRotors.push(blade);
-  });
-  const navLight = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,5),
-    new THREE.MeshBasicMaterial({color:AMBER, transparent:true}));
-  navLight.position.y = -0.12;
-  drone.add(navLight);
-  drone.scale.setScalar(mobile ? 0.8 : 1.05);
-  scene.add(drone);
-
-  /*  3c. GROUND ROVER + LIDAR + WAYPOINT PATH  */
-  const rover = new THREE.Group();
-  const rBody = new THREE.Mesh(new THREE.BoxGeometry(1.1,0.42,0.75), wire(CYAN));
-  rBody.position.y = 0.42; rover.add(rBody);
-  const rWheels = [];
-  [[0.42,0.45],[0.42,-0.45],[-0.42,0.45],[-0.42,-0.45]].forEach(([x,z])=>{
-    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.12,10), wire(DEEPBLUE));
-    w.rotation.x = Math.PI/2;
-    w.position.set(x, 0.22, z);
-    rover.add(w); rWheels.push(w);
-  });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6,0,Math.PI*2,0,Math.PI/2), wire(AMBER));
-  dome.position.y = 0.72; rover.add(dome);
-  // rotating LiDAR fan beam from the dome
-  const beamG = new THREE.Group(); beamG.position.y = 0.75; rover.add(beamG);
-  const beamGeo = new THREE.CircleGeometry(3.2, 20, -Math.PI/14, Math.PI/7);
-  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({
-    color:CYAN, transparent:true, opacity:0.1, side:THREE.DoubleSide}));
-  beam.rotation.x = -Math.PI/2;
-  beamG.add(beam);
-  rover.position.y = -4.4;
-  rover.scale.setScalar(mobile ? 0.85 : 1.1);
-  scene.add(rover);
-
-  // rover patrol path: visible dashed ellipse + waypoint markers
-  const PATH = {cx:-6.5, cz:2.0, rx:5.2, rz:3.4};
-  const pathPts = [];
-  for(let i=0;i<=72;i++){
-    const th=i/72*Math.PI*2;
-    pathPts.push(new THREE.Vector3(PATH.cx+PATH.rx*Math.cos(th), -4.35, PATH.cz+PATH.rz*Math.sin(th)));
+    const innerM = glow(0xf5a35c, 0.7);
+    const inner = add(root, new THREE.RingGeometry(R*0.64, R*0.64+0.018, 120), innerM, 0, 0.318, 0, false);
+    inner.rotation.x = -Math.PI/2;
+    root.userData.glows.push({m:ringM, k:2.2}, {m:innerM, k:0.7});
   }
-  const pathGeo = new THREE.BufferGeometry().setFromPoints(pathPts);
-  const pathLine = new THREE.Line(pathGeo, new THREE.LineDashedMaterial({
-    color:AMBER, transparent:true, opacity:0.4, dashSize:0.35, gapSize:0.28}));
-  pathLine.computeLineDistances();
-  scene.add(pathLine);
-  const wps = [];
-  for(let i=0;i<4;i++){
-    const th=i/4*Math.PI*2;
-    const wp = new THREE.Mesh(new THREE.OctahedronGeometry(0.16,0), wire(AMBER));
-    wp.position.set(PATH.cx+PATH.rx*Math.cos(th), -4.1, PATH.cz+PATH.rz*Math.sin(th));
-    scene.add(wp); wps.push(wp);
+  const TOP = 0.315;   // plinth deck height
+
+  /*  0. SIX-AXIS ARM, pick and place
+     A real three-link planar IK in the arm's vertical plane after
+     the base yaw (elbow-up branch), with the wrist pitched so the
+     tool always points straight down. The cube rides the solved
+     tool point, so it can never drift off the fingers. */
+  function buildArm(root){
+    plinth(root, 3.1);
+    const L1 = 1.6, L2 = 1.45, TOOL = 0.64, SHY = 1.0;
+    const base = new THREE.Group(); base.position.y = 0.3; root.add(base);
+    add(base, cylY(0.4, 0.44, 0.1, 48), MAT.dark, 0, 0.05, 0);
+    add(base, cylY(0.31, 0.31, 0.16, 48), MAT.cap, 0, 0.18, 0);
+    const j1 = new THREE.Group(); j1.position.y = 0.26; base.add(j1);
+    add(j1, cylY(0.25, 0.25, 0.3, 48), MAT.shell, 0, 0.15, 0);
+    const j2 = new THREE.Group(); j2.position.y = 0.44; j1.add(j2);
+    add(j2, cylZ(0.25, 0.5, 48), MAT.shell);
+    add(j2, cylZ(0.256, 0.05, 48), MAT.cap, 0, 0,  0.27);
+    add(j2, cylZ(0.256, 0.05, 48), MAT.cap, 0, 0, -0.27);
+    add(j2, cylX(0.13, L1, 36), MAT.alu, L1/2, 0, 0);
+    add(j2, cylX(0.16, 0.2, 36), MAT.shell, 0.34, 0, 0);
+    add(j2, cylX(0.15, 0.2, 36), MAT.shell, L1-0.3, 0, 0);
+    const j3 = new THREE.Group(); j3.position.x = L1; j2.add(j3);
+    add(j3, cylZ(0.2, 0.42, 48), MAT.shell);
+    add(j3, cylZ(0.206, 0.05, 48), MAT.cap, 0, 0, 0.235);
+    add(j3, cylX(0.1, L2, 32), MAT.alu, L2/2, 0, 0);
+    add(j3, cylX(0.125, 0.18, 32), MAT.shell, L2-0.26, 0, 0);
+    const j4 = new THREE.Group(); j4.position.x = L2; j3.add(j4);
+    add(j4, cylZ(0.14, 0.3, 40), MAT.shell);
+    add(j4, cylZ(0.146, 0.04, 40), MAT.cap, 0, 0, 0.165);
+    add(j4, cylX(0.12, 0.26, 40), MAT.shell, 0.17, 0, 0);
+    add(j4, cylX(0.126, 0.04, 40), MAT.cap, 0.3, 0, 0);
+    const j5 = new THREE.Group(); j5.position.x = 0.32; j4.add(j5);
+    add(j5, cylX(0.085, 0.1, 32), MAT.steel, 0.05, 0, 0);
+    add(j5, rbox(0.14, 0.2, 0.5, 0.03), MAT.dark, 0.17, 0, 0);
+    add(j5, rbox(0.02, 0.03, 0.14, 0.008), MAT.cyanG, 0.17, 0.101, 0, false);
+    const fingers = [-1, 1].map(s => {
+      const f = add(j5, rbox(0.15, 0.06, 0.035, 0.012), MAT.steel, 0.32, 0, s*0.22);
+      f.userData.s = s; return f;
+    });
+
+    function solve(x, y, z){
+      const wr = Math.hypot(x, z), wy = y + TOOL - SHY;
+      let D = (wr*wr + wy*wy - L1*L1 - L2*L2) / (2*L1*L2);
+      D = Math.max(-1, Math.min(1, D));
+      const q3 = -Math.acos(D);                              // elbow up
+      const q2 = Math.atan2(wy, wr) - Math.atan2(L2*Math.sin(q3), L1 + L2*Math.cos(q3));
+      j1.rotation.y = Math.atan2(-z, x);
+      j2.rotation.z = q2;
+      j3.rotation.z = q3;
+      j4.rotation.z = -Math.PI/2 - q2 - q3;                  // tool straight down
+    }
+
+    const PR = 2.05, PA = 0.32, PB = 2.1, CY = TOP + 0.03 + 0.13, HOVER = CY + 0.62;
+    [PA, PB].forEach(a => {
+      add(root, cylY(0.25, 0.25, 0.03, 40), MAT.dark, PR*Math.cos(a), TOP+0.015, PR*Math.sin(a));
+      const r = add(root, new THREE.TorusGeometry(0.25, 0.012, 6, 48), MAT.amberG, PR*Math.cos(a), TOP+0.03, PR*Math.sin(a), false);
+      r.rotation.x = Math.PI/2;
+    });
+    const cube = add(root, rbox(0.26, 0.26, 0.26, 0.035), MAT.amber);
+
+    const T = 7.6;
+    function update(t){
+      const n = Math.floor(t/T), u = t - n*T;
+      const fa = (n%2) ? PB : PA, fb = (n%2) ? PA : PB;
+      const ss = (a, b) => smoothstep(clamp01((u-a)/(b-a)));
+      let ang = fb, y = HOVER, grip = 0, carry = false;
+      if(u < 0.4)      { ang = fa; }
+      else if(u < 1.3) { ang = fa; y = HOVER + (CY-HOVER)*ss(0.4, 1.3); }
+      else if(u < 1.65){ ang = fa; y = CY; grip = ss(1.3, 1.65); }
+      else if(u < 2.5) { ang = fa; y = CY + (HOVER-CY)*ss(1.65, 2.5); grip = 1; carry = true; }
+      else if(u < 4.4) { const k = ss(2.5, 4.4); ang = fa + (fb-fa)*k; y = HOVER + Math.sin(Math.PI*k)*0.45; grip = 1; carry = true; }
+      else if(u < 5.3) { y = HOVER + (CY-HOVER)*ss(4.4, 5.3); grip = 1; carry = true; }
+      else if(u < 5.65){ y = CY; grip = 1 - ss(5.3, 5.65); }
+      else             { y = CY + (HOVER-CY)*ss(5.65, 6.5); }
+      const x = PR*Math.cos(ang), z = PR*Math.sin(ang);
+      solve(x, y, z);
+      const fz = 0.22 - (0.22 - 0.148)*grip;
+      fingers.forEach(f => { f.position.z = f.userData.s*fz; });
+      if(carry){ cube.position.set(x, y, z); cube.rotation.y = -ang; }
+      else {
+        const pa = u < 1.65 ? fa : fb;
+        cube.position.set(PR*Math.cos(pa), CY, PR*Math.sin(pa)); cube.rotation.y = -pa;
+      }
+    }
+    return {update, focus:[0, 1.8, 0]};
   }
 
-  /*  3d. BLIMP (AeroFusion)  */
-  const blimp = new THREE.Group();
-  const hull = new THREE.Mesh(new THREE.SphereGeometry(1.5,14,10), wire(DEEPBLUE));
-  hull.scale.set(1.65,0.62,0.62); blimp.add(hull);
-  const gondola = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.28,0.34), wire(CYAN));
-  gondola.position.y = -1.05; blimp.add(gondola);
-  const bProps = [];
-  [[-0.55],[0.55]].forEach(([z])=>{
-    const pr = new THREE.Mesh(new THREE.BoxGeometry(0.02,0.5,0.06), wire(AMBER));
-    pr.position.set(-0.5, -1.05, z*0.34);
-    blimp.add(pr); bProps.push(pr);
+  /*  QUADROTOR model + flight: banks into its acceleration, so any
+     path it is handed reads as flown rather than slid. Used as the
+     aerial half of the rover stage's air-ground team. */
+  function makeQuad(parent){
+    const d = new THREE.Group(); parent.add(d);
+    const body = new THREE.Group(); d.add(body);
+    body.scale.setScalar(1.25);
+    add(body, rbox(0.62, 0.15, 0.42, 0.06), MAT.carbon);
+    add(body, rbox(0.46, 0.1, 0.32, 0.05), MAT.shell, -0.02, 0.1, 0);
+    add(body, rbox(0.03, 0.02, 0.22, 0.008), MAT.cyanG, 0.31, 0.02, 0, false);
+    add(body, rbox(0.24, 0.07, 0.2, 0.02), MAT.amber, -0.1, -0.1, 0);       // battery
+    const gimbal = add(body, new THREE.SphereGeometry(0.075, 24, 16), MAT.dark, 0.26, -0.1, 0);
+    add(body, cylX(0.035, 0.04, 20), MAT.glass, 0.33, -0.1, 0);
+    const props = [];
+    const blur = new THREE.MeshBasicMaterial({color:0xcfe6ff, transparent:true, opacity:0.07, depthWrite:false, side:THREE.DoubleSide});
+    [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx, sz], i) => {
+      const L = 0.8, mx = sx*L*0.7071, mz = sz*L*0.7071;
+      const a = add(body, cylX(0.03, L, 12), MAT.carbon, mx/2, 0, mz/2);
+      a.rotation.y = -Math.atan2(sz, sx);
+      add(body, cylY(0.07, 0.08, 0.11, 28), MAT.alu, mx, 0.05, mz);
+      add(body, cylY(0.025, 0.025, 0.05, 12), MAT.steel, mx, 0.125, mz);
+      add(body, new THREE.SphereGeometry(0.025, 12, 8), sx > 0 ? MAT.cyanG : MAT.amberG, mx, -0.02, mz, false);
+      add(body, cylY(0.012, 0.012, 0.2, 8), MAT.carbon, mx*0.82, -0.1, mz*0.82);
+      const p = new THREE.Group(); p.position.set(mx, 0.155, mz); body.add(p);
+      const bl = add(p, rbox(0.6, 0.012, 0.055, 0.005), MAT.dark); bl.rotation.x = 0.12;
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.31, 40), blur);
+      disc.rotation.x = -Math.PI/2; p.add(disc);
+      p.userData.dir = (i === 0 || i === 3) ? 1 : -1;
+      props.push(p);
+    });
+    return {d, body, props, gimbal, px:0, pz:0, vx:0, vz:0, ax:0, az:0, init:false};
+  }
+  /* Velocity and acceleration are finite differences, which turn any
+     unevenness in frame time into noise; both are low-passed, and the
+     tilt itself is eased, so the body banks smoothly instead of twitching. */
+  function flyQuad(q, x, y, z, yaw, dt){
+    if(!q.init || dt <= 0){ q.px = x; q.pz = z; q.init = true; }
+    const h = Math.max(dt, 1/240);
+    const kf = damp(0.08, h);
+    const rvx = (x - q.px)/h, rvz = (z - q.pz)/h;
+    const nvx = q.vx + (rvx - q.vx)*kf, nvz = q.vz + (rvz - q.vz)*kf;
+    q.ax += ((nvx - q.vx)/h - q.ax)*kf;
+    q.az += ((nvz - q.vz)/h - q.az)*kf;
+    const ax = q.ax, az = q.az;
+    q.px = x; q.pz = z; q.vx = nvx; q.vz = nvz;
+    q.d.position.set(x, y, z);
+    q.d.rotation.y = yaw;
+    // tilt in the body frame: rotate world accel by -yaw
+    const c = Math.cos(yaw), sn = Math.sin(yaw);
+    const fx = c*(ax*0.12 + nvx*0.08) - sn*(az*0.12 + nvz*0.08), fz = sn*(ax*0.12 + nvx*0.08) + c*(az*0.12 + nvz*0.08);
+    const kt = damp(0.06, h);
+    q.body.rotation.z += (-Math.max(-0.3, Math.min(0.3, fx)) - q.body.rotation.z)*kt;
+    q.body.rotation.x += ( Math.max(-0.3, Math.min(0.3, fz)) - q.body.rotation.x)*kt;
+    q.props.forEach(p => { p.rotation.y += p.userData.dir * 0.9; });
+    q.gimbal.rotation.y = -yaw*0.5;
+  }
+
+  /*  2. AUV FLEET in a gyre, with the connectivity tree drawn live.
+     The tree is the page's own delta-BFS rule: the smallest ID is
+     root, every vehicle picks the in-range neighbour with the fewest
+     hops (ties to the smaller ID) as its parent. Bright edges are
+     the tree, faint ones are every other in-range link. */
+  function buildFleet(root){
+    const rockM = std(0x17242f, 0.95, 0.05);
+    for(let i=0;i<16;i++){
+      const a = i*2.39, r = 2.2 + (i*1.7)%4.6;
+      const m = add(root, new THREE.DodecahedronGeometry(0.22 + ((i*37)%10)/16, 0), rockM, Math.cos(a)*r, 0.06, Math.sin(a)*r);
+      m.scale.y = 0.5; m.rotation.set(i, i*0.7, 0);
+    }
+    // the seabed beacon the fleet circles
+    add(root, cylY(0.35, 0.45, 0.18, 32), MAT.dark, 0, 0.09, 0);
+    add(root, cylY(0.04, 0.04, 1.1, 12), MAT.steel, 0, 0.7, 0);
+    const beacon = add(root, new THREE.SphereGeometry(0.09, 20, 14), glow(0x4fd8e8, 3), 0, 1.3, 0, false);
+    root.userData.glows.push({m:beacon.material, k:3});
+
+    const pts = [new THREE.Vector2(0.001, -0.75)];
+    for(let i=0;i<=28;i++){
+      const u = i/28, y = -0.75 + u*1.5;
+      let r = 0.16;
+      if(u < 0.2) r = 0.16*(0.35 + 0.65*Math.sqrt(u/0.2));
+      else if(u > 0.85){ const k = (u-0.85)/0.15; r = 0.16*Math.sqrt(Math.max(0, 1 - k*k)); }
+      pts.push(new THREE.Vector2(Math.max(r, 0.001), y));
+    }
+    const hullG = new THREE.LatheGeometry(pts, 40); hullG.rotateZ(-Math.PI/2);
+    const finV = rbox(0.24, 0.17, 0.014, 0.006), finH = rbox(0.24, 0.014, 0.17, 0.006);
+    const NA = mobile ? 6 : 8;
+    const auvs = [];
+    for(let i=0;i<NA;i++){
+      const g = new THREE.Group(); root.add(g);
+      add(g, hullG, i === 0 ? MAT.amber : MAT.shell);
+      add(g, cylX(0.163, 0.07, 40), i === 0 ? MAT.shell : MAT.amber, 0.38, 0, 0);
+      add(g, cylX(0.163, 0.025, 40), MAT.dark, -0.22, 0, 0);
+      add(g, finV, MAT.dark, -0.6, 0.2, 0); add(g, finV, MAT.dark, -0.6, -0.2, 0);
+      add(g, finH, MAT.dark, -0.6, 0, 0.2); add(g, finH, MAT.dark, -0.6, 0, -0.2);
+      const sh = add(g, new THREE.TorusGeometry(0.13, 0.022, 10, 36), MAT.dark, -0.8, 0, 0);
+      sh.rotation.y = Math.PI/2;
+      const prop = new THREE.Group(); prop.position.x = -0.8; g.add(prop);
+      add(prop, rbox(0.012, 0.22, 0.05, 0.004), MAT.steel);
+      add(prop, rbox(0.012, 0.05, 0.22, 0.004), MAT.steel);
+      add(g, rbox(0.32, 0.02, 0.04, 0.008), MAT.cyanG, 0.05, 0.158, 0, false);
+      const a = i/NA*Math.PI*2;
+      g.position.set(Math.cos(a)*3.2, 1.5 + (i%3)*0.55, Math.sin(a)*3.2);
+      auvs.push({g, prop, v:new THREE.Vector3(), ph:i*1.37});
+    }
+
+    const MAXL = NA*NA;
+    const mkLines = (col, op) => {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXL*6), 3));
+      const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color:lin(col), transparent:true, opacity:op, depthWrite:false}));
+      l.frustumCulled = false; root.add(l); return l;
+    };
+    const treeL = mkLines(0x4fd8e8, 0.95), linkL = mkLines(0x4fd8e8, 0.16);
+    const RC = 3.4, RC2 = RC*RC;
+
+    // suspended particles drifting with the same current
+    const NP = mobile ? 350 : 800;
+    const pp = new Float32Array(NP*3);
+    const respawn = i => {
+      const a = Math.random()*Math.PI*2, r = 0.6 + Math.random()*6.2;
+      pp[i*3] = Math.cos(a)*r; pp[i*3+1] = 0.2 + Math.random()*4.6; pp[i*3+2] = Math.sin(a)*r;
+    };
+    for(let i=0;i<NP;i++) respawn(i);
+    const pg = new THREE.BufferGeometry();
+    pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+    const pts3 = new THREE.Points(pg, new THREE.PointsMaterial({color:lin(0x9ff0ff), size:0.035, transparent:true, opacity:0.55, depthWrite:false}));
+    pts3.frustumCulled = false; root.add(pts3);
+
+    function current(x, z, t, out){
+      const r = Math.hypot(x, z) + 1e-4, tang = 0.5 + 0.15*Math.sin(t*0.3 + r);
+      out.x = -z/r*tang + 0.18*Math.sin(0.55*z + t*0.6);
+      out.z =  x/r*tang + 0.18*Math.cos(0.5*x + t*0.5);
+      return r;
+    }
+    const cur = {x:0, z:0}, tgt = new THREE.Vector3();
+    const hop = new Int32Array(NA), par = new Int32Array(NA), queue = new Int32Array(NA);
+
+    function update(t, dt){
+      for(let i=0;i<NA;i++){
+        const a = auvs[i], p = a.g.position;
+        const r = current(p.x, p.z, t, cur);
+        const ring = (3.2 + Math.sin(t*0.37 + a.ph)*0.9 - r)*0.4;
+        tgt.set(cur.x + p.x/r*ring, (2.0 + Math.sin(t*0.33 + a.ph)*0.7 - p.y)*0.45, cur.z + p.z/r*ring);
+        for(let j=0;j<NA;j++){
+          if(j === i) continue;
+          const q = auvs[j].g.position, dx = p.x-q.x, dy = p.y-q.y, dz = p.z-q.z, d2 = dx*dx+dy*dy+dz*dz;
+          if(d2 < 1.2 && d2 > 1e-4){ const k = (1.2 - d2)*0.9; tgt.x += dx*k; tgt.y += dy*k; tgt.z += dz*k; }
+        }
+        a.v.lerp(tgt, damp(0.03, dt));
+        p.addScaledVector(a.v, dt);
+        const sp = a.v.length() + 1e-5;
+        a.g.rotation.set(0, Math.atan2(-a.v.z, a.v.x), Math.asin(Math.max(-0.5, Math.min(0.5, a.v.y/sp))));
+        a.prop.rotation.x += dt*16;
+      }
+      // delta-BFS tree from the smallest ID
+      hop.fill(-1); par.fill(-1); hop[0] = 0;
+      let qh = 0, qt = 0; queue[qt++] = 0;
+      while(qh < qt){
+        const i = queue[qh++], pi = auvs[i].g.position;
+        for(let j=0;j<NA;j++){
+          if(hop[j] >= 0) continue;
+          if(pi.distanceToSquared(auvs[j].g.position) < RC2){ hop[j] = hop[i] + 1; par[j] = i; queue[qt++] = j; }
+        }
+      }
+      const ta = treeL.geometry.attributes.position.array, la = linkL.geometry.attributes.position.array;
+      let nt = 0, nl = 0;
+      for(let i=0;i<NA;i++){
+        const pi = auvs[i].g.position;
+        for(let j=i+1;j<NA;j++){
+          const pj = auvs[j].g.position;
+          if(pi.distanceToSquared(pj) >= RC2) continue;
+          const isTree = par[j] === i || par[i] === j;
+          const arr = isTree ? ta : la, o = (isTree ? nt++ : nl++)*6;
+          arr[o] = pi.x; arr[o+1] = pi.y; arr[o+2] = pi.z; arr[o+3] = pj.x; arr[o+4] = pj.y; arr[o+5] = pj.z;
+        }
+      }
+      treeL.geometry.setDrawRange(0, nt*2); treeL.geometry.attributes.position.needsUpdate = true;
+      linkL.geometry.setDrawRange(0, nl*2); linkL.geometry.attributes.position.needsUpdate = true;
+
+      for(let i=0;i<NP;i++){
+        const x = pp[i*3], z = pp[i*3+2];
+        const r = current(x, z, t, cur);
+        pp[i*3] += cur.x*dt*1.3; pp[i*3+2] += cur.z*dt*1.3; pp[i*3+1] += Math.sin(t + i)*dt*0.04;
+        if(r > 7.2 || r < 0.4) respawn(i);
+      }
+      pg.attributes.position.needsUpdate = true;
+      beacon.material.emissiveIntensity = beacon.userData.k0 * (0.55 + 0.45*Math.max(0, Math.sin(t*2.4)));
+    }
+    beacon.userData.k0 = 3;
+    return {update, focus:[0, 2.0, 0]};
+  }
+
+  /*  3. SCARA WAFER TRANSFER
+     Two-link planar IK (L1 = L2, the same geometry family as the
+     wafer cell's SCARA), a quill for Z and a fork end-effector that
+     slides under a wafer in a cassette slot, lifts it off the ribs,
+     and lowers it between the two belts of an edge-belt conveyor.
+     The fork stays parallel to the belts so it drops into the gap. */
+  function buildScara(root){
+    plinth(root, 4.2);
+    const L1 = 1.2, L2 = 1.2, PAD = 0.36;
+    add(root, cylY(0.44, 0.48, 0.12, 48), MAT.dark, 0, TOP+0.06, 0);
+    add(root, cylY(0.34, 0.36, 0.9, 48), MAT.shell, 0, TOP+0.57, 0);
+    add(root, cylY(0.352, 0.352, 0.05, 48), MAT.cap, 0, TOP+1.0, 0);
+    const j1 = new THREE.Group(); j1.position.y = TOP + 1.05; root.add(j1);
+    add(j1, cylY(0.3, 0.3, 0.22, 48), MAT.shell, 0, 0.11, 0);
+    add(j1, new THREE.BoxGeometry(L1, 0.2, 0.46), MAT.shell, L1/2, 0.1, 0);
+    add(j1, cylY(0.23, 0.23, 0.2, 48), MAT.shell, L1, 0.1, 0);
+    add(j1, rbox(L1*0.6, 0.01, 0.05, 0.004), MAT.amberG, L1*0.5, 0.203, 0, false);
+    const j2 = new THREE.Group(); j2.position.set(L1, 0.2, 0); j1.add(j2);
+    add(j2, cylY(0.21, 0.21, 0.18, 48), MAT.shell, 0, 0.09, 0);
+    add(j2, new THREE.BoxGeometry(L2, 0.17, 0.36), MAT.shell, L2/2, 0.085, 0);
+    add(j2, cylY(0.18, 0.18, 0.17, 40), MAT.shell, L2, 0.085, 0);
+    add(j2, cylY(0.186, 0.186, 0.03, 40), MAT.cap, L2, 0.185, 0);
+    add(j2, cylY(0.12, 0.12, 0.3, 32), MAT.dark, L2, 0.33, 0);
+    const quill = new THREE.Group(); quill.position.x = L2; j2.add(quill);
+    add(quill, cylY(0.04, 0.04, 1.3, 16), MAT.steel);
+    const j4 = new THREE.Group(); j4.position.y = -0.65; quill.add(j4);
+    add(j4, cylY(0.07, 0.07, 0.08, 24), MAT.dark, 0, 0.04, 0);
+    add(j4, rbox(0.62, 0.022, 0.12, 0.008), MAT.dark, 0.3, 0, 0);
+    add(j4, cylY(0.03, 0.03, 0.006, 16), MAT.cyanG, PAD, 0.012, 0, false);
+    const Q0 = TOP + 1.05 + 0.2 - 0.65;   // paddle height when quill.y = 0
+
+    function solve(x, z, heading, Y){
+      const u = x, v = -z;
+      let D = (u*u + v*v - L1*L1 - L2*L2) / (2*L1*L2);
+      D = Math.max(-1, Math.min(1, D));
+      const q2 = Math.acos(D);
+      const q1 = Math.atan2(v, u) - Math.atan2(L2*Math.sin(q2), L1 + L2*Math.cos(q2));
+      j1.rotation.y = q1; j2.rotation.y = q2;
+      j4.rotation.y = heading - q1 - q2;
+      quill.position.y = Y - Q0;
+    }
+
+    // wafer: die grid on a silicon disc
+    const waferTex = canvasTex(256, 256, (g, w) => {
+      const gr = g.createLinearGradient(0, 0, w, w);
+      gr.addColorStop(0, '#6f7fa8'); gr.addColorStop(0.45, '#b9a6d6'); gr.addColorStop(0.7, '#7fc3d4'); gr.addColorStop(1, '#5b6a92');
+      g.fillStyle = gr; g.fillRect(0, 0, w, w);
+      g.strokeStyle = 'rgba(20,28,48,0.55)'; g.lineWidth = 1.2;
+      for(let i=8;i<w;i+=16){ g.beginPath(); g.moveTo(i, 0); g.lineTo(i, w); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
+      g.fillStyle = '#c9ced8'; g.beginPath(); g.arc(w/2, w/2, w/2, 0, Math.PI*2); g.arc(w/2, w/2, w/2-10, 0, Math.PI*2, true); g.fill();
+    });
+    const waferMats = [std(0x9aa3b4, 0.3, 0.9), new THREE.MeshStandardMaterial({map:waferTex, roughness:0.22, metalness:0.75}), std(0x8a93a3, 0.4, 0.8)];
+    const waferG = new THREE.CylinderGeometry(0.3, 0.3, 0.012, 56);
+    const mkWafer = () => add(root, waferG, waferMats);
+
+    // cassette, open face toward the SCARA
+    const CAS = {x:-1.55, z:-1.25}, cr = Math.hypot(CAS.x, CAS.z);
+    const cdir = {x:CAS.x/cr, z:CAS.z/cr}, hC = Math.atan2(-cdir.z, cdir.x);
+    const NS = 5, slotY = k => 1.25 - k*0.11;
+    const cas = new THREE.Group(); cas.position.set(CAS.x, 0, CAS.z); cas.rotation.y = hC; root.add(cas);
+    const wall = std(0x2c3e5a, 0.3, 0.2, {transparent:true, opacity:0.6});
+    add(cas, new THREE.BoxGeometry(0.03, 0.62, 0.72), wall, 0.36, 1.04, 0, false);
+    add(cas, new THREE.BoxGeometry(0.72, 0.62, 0.03), wall, 0, 1.04,  0.36, false);
+    add(cas, new THREE.BoxGeometry(0.72, 0.62, 0.03), wall, 0, 1.04, -0.36, false);
+    add(cas, rbox(0.76, 0.035, 0.76, 0.012), MAT.dark, 0, 1.36, 0);
+    add(cas, rbox(0.76, 0.035, 0.76, 0.012), MAT.dark, 0, 0.72, 0);
+    add(cas, cylY(0.05, 0.08, 0.4, 16), MAT.steel, 0, 0.51, 0);
+    add(cas, rbox(0.5, 0.03, 0.5, 0.01), MAT.dark, 0, TOP+0.02, 0);
+    for(let k=0;k<NS;k++) [-1, 1].forEach(s => add(cas, new THREE.BoxGeometry(0.62, 0.012, 0.05), MAT.alu, 0.02, slotY(k)-0.012, s*0.325));
+    const casW = [];
+    for(let k=0;k<NS;k++){ const w = mkWafer(); cas.remove(w); cas.add(w); w.position.set(0, slotY(k), 0); casW.push(w); }
+
+    // edge-belt conveyor along z at x = 1.9
+    const CX = 1.9, BY = 0.95, Z0 = 0.55, Z1 = -6.2, CL = Z0 - Z1, CZ = (Z0 + Z1)/2;
+    const beltTex = canvasTex(32, 256, (g, w, h) => {
+      g.fillStyle = '#14181f'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#2b323e'; for(let y=0;y<h;y+=16) g.fillRect(0, y, w, 5);
+    });
+    beltTex.wrapS = beltTex.wrapT = THREE.RepeatWrapping; beltTex.repeat.set(1, 14);
+    const beltM = new THREE.MeshStandardMaterial({map:beltTex, roughness:0.85, metalness:0.1});
+    [-1, 1].forEach(s => {
+      add(root, new THREE.BoxGeometry(0.09, 0.03, CL), beltM, CX + s*0.2, BY - 0.015, CZ);
+      add(root, rbox(0.05, 0.13, CL, 0.015), MAT.alu, CX + s*0.31, BY - 0.04, CZ);
+    });
+    for(let z=Z0-0.2; z>Z1; z-=1.5){
+      const onPl = CX*CX + z*z < 4.2*4.2, y0 = onPl ? TOP : 0, h = BY - 0.1 - y0;
+      [-1, 1].forEach(s => add(root, new THREE.BoxGeometry(0.05, h, 0.05), MAT.steel, CX + s*0.31, y0 + h/2, z));
+    }
+    // inspection gantry
+    const GZ = -2.7;
+    [-1, 1].forEach(s => add(root, new THREE.BoxGeometry(0.07, 1.75, 0.07), MAT.steel, CX + s*0.6, 0.875, GZ));
+    add(root, rbox(1.3, 0.09, 0.1, 0.02), MAT.dark, CX, 1.78, GZ);
+    add(root, rbox(0.18, 0.16, 0.22, 0.03), MAT.dark, CX, 1.66, GZ);
+    const flashM = glow(0x4fd8e8, 0.6);
+    const flash = add(root, cylY(0.05, 0.05, 0.02, 20), flashM, CX, 1.57, GZ, false);
+
+    const conv = [mkWafer(), mkWafer(), mkWafer()];
+    const held = mkWafer();
+
+    const T = 8.4;
+    const app = (d) => ({x:CAS.x - cdir.x*d - cdir.x*PAD, z:CAS.z - cdir.z*d - cdir.z*PAD});
+    const A_IN = app(0), A_OUT = app(0.72);
+    const WD = {x:CX, z:-0.35}, HD = Math.PI/2;                 // drop: fork points -z
+    const A_DROP = {x:WD.x, z:WD.z + PAD};
+    const polar = (a, b, k) => {
+      const ra = Math.hypot(a.x, a.z), rb = Math.hypot(b.x, b.z);
+      const th = angLerp(Math.atan2(a.z, a.x), Math.atan2(b.z, b.x), k), r = ra + (rb - ra)*k;
+      return {x:Math.cos(th)*r, z:Math.sin(th)*r};
+    };
+    function update(t){
+      const n = Math.floor(t/T), u = t - n*T, k = n % NS, S = slotY(k);
+      const ss = (a, b) => smoothstep(clamp01((u-a)/(b-a)));
+      let P, H, Y, carry = false;
+      if(u < 1.2)      { const e = ss(0, 1.2); P = polar(A_DROP, A_OUT, e); H = angLerp(HD, hC, e); Y = 1.15 + (S - 0.04 - 1.15)*e; }
+      else if(u < 2.0) { const e = ss(1.2, 2.0); P = {x:A_OUT.x + (A_IN.x-A_OUT.x)*e, z:A_OUT.z + (A_IN.z-A_OUT.z)*e}; H = hC; Y = S - 0.04; }
+      else if(u < 2.4) { P = A_IN; H = hC; Y = S - 0.04 + 0.07*ss(2.0, 2.4); carry = true; }
+      else if(u < 3.2) { const e = ss(2.4, 3.2); P = {x:A_IN.x + (A_OUT.x-A_IN.x)*e, z:A_IN.z + (A_OUT.z-A_IN.z)*e}; H = hC; Y = S + 0.03; carry = true; }
+      else if(u < 4.8) { const e = ss(3.2, 4.8); P = polar(A_OUT, A_DROP, e); H = angLerp(hC, HD, e); Y = S + 0.03 + (1.15 - S - 0.03)*e + Math.sin(Math.PI*e)*0.12; carry = true; }
+      else if(u < 5.6) { P = A_DROP; H = HD; Y = 1.15 + (0.9 - 1.15)*ss(4.8, 5.6); carry = true; }
+      else if(u < 6.8) { P = A_DROP; H = HD; Y = 0.9; }
+      else             { P = A_DROP; H = HD; Y = 0.9 + 0.25*ss(6.8, 7.6); }
+      solve(P.x, P.z, H, Y);
+
+      held.visible = carry;
+      if(carry){
+        held.position.set(P.x + Math.cos(H)*PAD, Math.max(u < 3.2 ? S : BY + 0.006, Y + 0.017), P.z - Math.sin(H)*PAD);
+        held.rotation.y = H;
+      }
+      for(let s=0;s<NS;s++) casW[s].visible = s > k || (s === k && u < 2.0);
+
+      let lit = 0;
+      for(let i=0;i<3;i++) conv[i].visible = false;
+      for(let m=n; m>=n-2 && m>=0; m--){
+        const tr = m*T + 5.6, z = WD.z - 0.6*(t - tr);
+        if(t < tr || z < Z1 + 0.4) continue;
+        const w = conv[m % 3];
+        w.visible = true; w.position.set(WD.x, BY + 0.006, z); w.rotation.y = HD;
+        if(Math.abs(z - GZ) < 0.3) lit = 1 - Math.abs(z - GZ)/0.3;
+      }
+      beltTex.offset.y = -t*0.6/CL*14;
+      flashM.emissiveIntensity = 0.6 + lit*4;
+    }
+    return {update, focus:[0.4, 1.4, -0.4]};
+  }
+
+  /*  4. AIR-GROUND TEAM: a mecanum rover strafing a square without ever
+     turning, with a quadrotor escort circling above it on a lag
+     Each wheel carries real 45 degree rollers; wheel speeds come from
+     the mecanum inverse kinematics of the commanded body velocity. */
+  function buildRover(root){
+    plinth(root, 3.2);
+    const SQ = 1.25;
+    const sqPts = [[-SQ,-SQ],[SQ,-SQ],[SQ,SQ],[-SQ,SQ],[-SQ,-SQ]].map(([x, z]) => new THREE.Vector3(x, TOP+0.01, z));
+    const path = new THREE.Line(new THREE.BufferGeometry().setFromPoints(sqPts),
+      new THREE.LineDashedMaterial({color:lin(0xf5a35c), dashSize:0.18, gapSize:0.12, transparent:true, opacity:0.7}));
+    path.computeLineDistances(); root.add(path);
+    const postM = std(0xc94a3a, 0.5, 0.2);
+    [[2.5, 0.6], [-1.3, 2.35], [-2.2, -1.6]].forEach(([x, z]) => {
+      add(root, cylY(0.07, 0.07, 0.9, 20), postM, x, TOP+0.45, z);
+      add(root, cylY(0.072, 0.072, 0.12, 20), MAT.shell, x, TOP+0.6, z);
+    });
+
+    const rv = new THREE.Group(); root.add(rv);
+    const car = new THREE.Group(); car.scale.setScalar(1.45); rv.add(car);
+    const WR = 0.15, WY = 0.15;
+    add(car, rbox(0.86, 0.06, 0.5, 0.02), MAT.carbon, 0, WY + 0.04, 0);
+    add(car, rbox(0.7, 0.12, 0.34, 0.03), MAT.dark, 0, WY + 0.13, 0);
+    add(car, rbox(0.3, 0.08, 0.2, 0.02), MAT.amber, -0.12, WY + 0.23, 0);
+    [[0.3, 0.18], [0.3, -0.18], [-0.3, 0.18], [-0.3, -0.18]].forEach(([x, z]) => add(car, cylY(0.012, 0.012, 0.16, 8), MAT.alu, x, WY + 0.27, z));
+    add(car, rbox(0.8, 0.025, 0.46, 0.012), std(0x1b2a44, 0.3, 0.4, {transparent:true, opacity:0.85}), 0, WY + 0.36, 0);
+    add(car, rbox(0.18, 0.012, 0.14, 0.004), MAT.cap, 0.12, WY + 0.38, 0);
+    add(car, cylY(0.085, 0.09, 0.06, 32), MAT.dark, -0.12, WY + 0.4, 0);
+    const lidar = new THREE.Group(); lidar.position.set(-0.12, WY + 0.46, 0); car.add(lidar);
+    add(lidar, cylY(0.075, 0.075, 0.06, 32), MAT.carbon);
+    add(lidar, cylY(0.077, 0.077, 0.012, 32), MAT.cyanG, 0, 0.005, 0, false);
+    add(lidar, rbox(0.03, 0.03, 0.05, 0.008), MAT.glass, 0.065, 0.005, 0);
+    add(car, rbox(0.06, 0.06, 0.24, 0.015), MAT.carbon, 0.37, WY + 0.4, 0);
+    [-0.06, 0.06].forEach(z => add(car, cylX(0.018, 0.012, 16), MAT.glass, 0.4, WY + 0.4, z));
+    add(car, new THREE.SphereGeometry(0.012, 8, 6), MAT.cyanG, 0.4, WY + 0.4, 0, false);
+
+    const fan = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24, -0.18, 0.36),
+      new THREE.MeshBasicMaterial({color:lin(0x4fd8e8), transparent:true, opacity:0.08, depthWrite:false, side:THREE.DoubleSide}));
+    fan.rotation.x = -Math.PI/2; lidar.add(fan);
+
+    const roller = cylY(0.026, 0.026, 0.11, 10), Y = new THREE.Vector3(0, 1, 0);
+    const wheels = [[0.3, 0.31, 1], [0.3, -0.31, -1], [-0.3, 0.31, -1], [-0.3, -0.31, 1]].map(([x, z, hand]) => {
+      const w = new THREE.Group(); w.position.set(x, WY, z); car.add(w);
+      add(w, cylZ(0.07, 0.1, 20), MAT.alu);
+      [-0.045, 0.045].forEach(o => add(w, cylZ(WR - 0.02, 0.012, 28), MAT.dark, 0, 0, o));
+      for(let k=0;k<10;k++){
+        const a = k/10*Math.PI*2;
+        const m = add(w, roller, MAT.rubber, Math.cos(a)*(WR - 0.028), Math.sin(a)*(WR - 0.028), 0);
+        const ax = new THREE.Vector3(-Math.sin(a), Math.cos(a), hand).normalize();
+        m.quaternion.setFromUnitVectors(Y, ax);
+      }
+      w.userData = {x, z};
+      return w;
+    });
+
+    const HEAD = -0.35;
+    rv.rotation.y = HEAD;
+    const quad = makeQuad(root);
+    let qx = 0, qz = 0;
+    const LEG = 2.6;
+    const corners = [[-SQ, -SQ], [SQ, -SQ], [SQ, SQ], [-SQ, SQ]];
+    let lastX = 0, lastZ = 0, first = true;
+    function update(t, dt){
+      const n = Math.floor(t/LEG), u = (t - n*LEG)/LEG;
+      const a = corners[n % 4], b = corners[(n + 1) % 4];
+      const e = smoothstep(clamp01(u*1.25));
+      const x = a[0] + (b[0]-a[0])*e, z = a[1] + (b[1]-a[1])*e;
+      rv.position.set(x, TOP, z);
+      if(first){ lastX = x; lastZ = z; first = false; }
+      // world velocity into the body frame, then mecanum IK per wheel
+      const wx = dt > 0 ? (x - lastX)/dt : 0, wz = dt > 0 ? (z - lastZ)/dt : 0;
+      lastX = x; lastZ = z;
+      const c = Math.cos(HEAD), s = Math.sin(HEAD);
+      const bx = c*wx - s*wz, bz = s*wx + c*wz;
+      wheels.forEach((w, i) => {
+        const sgn = (i === 0 || i === 3) ? 1 : -1;
+        w.rotation.z -= (bx + sgn*bz) / (WR*1.45) * dt;
+      });
+      lidar.rotation.y = t*5;
+      // escort: orbit the rover's position, chasing it with a first-order lag
+      const oa = t*0.55;
+      qx += (x + Math.cos(oa)*1.1 - qx)*damp(0.018, dt);
+      qz += (z + Math.sin(oa)*1.1 - qz)*damp(0.018, dt);
+      flyQuad(quad, qx, TOP + 2.5 + Math.sin(t*0.9)*0.12, qz, -oa - Math.PI/2, dt);
+    }
+    return {update, focus:[0, 1.4, 0]};
+  }
+
+  /*  5. BLIMP tracking a green balloon (the AeroFusion vision target):
+     it yaws to face the balloon and closes to a standoff distance
+     with a first-order lag, the way a gentle visual servo would. */
+  function buildBlimp(root){
+    plinth(root, 3.0);
+    const pts = [];
+    const L = 3.6, R = 0.78;
+    for(let i=0;i<=40;i++){
+      const u = i/40, y = -L/2 + u*L;
+      const r = R*Math.pow(Math.sin(Math.PI*Math.pow(u, 0.85)), 0.72);
+      pts.push(new THREE.Vector2(Math.max(r, 0.002), y));
+    }
+    const envG = new THREE.LatheGeometry(pts, 56); envG.rotateZ(-Math.PI/2);
+    const bl = new THREE.Group(); root.add(bl);
+    add(bl, envG, std(0xc9d2dc, 0.26, 0.72));
+    const band = add(bl, cylX(R*0.985, 0.05, 56), MAT.amber, 0.25, 0, 0); band.scale.set(1, 1, 1);
+    const finG = rbox(0.62, 0.5, 0.03, 0.02), finH = rbox(0.62, 0.03, 0.5, 0.02);
+    add(bl, finG, MAT.amber, -1.52, 0.42, 0); add(bl, finG, MAT.amber, -1.52, -0.42, 0);
+    add(bl, finH, MAT.amber, -1.52, 0, 0.42); add(bl, finH, MAT.amber, -1.52, 0, -0.42);
+    [[-0.12, 0.14], [0.22, 0.14], [-0.12, -0.14], [0.22, -0.14]].forEach(([x, z]) => add(bl, cylY(0.008, 0.008, 0.2, 6), MAT.steel, x, -0.82, z));
+    add(bl, rbox(0.66, 0.2, 0.32, 0.05), MAT.carbon, 0.05, -0.98, 0);
+    add(bl, rbox(0.04, 0.03, 0.18, 0.008), MAT.cyanG, 0.38, -0.94, 0, false);
+    add(bl, new THREE.SphereGeometry(0.045, 16, 10), MAT.glass, 0.39, -1.02, 0);
+    add(bl, cylZ(0.016, 1.15, 10), MAT.steel, 0, -0.98, 0);
+    const blur = new THREE.MeshBasicMaterial({color:0xcfe6ff, transparent:true, opacity:0.08, depthWrite:false, side:THREE.DoubleSide});
+    const props = [-1, 1].map(s => {
+      add(bl, cylX(0.05, 0.12, 20), MAT.alu, -0.02, -0.98, s*0.58);
+      const p = new THREE.Group(); p.position.set(-0.1, -0.98, s*0.58); bl.add(p);
+      add(p, rbox(0.012, 0.36, 0.04, 0.004), MAT.dark);
+      const d = new THREE.Mesh(new THREE.CircleGeometry(0.18, 32), blur); d.rotation.y = Math.PI/2; p.add(d);
+      return p;
+    });
+
+    const ball = new THREE.Group(); root.add(ball);
+    const bm = add(ball, new THREE.SphereGeometry(0.3, 32, 22), std(0x4cc35d, 0.32, 0.05));
+    bm.scale.y = 1.12;
+    add(ball, new THREE.ConeGeometry(0.05, 0.08, 12), std(0x3a9e48, 0.4, 0.05), 0, -0.37, 0);
+    const strG = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -0.4, 0), new THREE.Vector3(0.05, -1.3, 0.03)]);
+    ball.add(new THREE.Line(strG, new THREE.LineBasicMaterial({color:lin(0x8a9ab5), transparent:true, opacity:0.6})));
+
+    bl.position.set(-1.4, 3.0, 0.4);
+    let yaw = 0;
+    const tmp = new THREE.Vector3();
+    function update(t, dt){
+      ball.position.set(Math.cos(t*0.23)*2.1, 3.1 + Math.sin(t*0.5)*0.35, Math.sin(t*0.31)*1.4);
+      tmp.subVectors(ball.position, bl.position);
+      const dist = Math.hypot(tmp.x, tmp.z) + 1e-4;
+      const want = Math.atan2(-tmp.z, tmp.x);
+      yaw = angLerp(yaw, want, damp(0.02, dt));
+      bl.rotation.y = yaw;
+      const close = (dist - 2.4)*0.35;
+      bl.position.x += (tmp.x/dist)*close*dt;
+      bl.position.z += (tmp.z/dist)*close*dt;
+      bl.position.y += (ball.position.y - 0.1 - bl.position.y)*damp(0.01, dt);
+      bl.rotation.z = Math.sin(t*0.6)*0.03;
+      props.forEach((p, i) => { p.rotation.x += (i ? -1 : 1)*0.7; });
+    }
+    return {update, focus:[0, 3.0, 0]};
+  }
+
+  /*  6. TURTLEBOT 4, patrolling a circle beside its dock  */
+  function buildTB4(root){
+    plinth(root, 2.9);
+    const dock = new THREE.Group(); dock.position.set(-0.4, TOP, -2.2); root.add(dock);
+    add(dock, rbox(0.7, 0.05, 0.45, 0.02), MAT.carbon, 0, 0.025, 0.1);
+    add(dock, rbox(0.7, 0.42, 0.16, 0.06), MAT.carbon, 0, 0.21, -0.08);
+    add(dock, rbox(0.3, 0.02, 0.02, 0.006), MAT.cyanG, 0, 0.32, 0.005, false);
+
+    const bot = new THREE.Group(); root.add(bot);
+    const b = new THREE.Group(); b.scale.setScalar(1.7); bot.add(b);
+    const baseM = std(0x3b414b, 0.55, 0.25);
+    add(b, cylY(0.5, 0.5, 0.15, 64), baseM, 0, 0.1, 0);
+    add(b, new THREE.CylinderGeometry(0.508, 0.508, 0.09, 64, 1, false, -Math.PI*0.5, Math.PI), std(0x262b33, 0.6, 0.2), 0, 0.085, 0);
+    const ringL = add(b, new THREE.TorusGeometry(0.12, 0.01, 8, 48), MAT.cyanG, 0, 0.176, 0, false);
+    ringL.rotation.x = Math.PI/2;
+    [[0.24, 0.24], [0.24, -0.24], [-0.24, 0.24], [-0.24, -0.24]].forEach(([x, z]) => add(b, cylY(0.014, 0.014, 0.5, 8), MAT.alu, x, 0.43, z));
+    add(b, cylY(0.07, 0.07, 0.05, 28), MAT.dark, -0.05, 0.2, 0);
+    const lidar = new THREE.Group(); lidar.position.set(-0.05, 0.25, 0); b.add(lidar);
+    add(lidar, cylY(0.065, 0.065, 0.05, 28), MAT.carbon);
+    add(lidar, rbox(0.025, 0.02, 0.04, 0.006), MAT.glass, 0.055, 0, 0);
+    add(b, cylY(0.43, 0.43, 0.025, 64), std(0x15181e, 0.5, 0.3), 0, 0.69, 0);
+    add(b, rbox(0.08, 0.06, 0.24, 0.015), MAT.carbon, 0.33, 0.74, 0);
+    [-0.07, 0, 0.07].forEach(z => add(b, cylX(0.014, 0.01, 14), MAT.glass, 0.375, 0.745, z));
+    const scr = add(b, rbox(0.16, 0.015, 0.11, 0.006), MAT.cyanG, 0.12, 0.71, 0, false);
+    scr.rotation.z = 0.25;
+    add(b, rbox(0.12, 0.012, 0.08, 0.005), MAT.cap, -0.18, 0.71, 0.12);
+
+    const RR = 1.2;
+    function update(t){
+      const a = t*0.32;
+      bot.position.set(Math.cos(a)*RR + 0.3, TOP, Math.sin(a)*RR + 0.4);
+      bot.rotation.y = -a - Math.PI/2;   // nose along the direction of travel
+      lidar.rotation.y = t*6;
+    }
+    return {update, focus:[0.3, 0.8, 0.4]};
+  }
+
+  /*  STAGES, pinned to real sections in document order  */
+  const DEFS = [
+    {sel:'.hero',     build:buildArm,   cam:{az: 0.35, d:10.5, h:3.9, ly:1.55}, sky:[0x050a16, 0x0f2140], hemi:0xa8c8ff, label:'Six-axis arm · pick and place'},
+    {sel:'#research', build:buildFleet, cam:{az: 0.12, d:12.5, h:3.4, ly:1.9, fit:1.25}, sky:[0x02090f, 0x0a3440], hemi:0x6fe0ee, label:'AUV fleet · connectivity tree'},
+    {sel:'#work',     build:buildScara, cam:{az: 0.62, d:12.0, h:5.4, ly:1.0, sh:0.64}, sky:[0x090705, 0x2a1b0f], hemi:0xffcf9a, label:'SCARA · wafer transfer cell'},
+    // the blimp takes over from the SCARA at the Tube-MPC card (third in Featured Work)
+    {sel:'#work > .project:nth-of-type(3)', build:buildBlimp, cam:{az: 0.3, d:12.0, h:3.4, ly:2.8, sh:0.6}, sky:[0x070a1c, 0x1e2452], hemi:0xc0b8ff, label:'Blimp · balloon tracking'},
+    {sel:'#projects', build:buildRover, cam:{az:-0.55, d:10.0, h:5.0, ly:1.1, sh:0.6, fit:1.22}, sky:[0x050912, 0x10203a], hemi:0xa8c8ff, label:'Rover and quadrotor · air-ground team'},
+    {sel:'#contact',  build:buildTB4,   cam:{az:-0.1,  d:10.5, h:4.2, ly:0.75, sh:0.55}, sky:[0x04070f, 0x0c1830], hemi:0xa8c8ff, label:'TurtleBot 4 · patrol'}
+  ];
+  const stages = DEFS.filter(s => document.querySelector(s.sel));
+  /* World layout zig-zags: each stage is one step deeper and one step
+     toward its own side of the screen, so the flight pans toward the
+     incoming robot and it slides in from the side it will sit on. */
+  const STEP = 34;
+  let wx = 0;
+  stages.forEach((s, i) => {
+    s.el = document.querySelector(s.sel);
+    // side comes from the enclosing section's layout: dock-r copy means robot on the left
+    s.side = s.el.closest('section').classList.contains('dock-r') ? -1 : 1;   // +1 right, -1 left
+    if(i > 0) wx += s.side*STEP;
+    s.p = new THREE.Vector3(wx, 0, -i*STEP);
+    s.root = new THREE.Group();
+    s.root.position.copy(s.p);
+    s.root.userData.glows = [];
+    scene.add(s.root);
+    s.api = s.build(s.root);
+    s.top = new THREE.Color(s.sky[0]); s.hor = new THREE.Color(s.sky[1]); s.hemiC = lin(s.hemi);
+    s.az0 = s.cam.az;
   });
-  [[1],[-1]].forEach(([s])=>{
-    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.32,0.7,4), wire(DEEPBLUE));
-    fin.rotation.z = Math.PI/2; fin.rotation.y = s>0?0:Math.PI;
-    fin.position.set(-2.4, s*0.28*0, 0); fin.position.y = s*0.35;
-    blimp.add(fin);
-  });
-  blimp.position.set(-9, 7.5, -9);
-  blimp.scale.setScalar(mobile ? 0.75 : 1.05);
-  scene.add(blimp);
+  const NST = stages.length;
+  // centre the floor and grid under however the stages fell
+  const wMid = new THREE.Vector3();
+  stages.forEach(s => wMid.add(s.p)); wMid.divideScalar(NST);
+  ground.position.set(wMid.x, 0, wMid.z); grid.position.set(wMid.x, 0.003, wMid.z);
 
-  /*  3e. COMM TOWER + UPLINK  */
-  const tower = new THREE.Group();
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.14,4.6,6), wire(DEEPBLUE));
-  mast.position.y = 2.3; tower.add(mast);
-  for(let i=0;i<3;i++){
-    const strut = new THREE.Mesh(new THREE.TorusGeometry(0.34-i*0.08,0.02,4,10), wire(DEEPBLUE));
-    strut.rotation.x = Math.PI/2; strut.position.y = 1.2+i*1.3;
-    tower.add(strut);
+  // drifting motes for depth across the whole world
+  const DC = mobile ? 600 : 1400;
+  const dPos = new Float32Array(DC*3);
+  for(let i=0;i<DC;i++){
+    dPos[i*3] = wMid.x - 60 + Math.random()*120;
+    dPos[i*3+1] = 0.5 + Math.random()*14;
+    dPos[i*3+2] = 30 - Math.random()*(STEP*(NST-1) + 60);
   }
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.55,10,7,0,Math.PI*2,0,Math.PI/2.6), wire(AMBER));
-  dish.rotation.x = Math.PI/1.7;
-  dish.position.y = 4.75;
-  tower.add(dish);
-  const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.06,6,5),
-    new THREE.MeshBasicMaterial({color:CYAN, transparent:true}));
-  antTip.position.y = 5.15; tower.add(antTip);
-  tower.position.set(mobile ? -8 : -14.5, -4.4, -5.5);
-  scene.add(tower);
-  // dashed uplink from tower to blimp
-  const upGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-  const uplink = new THREE.Line(upGeo, new THREE.LineDashedMaterial({
-    color:CYAN, transparent:true, opacity:0.3, dashSize:0.3, gapSize:0.25}));
-  scene.add(uplink);
-
-  /*  4. AMBIENT PARTICLES  */
-  const PC = mobile ? 700 : 1600;
-  const pPos = new Float32Array(PC*3);
-  for(let i=0;i<PC;i++){
-    pPos[i*3]=(Math.random()-0.5)*50;
-    pPos[i*3+1]=(Math.random()-0.5)*24;
-    pPos[i*3+2]=(Math.random()-0.5)*30;
-  }
-  const pGeo = new THREE.BufferGeometry();
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos,3));
-  const pMat = new THREE.PointsMaterial({color:0x3b6ea8, size:0.05, transparent:true, opacity:0.5});
-  const dust = new THREE.Points(pGeo, pMat);
+  const dGeo = new THREE.BufferGeometry();
+  dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+  const dust = new THREE.Points(dGeo, new THREE.PointsMaterial({color:lin(0x5d8fcf), size:0.05, transparent:true, opacity:0.45, depthWrite:false}));
+  dust.frustumCulled = false;
   scene.add(dust);
 
-  /* 
-     5. INTERACTION
-     Pointer and scroll handlers only ever *write* a number.
-     Nothing is smoothed, projected, or rendered here, that all
-     happens once per frame in animate(), so a fast mousemove or
-     a momentum scroll can never queue more work than there are
-     frames, and nothing reads layout inside an event.
+  /*
+     INTERACTION
+     Pointer and scroll handlers only ever *write* a number. Nothing
+     is smoothed, projected, or rendered here; that all happens once
+     per frame in animate(), so a fast mousemove or a momentum scroll
+     can never queue more work than there are frames.
       */
   let scrollTarget = window.scrollY;
-  addEventListener('scroll', ()=>{ scrollTarget = window.scrollY; }, {passive:true});
+  addEventListener('scroll', () => { scrollTarget = window.scrollY; }, {passive:true});
 
-  let ptrNX = 0, ptrNY = 0;        // pointer, normalised −0.5..0.5, the targets
-  let smNX  = 0, smNY  = 0;        // damped values the camera actually uses
-  let ptrX = -1e5, ptrY = -1e5;    // pointer in CSS px, for 3D-object proximity
-  let overUI = false;              // cursor is over a card/nav, suppress object focus
-
-  addEventListener('pointermove', e=>{
-    if(e.pointerType && e.pointerType !== 'mouse') return;  // no parallax lurch on touch
+  let ptrNX = 0, ptrNY = 0, smNX = 0, smNY = 0;
+  let ptrX = -1e5, ptrY = -1e5, overUI = false;
+  addEventListener('pointermove', e => {
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // no parallax lurch on touch
     ptrX = e.clientX; ptrY = e.clientY;
-    ptrNX = e.clientX / innerWidth  - 0.5;
-    ptrNY = e.clientY / innerHeight - 0.5;
+    ptrNX = e.clientX/innerWidth - 0.5;
+    ptrNY = e.clientY/innerHeight - 0.5;
     overUI = !!(e.target && e.target.closest &&
       e.target.closest('.project,.gcard,.skill-card,.ra-card,nav,.lb,footer,.reel-cta'));
   }, {passive:true});
-
   function ptrOut(){ ptrNX = ptrNY = 0; ptrX = ptrY = -1e5; overUI = false; }
   addEventListener('pointerleave', ptrOut, {passive:true});
   addEventListener('blur', ptrOut);
 
-  /* 
-     6. CAMERA RIG, one continuous flight through the scene
-     Each shot is pinned to where a real section sits in the
-     document, so the camera arrives somewhere as you arrive at
-     the copy, instead of orbiting on a magic scroll constant.
-      */
-  const SHOTS = [
-    // section          camera position        look-at              swarm formation
-    {sel:'.hero',     pos:[  0.0, 2.2, 15.0], look:[ 0.0, 0.6,  0.0], form:'free'},
-    {sel:'#about',    pos:[ -6.0, 3.6, 12.5], look:[-1.5, 1.4, -1.0], form:'free'},
-    {sel:'#research', pos:[-12.5, 4.2,  7.0], look:[-8.0, 2.0, -5.0], form:'ring'},
-    {sel:'#work',     pos:[ -2.0,-0.6, 10.5], look:[-5.0,-3.2,  1.0], form:'lattice'},
-    {sel:'#projects', pos:[  9.5, 0.6,  8.0], look:[ 8.5,-1.6, -2.5], form:'shell'},
-    {sel:'#skills',   pos:[  0.0, 7.5, 13.0], look:[ 0.0, 1.0, -2.0], form:'plane'},
-    {sel:'#contact',  pos:[  0.0, 2.0, 18.0], look:[ 0.0, 3.0, -4.0], form:'vee'}
-  ];
-  const shots = SHOTS.filter(s=>document.querySelector(s.sel));
-  shots.forEach(s=>{ s.el = document.querySelector(s.sel); s.at = 0; });
-
-  /* Where along the page each shot peaks. Measured, never guessed , 
-     and re-measured on resize because reflow moves every section. */
-  function measureShots(){
-    const h = innerHeight;
-    shots.forEach(s=>{
-      const r = s.el.getBoundingClientRect();
-      s.at = Math.max(0, (r.top + window.scrollY) + r.height * 0.5 - h * 0.5);
+  /*  CAMERA RIG
+     Each machine holds for the whole of its section, however tall,
+     and the flight to the next one happens in a window around the
+     boundary (when the next section's top crosses mid-viewport), so
+     you never read a long section with the camera stranded between
+     stages. Windows are measured, never guessed. On wide screens
+     the look point is pushed left of the machine so it frames the
+     right of the viewport, clear of the text column. */
+  function measure(){
+    const h = innerHeight, w = h*0.3, W = innerWidth;
+    // the free lane beside each stage's copy: its centre in NDC and its width
+    stages.forEach(s => {
+      const r = s.el.closest('section').getBoundingClientRect();
+      const l0 = s.side > 0 ? r.right : 0, l1 = s.side > 0 ? W : r.left;
+      s.laneC = ((l0 + l1)/2)/W*2 - 1;
+      s.laneW = Math.max(0.2, (l1 - l0)/W);
     });
-    shots[0].at = 0;
-    for(let i=1;i<shots.length;i++){
-      if(shots[i].at <= shots[i-1].at) shots[i].at = shots[i-1].at + 1;
+    // the last boundaries may sit past the bottom of the page; squeeze them in
+    const maxY = Math.max(1, document.documentElement.scrollHeight - h);
+    let prev = 0;
+    for(let i=0;i<NST-1;i++){
+      const s = stages[i];
+      const B = stages[i+1].el.getBoundingClientRect().top + window.scrollY - h*0.5;
+      s.t0 = Math.max(prev, Math.min(B - w, maxY - (NST-1-i)*h*0.25));
+      s.t1 = Math.max(s.t0 + 1, Math.min(B + w, maxY - (NST-2-i)*h*0.25));
+      prev = s.t1;
     }
   }
-  measureShots();
-  // fonts and lazy images land after first paint and shift the page
-  addEventListener('load', measureShots);
-  if(document.fonts && document.fonts.ready) document.fonts.ready.then(measureShots);
+  measure();
+  addEventListener('load', measure);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
 
-  const smoothstep = x => x*x*(3-2*x);
-  /* frame-rate independent damping: the same visual easing at 30 or 144 fps */
-  const damp = (k, dt) => 1 - Math.pow(1-k, dt*60);
+  const wide = () => camera.aspect > 1.05;
+  // matches the CSS: from 1100px the copy is docked into the left 64vw
+  const docked = () => innerWidth >= 1100 && wide();
+  function stageCam(s, pos, look){
+    const c = s.cam, w = wide(), dk = docked();
+    // docked: pull back until the machine fits its lane, with margin to spare
+    const d = c.d*(w ? (dk ? 1.38*(c.fit || 1)*Math.min(1.25, Math.max(0.9, 0.4/s.laneW)) : 1) : 1.55);
+    // left-hand stages mirror the orbit so the machine faces into the page, not off its edge
+    const az = w ? c.az*s.side : c.az;
+    const sa = Math.sin(az), ca = Math.cos(az);
+    pos.set(s.p.x + sa*d, c.h*(w ? 1 : 1.25), s.p.z + ca*d);
+    const shift = w ? d*Math.tan(camera.fov*Math.PI/360)*camera.aspect*(dk ? Math.abs(s.laneC) : (c.sh || 0.5))*s.side : 0;
+    look.set(s.p.x - ca*shift, c.ly + (w ? 0 : 1.1), s.p.z + sa*shift);
+  }
 
-  const tgtPos  = new THREE.Vector3().fromArray(shots[0].pos);
-  const tgtLook = new THREE.Vector3().fromArray(shots[0].look);
-  const curPos  = tgtPos.clone();
-  const curLook = tgtLook.clone();
+  const pA = new THREE.Vector3(), lA = new THREE.Vector3(), pB = new THREE.Vector3(), lB = new THREE.Vector3();
+  const tgtPos = new THREE.Vector3(), tgtLook = new THREE.Vector3();
+  const curPos = new THREE.Vector3(), curLook = new THREE.Vector3();
   const scratch = new THREE.Vector3();
-  let segI = 0, segT = 0;          // which leg of the flight, and how far along it
+  let fTarget = 0;
 
   function sampleRig(y){
-    let i = shots.length - 1;
-    while(i > 0 && y < shots[i].at) i--;
-    const a = shots[i], b = shots[Math.min(i+1, shots.length-1)];
-    segI = i;
-    segT = (b === a) ? 1 : Math.min(1, Math.max(0, (y - a.at) / (b.at - a.at)));
+    let i = 0, segT = 0;
+    while(i < NST-1 && y >= stages[i].t1) i++;
+    if(i < NST-1) segT = clamp01((y - stages[i].t0)/(stages[i].t1 - stages[i].t0));
+    const a = stages[i], b = stages[Math.min(i+1, NST-1)];
     const k = smoothstep(segT);
-    tgtPos .fromArray(a.pos ).lerp(scratch.fromArray(b.pos ), k);
-    tgtLook.fromArray(a.look).lerp(scratch.fromArray(b.look), k);
+    stageCam(a, pA, lA); stageCam(b, pB, lB);
+    tgtPos.copy(pA).lerp(pB, k);
+    tgtLook.copy(lA).lerp(lB, k);
+    // crane arc: rise and pull back between stages so it reads as travel
+    const arc = Math.sin(Math.PI*k);
+    tgtPos.y += arc*4.0;
+    tgtLook.y += arc*1.2;
+    fTarget = i + (b === a ? 0 : k);
   }
 
-  /* 
-     7. OBJECT FOCUS, the machines react to the cursor
-     Screen-space proximity rather than a raycast: wireframes are
-     mostly empty space, so a ray misses far more often than the
-     eye says it should. Projecting the centre and measuring pixel
-     distance gives a soft falloff and costs one project() each.
-      */
-  function wireMats(root){
-    const out = [];
-    root.traverse(o=>{
-      if(o.material && o.material.wireframe){
-        out.push({m:o.material, o0:o.material.opacity, c0:o.material.color.clone()});
-      }
-    });
-    return out;
-  }
-  const HI = new THREE.Color(0x9df3ff);
-  const FOCUS = [
-    {obj:arm,   c:[0, 2.5, 0], rk:1.05, label:'Manipulator · visual servoing'},
-    {obj:drone, c:[0, 0.0, 0], rk:0.75, label:'Quadrotor · patrol'},
-    {obj:rover, c:[0, 0.5, 0], rk:0.85, label:'Rover · LiDAR + A*'},
-    {obj:blimp, c:[0, 0.0, 0], rk:1.00, label:'Blimp · AeroFusion'},
-    {obj:tower, c:[0, 2.6, 0], rk:0.85, label:'Comms uplink · connectivity'}
-  ];
-  FOCUS.forEach(f=>{
-    f.mats = wireMats(f.obj);
-    f.s0 = f.obj.scale.x;
-    f.f = 0;                       // damped focus weight, 0..1
-    f.sx = 0; f.sy = 0;            // last projected screen position
-    f.on = false;
-  });
-  const focusTag = document.getElementById('focusTag');
-  let taggedIdx = -1;
-
-  function updateFocus(dt){
-    const R = Math.min(innerWidth, innerHeight) * 0.20;
-    let best = -1, bestF = 0.34;   // must beat this before the chip appears
-
-    for(let i=0;i<FOCUS.length;i++){
-      const f = FOCUS[i];
-      scratch.set(f.c[0], f.c[1], f.c[2]).multiplyScalar(f.s0).add(f.obj.position);
-      scratch.project(camera);
-      const behind = scratch.z > 1;
-      f.sx = ( scratch.x * 0.5 + 0.5) * innerWidth;
-      f.sy = (-scratch.y * 0.5 + 0.5) * innerHeight;
-
-      let want = 0;
-      if(!behind && !overUI && ptrX > -1e4){
-        const dx = ptrX - f.sx, dy = ptrY - f.sy;
-        const d  = Math.sqrt(dx*dx + dy*dy) / (R * f.rk);
-        want = d >= 1 ? 0 : 1 - smoothstep(d);
-      }
-      f.f += (want - f.f) * damp(0.12, dt);
-
-      if(f.f > 0.002 || f.on){
-        const g = f.f;
-        f.on = f.f > 0.002;
-        for(let j=0;j<f.mats.length;j++){
-          const e = f.mats[j];
-          e.m.opacity = Math.min(1, e.o0 * (1 + 0.62*g));
-          e.m.color.copy(e.c0).lerp(HI, 0.55*g);
-        }
-        f.obj.scale.setScalar(f.s0 * (1 + 0.045*g));
-      }
-      if(f.f > bestF){ bestF = f.f; best = i; }
-    }
-
-    if(!focusTag) return;
-    if(best !== taggedIdx){
-      taggedIdx = best;
-      if(best >= 0) focusTag.textContent = FOCUS[best].label;
-      focusTag.classList.toggle('on', best >= 0);
-    }
-    if(best >= 0){
-      focusTag.style.setProperty('--x', FOCUS[best].sx.toFixed(1) + 'px');
-      focusTag.style.setProperty('--y', FOCUS[best].sy.toFixed(1) + 'px');
+  /*  STAGE MOOD + POWER: sky, fog and lights blend between the two
+     stages either side of the camera; machines more than a stage
+     away are hidden and not simulated. */
+  const cTop = new THREE.Color(), cHor = new THREE.Color(), cHemi = new THREE.Color();
+  const center = new THREE.Vector3();
+  const scrimL = document.querySelector('.scrim-l'), scrimR = document.querySelector('.scrim-r');
+  let lastScrim = '';
+  function applyMood(f){
+    const a = Math.max(0, Math.min(NST-1, Math.floor(f))), b = Math.min(NST-1, a+1), k = f - a;
+    const A = stages[a], B = stages[b];
+    cTop.copy(A.top).lerp(B.top, k);
+    cHor.copy(A.hor).lerp(B.hor, k);
+    cHemi.copy(A.hemiC).lerp(B.hemiC, k);
+    skyU.top.value.copy(cTop); skyU.hor.value.copy(cHor);
+    scene.fog.color.copy(cHor);
+    hemi.color.copy(cHemi);
+    center.copy(A.p).lerp(B.p, k);
+    key.position.set(center.x + 5, 12, center.z + 7); key.target.position.copy(center);
+    rim.position.set(center.x - 6, 5, center.z - 8);  rim.target.position.copy(center);
+    fill.position.set(center.x + 8, 2.5, center.z - 2); fill.target.position.copy(center);
+    sky.position.copy(camera.position);
+    // copy sits opposite the robot: fade the scrims with the camera's side
+    const side = A.side + (B.side - A.side)*smoothstep(k);
+    const wl = (0.5 + side*0.5).toFixed(3);
+    if(wl !== lastScrim){
+      lastScrim = wl;
+      if(scrimL){ scrimL.style.opacity = wl; scrimR.style.opacity = (1 - wl).toFixed(3); }
     }
   }
-
-  /* 
-     8. SWARM FORMATIONS
-     Instead of the swarm popping between backgrounds, each shot
-     names a formation and the agents are pulled toward a blend of
-     the two flanking it, so the reorganisation happens *during*
-     the scroll between sections, not at a boundary.
-      */
-  const PHI = Math.PI * (1 + Math.sqrt(5));
-  function formation(name, i, t, out){
-    switch(name){
-      case 'ring': {                       // orbit, connectivity loop
-        const a = i/N*Math.PI*2 + t*0.10, R = 7.4 + (i%3)*0.9;
-        out.set(Math.cos(a)*R, 1.5 + Math.sin(a*3 + t*0.4)*1.1, Math.sin(a)*R*0.55);
-        break; }
-      case 'lattice': {                    // ranked grid, a fleet on station
-        const c = i%8, r = Math.floor(i/8);
-        out.set((c-3.5)*2.6, 1.5 + (r-2.5)*1.9, -2.0 + Math.sin(t*0.3 + i)*0.4);
-        break; }
-      case 'shell': {                      // fibonacci sphere, full coverage
-        const k = (i+0.5)/N, ph = Math.acos(1-2*k), th = PHI*i + t*0.15, R = 6.2;
-        out.set(Math.sin(ph)*Math.cos(th)*R, 1.5 + Math.cos(ph)*R*0.55, Math.sin(ph)*Math.sin(th)*R*0.7);
-        break; }
-      case 'plane': {                      // flat sweep grid
-        const cols = Math.ceil(Math.sqrt(N)), c = i%cols, r = Math.floor(i/cols);
-        out.set((c-(cols-1)/2)*3.0, 1.5 + Math.sin(t*0.5 + i*0.4)*0.35, (r-(cols-1)/2)*2.6);
-        break; }
-      case 'vee': {                        // formation flight, heading away
-        const s = (i%2) ? 1 : -1, k = Math.floor(i/2);
-        out.set(s*(1 + k*0.42), 1.5 + k*0.16 - 1.8, 6.0 - k*0.42);
-        break; }
-      default: return false;               // 'free', pure flow field
-    }
+  function stagePower(s, i, f){
+    const dist = Math.abs(i - f);
+    s.root.visible = dist < 1.3;
+    if(!s.root.visible) return false;
+    const e = smoothstep(clamp01(1 - dist));
+    s.root.scale.setScalar(0.82 + 0.18*e);
+    s.root.rotation.y = (1 - e)*0.5*s.side;
+    s.root.userData.glows.forEach(g => { g.m.emissiveIntensity = g.k*(0.18 + 0.82*e); });
     return true;
   }
-  const FA = new THREE.Vector3(), FB = new THREE.Vector3(), FT = new THREE.Vector3();
-  const R2_COMM = R_COMM * R_COMM;
 
-  /* 
-     9. LOOP
-      */
+  /*  OBJECT FOCUS + STAGE TAG: the active machine reacts to the
+     cursor with a small lift and a label chip; the corner tag names
+     whichever stage the camera is on. */
+  const focusTag = document.getElementById('focusTag');
+  const stageTag = document.getElementById('stageTag');
+  const stN = stageTag && stageTag.querySelector('.n');
+  const stT = stageTag && stageTag.querySelector('.t');
+  let focusW = 0, tagOn = false, shownStage = -1, footVis = false;
+  const foot = document.querySelector('footer');
+  if(foot && 'IntersectionObserver' in window)
+    new IntersectionObserver(es => { footVis = es[0].isIntersecting; }).observe(foot);
+  function updateTags(f, dt){
+    const i = Math.round(f), s = stages[i];
+    const settled = Math.abs(f - i) < 0.28;
+    if(stageTag){
+      if(i !== shownStage && settled){
+        shownStage = i;
+        stN.textContent = String(i+1).padStart(2, '0') + ' / ' + String(NST).padStart(2, '0');
+        stT.textContent = s.label;
+        stageTag.classList.toggle('left', s.side < 0);   // the tag sits on its robot's side
+      }
+      stageTag.classList.toggle('on', settled && shownStage === i && !footVis);
+    }
+    if(!focusTag) return;
+    scratch.fromArray(s.api.focus).multiplyScalar(s.root.scale.x).add(s.p);
+    scratch.project(camera);
+    const sx = (scratch.x*0.5 + 0.5)*innerWidth, sy = (-scratch.y*0.5 + 0.5)*innerHeight;
+    let want = 0;
+    if(settled && scratch.z < 1 && !overUI && ptrX > -1e4){
+      const R = Math.min(innerWidth, innerHeight)*0.24;
+      const dd = Math.hypot(ptrX - sx, ptrY - sy)/R;
+      want = dd >= 1 ? 0 : 1 - smoothstep(dd);
+    }
+    focusW += (want - focusW)*damp(0.12, dt);
+    if(focusW > 0.002) s.root.scale.multiplyScalar(1 + 0.035*focusW);
+    const on = focusW > 0.34;
+    if(on !== tagOn){ tagOn = on; focusTag.classList.toggle('on', on); }
+    if(on){
+      focusTag.textContent = s.label;
+      focusTag.style.setProperty('--x', sx.toFixed(1) + 'px');
+      focusTag.style.setProperty('--y', sy.toFixed(1) + 'px');
+    }
+  }
+
+  /*  LOOP  */
   function resize(){
     camera.aspect = innerWidth/innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
-    measureShots();
-    if(reduced) drawStill();
+    measure();
+    if(reduced) still();
   }
   addEventListener('resize', resize, {passive:true});
   renderer.setSize(innerWidth, innerHeight);
 
-  function drawStill(){
-    camera.position.fromArray(shots[0].pos);
-    camera.lookAt(scratch.fromArray(shots[0].look));
+  /* Reduced motion: no flight and no rAF loop. The nearest stage is
+     composed as a still and recomposed (a cut, not a move) only when
+     scrolling lands on a different section. */
+  let stillIdx = -1, stillQueued = false;
+  function still(force){
+    sampleRig(scrollTarget);
+    const i = Math.round(fTarget);
+    if(i === stillIdx && !force) return;
+    stillIdx = i;
+    stageCam(stages[i], curPos, curLook);
+    camera.position.copy(curPos); camera.lookAt(curLook);
+    applyMood(i);
+    stages.forEach((s, j) => { if(stagePower(s, j, i)) s.api.update(2.0, 1/60); });
     renderer.render(scene, camera);
   }
-
-  /* Reduced motion: no flight, no parallax, no rAF at all, the scene
-     is composed once as a still and only redrawn if the window changes. */
   if(reduced){
-    drawStill();
+    still(true);
+    addEventListener('scroll', () => {
+      if(stillQueued) return;
+      stillQueued = true;
+      requestAnimationFrame(() => { stillQueued = false; still(); });
+    }, {passive:true});
+    if(stageTag){
+      const sync = () => { const i = Math.max(0, stillIdx); stN.textContent = String(i+1).padStart(2, '0') + ' / ' + String(NST).padStart(2, '0'); stT.textContent = stages[i].label; stageTag.classList.add('on'); };
+      sync(); addEventListener('scroll', () => requestAnimationFrame(sync), {passive:true});
+    }
     return;
   }
 
   const clock = new THREE.Clock();
-  let t = 0;                                 // our own clock, so a hidden tab
-  let frames = 0, probe = 0, tuned = false;  // cannot jump the animation forward
+  let t = 0, fCur = 0, intro = 0;
+  let frames = 0, probe = 0, tuned = false;
+  sampleRig(scrollTarget);
+  curPos.copy(tgtPos); curLook.copy(tgtLook); fCur = fTarget;
 
   function animate(){
     requestAnimationFrame(animate);
-
     /* clamped dt: a backgrounded tab resumes where it paused instead of
-       fast-forwarding through however many seconds it was hidden for */
+       fast-forwarding through however long it was hidden */
     const dt = Math.min(clock.getDelta(), 0.05);
-    // nothing to render for: hidden tab, or the video lightbox is covering
-    // the canvas. Bailing before t advances freezes the scene rather than
-    // letting it run on unseen and jump when it comes back.
+    // hidden tab, or the video lightbox covering the canvas: freeze, don't run on unseen
     if(document.hidden || document.body.classList.contains('lb-lock')) return;
     t += dt;
 
-    /* one-time quality probe, if this machine cannot hold 45 fps at
-       DPR 2, drop to 1 rather than shipping a stuttering background */
+    /* one-time quality probe: if this machine can't hold 45 fps, drop
+       to DPR 1 and soften shadows rather than ship a stuttering page */
     if(!tuned){
       frames++; probe += dt;
       if(probe > 2.5){
         tuned = true;
-        if(frames/probe < 45 && renderer.getPixelRatio() > 1){
-          renderer.setPixelRatio(1);
-          renderer.setSize(innerWidth, innerHeight);
+        if(frames/probe < 45){
+          if(renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); }
+          key.shadow.mapSize.set(1024, 1024); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map = null; }
         }
       }
     }
 
-    {
-      /*  which formation is the swarm being pulled toward?  */
-      const fa = shots[segI].form;
-      const fb = shots[Math.min(segI+1, shots.length-1)].form;
-      const fw = smoothstep(segT);
-      const useA = fa !== 'free', useB = fb !== 'free';
-      const bind = (useA && useB) ? 1 : useA ? (1-fw) : useB ? fw : 0;
-      const drift = 0.012 * (1 - bind*0.75);   // flow field yields to the formation
-      const pull  = 0.010 * bind;
-
-      /* swarm dynamics: flow field + formation pull + containment */
-      for(let i=0;i<N;i++){
-        const a = agents[i], p = a.position, v = a.userData.vel;
-        const f = flow(p.x,p.y,p.z,t);
-        v.x = v.x*0.93 + f[0]*drift;
-        v.y = v.y*0.93 + f[1]*drift;
-        v.z = v.z*0.93 + f[2]*drift;
-
-        if(bind > 0.001){
-          if(useA) formation(fa, i, t, FA);
-          if(useB) formation(fb, i, t, FB);
-          if(useA && useB) FT.copy(FA).lerp(FB, fw);
-          else FT.copy(useA ? FA : FB);
-          v.x += (FT.x - p.x)*pull;
-          v.y += (FT.y - p.y)*pull;
-          v.z += (FT.z - p.z)*pull;
-        }
-
-        // soft box containment (barrier-function-flavored)
-        v.x -= Math.max(0, Math.abs(p.x)-BOUND.x) * Math.sign(p.x)*0.004;
-        v.y -= Math.max(0, Math.abs(p.y-1.5)-BOUND.y) * Math.sign(p.y-1.5)*0.004;
-        v.z -= Math.max(0, Math.abs(p.z)-BOUND.z) * Math.sign(p.z)*0.004;
-        p.add(v);
-        a.rotation.x += 0.004 + i*0.0002;
-        a.rotation.y += 0.006;
-      }
-
-      /* separation and the connectivity graph share one pair sweep , 
-         same O(N²) visit, one squared distance, no sqrt for the edge test */
-      const sepK = 0.01 * (1 - bind*0.5);
-      let e = 0;
-      for(let i=0;i<N;i++){
-        const pi = agents[i].position;
-        for(let j=i+1;j<N;j++){
-          const pj = agents[j].position;
-          let dx=pi.x-pj.x, dy=pi.y-pj.y, dz=pi.z-pj.z;
-          let d2=dx*dx+dy*dy+dz*dz;
-          if(d2<1.0 && d2>0.0001){
-            const d=Math.sqrt(d2), push=(1.0-d)*sepK/d;
-            pi.x+=dx*push; pi.y+=dy*push; pi.z+=dz*push;
-            pj.x-=dx*push; pj.y-=dy*push; pj.z-=dz*push;
-            dx=pi.x-pj.x; dy=pi.y-pj.y; dz=pi.z-pj.z;
-            d2=dx*dx+dy*dy+dz*dz;
-          }
-          if(e<MAXE && d2 < R2_COMM){
-            edgePos[e*6]=pi.x; edgePos[e*6+1]=pi.y; edgePos[e*6+2]=pi.z;
-            edgePos[e*6+3]=pj.x; edgePos[e*6+4]=pj.y; edgePos[e*6+5]=pj.z;
-            e++;
-          }
-        }
-      }
-      edgeGeo.setDrawRange(0, e*2);   // cheaper than zeroing the tail of the buffer
-      edgeGeo.attributes.position.needsUpdate = true;
-      edgeMat.opacity = 0.22 + Math.sin(t*0.8)*0.06 + bind*0.10;
-
-      /* arm choreography, slow pick cycle */
-      shoulder.rotation.z = Math.sin(t*0.35)*0.45 - 0.15;
-      shoulder.rotation.y = Math.sin(t*0.2)*0.6;
-      elbow.rotation.z    = Math.sin(t*0.35 + 1.2)*0.7 + 0.5;
-      wristG.rotation.z   = Math.sin(t*0.5)*0.4;
-      const grip = (Math.sin(t*0.7)+1)/2;
-      f1.position.x =  0.08 + grip*0.1;
-      f2.position.x = -0.08 - grip*0.1;
-
-      /* drone: lissajous patrol with spinning rotors */
-      const dx = Math.sin(t*0.22)*9, dz = Math.sin(t*0.31+1.2)*5 - 1.5;
-      const dy = 3.6 + Math.sin(t*0.6)*0.5;
-      // bank toward motion direction
-      const ndx = Math.cos(t*0.22)*0.22*9, ndz = Math.cos(t*0.31+1.2)*0.31*5;
-      drone.position.set(dx, dy, dz);
-      drone.rotation.z = -ndx*0.06;
-      drone.rotation.x =  ndz*0.06;
-      drone.rotation.y = t*0.1;
-      dRotors.forEach(b=>{ b.rotation.y += 0.55*b.userData.dir; });
-      navLight.material.opacity = (Math.sin(t*6)>0.4)?1:0.15;
-
-      /* rover: follows the dashed waypoint ellipse */
-      const rth = t*0.16;
-      rover.position.x = PATH.cx + PATH.rx*Math.cos(rth);
-      rover.position.z = PATH.cz + PATH.rz*Math.sin(rth);
-      rover.rotation.y = -Math.atan2(PATH.rz*Math.cos(rth), -PATH.rx*Math.sin(rth));
-      rWheels.forEach(w=>{ w.rotation.y += 0.12; });
-      beamG.rotation.y = t*1.4;
-      wps.forEach((wp,i)=>{ wp.rotation.y = t*0.8 + i; wp.position.y = -4.1 + Math.sin(t*1.5+i)*0.06; });
-
-      /* blimp: slow crossing drift, spinning props, gentle heave */
-      blimp.position.x = -14 + ((t*0.32) % 30);
-      blimp.position.y = 7.5 + Math.sin(t*0.4)*0.4;
-      blimp.rotation.z = Math.sin(t*0.3)*0.04;
-      bProps.forEach(p=>{ p.rotation.x += 0.4; });
-
-      /* tower: dish scans, uplink tracks the blimp */
-      dish.rotation.y = t*0.4;
-      antTip.material.opacity = (Math.sin(t*3)>0)?0.9:0.2;
-      const upArr = uplink.geometry.attributes.position.array;
-      upArr[0]=tower.position.x; upArr[1]=tower.position.y+4.9; upArr[2]=tower.position.z;
-      upArr[3]=blimp.position.x; upArr[4]=blimp.position.y-0.8; upArr[5]=blimp.position.z;
-      uplink.geometry.attributes.position.needsUpdate = true;
-      uplink.computeLineDistances();
-      uplink.material.opacity = 0.18 + Math.sin(t*2.2)*0.1;
-
-      /* lidar sweep + sonar rings */
-      sweep.rotation.z = -t*0.5;
-      rings.forEach(r=>{
-        const ph = ((t*0.18 + r.userData.phase) % 1);
-        const s = 0.5 + ph*16;
-        r.scale.setScalar(s);
-        r.material.opacity = (1-ph)*0.16;
-      });
-
-      dust.rotation.y = t*0.008;
-    }
-
-    /*  camera: sample the rig, then chase it with damping 
-       The rig gives an instantaneous target for this scroll position;
-       the damping is what turns a flicked scrollwheel into a glide. */
     sampleRig(scrollTarget);
     const kc = damp(0.055, dt);
-    curPos .lerp(tgtPos,  kc);
+    curPos.lerp(tgtPos, kc);
     curLook.lerp(tgtLook, kc);
+    fCur += (fTarget - fCur)*kc;
 
     const kp = damp(0.07, dt);
-    smNX += (ptrNX - smNX) * kp;
-    smNY += (ptrNY - smNY) * kp;
-
+    smNX += (ptrNX - smNX)*kp;
+    smNY += (ptrNY - smNY)*kp;
     camera.position.copy(curPos);
-    // a breath of idle drift so the frame is never perfectly dead
-    camera.position.x += Math.sin(t*0.13)*0.35;
-    camera.position.y += Math.cos(t*0.09)*0.22;
+    camera.position.x += Math.sin(t*0.13)*0.3;
+    camera.position.y += Math.cos(t*0.09)*0.18;
     camera.lookAt(curLook);
-    // parallax along the camera's own axes, then re-aim: the look target
-    // stays put, so the offset reads as parallax rather than a pan
-    camera.translateX( smNX * 2.4);
-    camera.translateY(-smNY * 1.5);
+    // parallax along the camera's own axes, then re-aim on the same target
+    camera.translateX( smNX*1.6);
+    camera.translateY(-smNY*1.0);
     camera.lookAt(curLook);
 
-    updateFocus(dt);
+    applyMood(fCur);
+    intro = Math.min(1, intro + dt/1.6);
+    for(let i=0;i<NST;i++){
+      const s = stages[i];
+      // first load: the hero machine powers up instead of popping in
+      if(stagePower(s, i, i === 0 ? fCur + (1 - smoothstep(intro))*0.9 : fCur)) s.api.update(t, dt);
+    }
+    updateTags(fCur, dt);
     renderer.render(scene, camera);
   }
   animate();
